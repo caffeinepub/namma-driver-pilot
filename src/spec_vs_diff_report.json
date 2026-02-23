@@ -1,0 +1,92 @@
+{
+  "kind": "spec_vs_diff_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-23T22:40:56.397Z",
+  "summary": "The diff implements a comprehensive trip planning form replacement with extensive new fields including trip type, journey type, vehicle type, duration handling, location modes (manual/GPS), and contact information. Backend data model and createTrip function updated accordingly. However, several requirements have incomplete or missing implementation details in the visible diff evidence.",
+  "missing_requirements": [
+    {
+      "id": "REQ-23",
+      "requirement": "Display informational popup modal when customer selects a Journey Type option",
+      "reason": "Modal implementation visible in RideRequestForm.tsx but diff is truncated before validation of all acceptance criteria (popup appearance timing, correct text display, OK button dismissal, modal blocking behavior)",
+      "evidence": [
+        "frontend/src/components/RideRequestForm.tsx"
+      ]
+    },
+    {
+      "id": "REQ-25",
+      "requirement": "Implement smart Hire Duration field for Local trips with dropdown 2-12 hours plus Custom option",
+      "reason": "Duration state variables exist but implementation is truncated - cannot verify dropdown options, Custom input field reveal, or minimum 2-hour validation",
+      "evidence": [
+        "frontend/src/components/RideRequestForm.tsx"
+      ]
+    },
+    {
+      "id": "REQ-26",
+      "requirement": "Implement Hire Duration for Outstation trips with date-time pickers and auto-calculation",
+      "reason": "Date-time state and calculation logic visible but implementation truncated - cannot verify picker rendering, duration display format, or complete validation error handling",
+      "evidence": [
+        "frontend/src/components/RideRequestForm.tsx"
+      ]
+    },
+    {
+      "id": "REQ-29",
+      "requirement": "Implement Use GPS mode with Get My Location button and geolocation capture",
+      "reason": "GPS handler function visible but truncated - cannot verify button rendering, coordinate capture, address display, or optional field behavior",
+      "evidence": [
+        "frontend/src/components/RideRequestForm.tsx"
+      ]
+    },
+    {
+      "id": "REQ-30",
+      "requirement": "Implement GPS permission denial fallback with automatic mode switch",
+      "reason": "Geolocation error handling started but truncated - cannot verify automatic mode switch, error message display, or retry capability",
+      "evidence": [
+        "frontend/src/components/RideRequestForm.tsx"
+      ]
+    },
+    {
+      "id": "REQ-33",
+      "requirement": "Display informational message at bottom of form about automatic fare calculation",
+      "reason": "No evidence in visible diff of the message 'Fare will be calculated automatically and confirmed by admin pricing rules.' being displayed",
+      "evidence": []
+    },
+    {
+      "id": "REQ-35",
+      "requirement": "Update backend createTrip function to accept and validate all new trip fields",
+      "reason": "Backend main.mo truncated before createTrip function implementation - cannot verify parameter validation, conditional requirements based on tripType/journeyType, or error messages",
+      "evidence": [
+        "backend/main.mo"
+      ]
+    },
+    {
+      "id": "REQ-36",
+      "requirement": "Update frontend RideRequestForm component with comprehensive booking form in specified field order",
+      "reason": "RideRequestForm.tsx heavily truncated - cannot verify complete field order (Trip Type, Journey Type, Vehicle Type, Hire Duration, Location Mode, Contact), mobile-friendly layout, or form submission integration",
+      "evidence": [
+        "frontend/src/components/RideRequestForm.tsx"
+      ]
+    }
+  ],
+  "hallucinated_features": [
+    {
+      "description": "Migration module added to backend with old/new trip type definitions and migration logic",
+      "reason": "BuildRequest explicitly constrains 'Do NOT modify backend/migration.mo unless absolutely necessary for new Trip type fields' but migration.mo was added with full migration run function when existing trip transformation could potentially be handled differently",
+      "evidence": [
+        "backend/migration.mo"
+      ]
+    }
+  ],
+  "confidence": 0.65,
+  "changed_files": [
+    "backend/main.mo",
+    "backend/migration.mo",
+    "frontend-file-summaries.txt",
+    "frontend/src/components/AdminTripsTab.tsx",
+    "frontend/src/components/AvailableTripsSection.tsx",
+    "frontend/src/components/CustomerTripList.tsx",
+    "frontend/src/components/DriverTripList.tsx",
+    "frontend/src/components/RideRequestForm.tsx",
+    "frontend/src/hooks/useQueries.ts",
+    "project_state.json"
+  ]
+}

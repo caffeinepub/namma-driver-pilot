@@ -1,0 +1,216 @@
+{
+  "kind": "coverage_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-23T22:40:56.401Z",
+  "sources": {
+    "buildRequest": true,
+    "implementationPlan": true
+  },
+  "requirements": {
+    "total": 17,
+    "implemented": 15,
+    "items": [
+      {
+        "id": "REQ-21",
+        "summary": "Add Trip Type field to Customer booking form with two radio options: 'Local' and 'Outstation' (required field, no default selection)",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-22",
+        "summary": "Add Journey Type field to Customer booking form with two radio options: 'One Way' and 'Round Trip' (required field, no default selection)",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-23",
+        "summary": "Display informational popup modal when customer selects a Journey Type option, showing explanation text based on selection: 'One Way: Pickup & Drop are at different locations in the city.' for One Way, or 'Round Trip: Pickup & Drop are the same location in the city (driver returns to pickup).' for Round Trip, with an OK button to dismiss",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-24",
+        "summary": "Add Vehicle Type dropdown field to Customer booking form with four options: 'Hatchback', 'Sedan', 'SUV', 'Luxury' (required field, no default selection)",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-25",
+        "summary": "Implement smart Hire Duration field for Local trips: display dropdown with options 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 hours, plus 'Custom' option that reveals a number input field (minimum value 2 hours) when selected",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-26",
+        "summary": "Implement Hire Duration for Outstation trips: display Start Date & Time picker and End Date & Time picker fields (both required), auto-calculate duration in calendar days using formula durationDays = ceil((endDateTime - startDateTime) / 24 hours), display calculated duration as 'Duration: X days', enforce minimum 1 day and validate that End must be after Start (show error if End <= Start)",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-27",
+        "summary": "Add Location Mode toggle field to Customer booking form with two options: 'Manual Entry' (default) and 'Use GPS' (optional mode)",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-28",
+        "summary": "Implement Manual Entry mode location fields: display Pickup Pincode (required, 6-digit validation) and Pickup Area Name (required text field), and conditionally show Drop Pincode (required, 6-digit validation) and Drop Area Name (required text field) only when Trip Type is 'Outstation' AND Journey Type is 'One Way'",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-29",
+        "summary": "Implement Use GPS mode with 'Get My Location' button: when clicked, request browser geolocation permission, capture pickup latitude and longitude coordinates, display captured pickup address text to user, make Pickup Pincode and Pickup Area fields optional (not required), and maintain same Drop field visibility rules (show Drop Pincode and Drop Area only for Outstation + One Way trips)",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-30",
+        "summary": "Implement GPS permission denial fallback: if geolocation permission is denied or fails, automatically switch Location Mode back to 'Manual Entry' and display error message 'Location permission denied. Please enter pickup pincode and area manually.'",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-31",
+        "summary": "Add Contact section to Customer booking form with Phone Number field (required, 10-digit validation) and Landmark field (optional text field)",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-32",
+        "summary": "Remove distance field and fare amount field from Customer booking form if they exist in the current implementation",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-33",
+        "summary": "Display informational message at the bottom of the Customer booking form: 'Fare will be calculated automatically and confirmed by admin pricing rules.'",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-34",
+        "summary": "Update backend Trip data model to include new fields: tripType (Local/Outstation), journeyType (OneWay/RoundTrip), vehicleType (Hatchback/Sedan/SUV/Luxury), durationHours (for Local trips), durationDays (for Outstation trips), startDateTime (for Outstation), endDateTime (for Outstation), pickupPincode, pickupArea, dropPincode (optional), dropArea (optional), pickupLat (optional), pickupLng (optional), phone, landmark (optional)",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-35",
+        "summary": "Update backend createTrip function to accept and validate all new trip fields (tripType, journeyType, vehicleType, duration fields, location fields, contact fields) from the customer booking form",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-36",
+        "summary": "Update frontend RideRequestForm component to replace the existing simple pickup/dropoff form with the comprehensive booking form containing all new fields (Trip Type, Journey Type, Vehicle Type, Hire Duration, Location Mode, Contact) in the specified order, maintaining mobile-friendly single-scroll layout",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-37",
+        "summary": "Update frontend useCreateTrip mutation hook to pass all new trip fields (tripType, journeyType, vehicleType, duration fields, location fields, contact fields) to the backend createTrip function",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useQueries.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useQueries.ts"
+        ]
+      }
+    ]
+  },
+  "changedFiles": [
+    "backend/main.mo",
+    "backend/migration.mo",
+    "build-request.json",
+    "feature_evidence.json",
+    "frontend-file-summaries.txt",
+    "frontend-implementation-plan.json",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/components/AdminTripsTab.tsx",
+    "frontend/src/components/AvailableTripsSection.tsx",
+    "frontend/src/components/CustomerTripList.tsx",
+    "frontend/src/components/DriverTripList.tsx",
+    "frontend/src/components/RideRequestForm.tsx",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
+    "frontend/src/hooks/useQueries.ts",
+    "project_state.json",
+    "scratch/component-selection.json",
+    "spec.md",
+    "spec_vs_diff_report.json"
+  ]
+}

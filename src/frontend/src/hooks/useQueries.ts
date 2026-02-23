@@ -1,0 +1,194 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useActor } from './useActor';
+import type { Trip, UserProfile, AppRole, TripType, JourneyType, VehicleType, Duration, Location, Time } from '../backend';
+
+// Get caller's user profile
+export function useGetCallerUserProfile() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  const query = useQuery<UserProfile | null>({
+    queryKey: ['currentUserProfile'],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.getCallerUserProfile();
+    },
+    enabled: !!actor && !actorFetching,
+    retry: false,
+  });
+
+  return {
+    ...query,
+    isLoading: actorFetching || query.isLoading,
+    isFetched: !!actor && query.isFetched,
+  };
+}
+
+// Save caller's user profile
+export function useSaveCallerUserProfile() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (profile: UserProfile) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.saveCallerUserProfile(profile);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+    },
+  });
+}
+
+// Update user role and lock it permanently
+export function useUpdateUserRoleAndLock() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (role: AppRole) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.updateUserRoleAndLock(role);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+    },
+  });
+}
+
+// Create a new trip with comprehensive fields
+export function useCreateTrip() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      tripType,
+      journeyType,
+      vehicleType,
+      duration,
+      startDateTime,
+      endDateTime,
+      pickupLocation,
+      dropoffLocation,
+      phone,
+      landmark,
+    }: {
+      tripType: TripType;
+      journeyType: JourneyType;
+      vehicleType: VehicleType;
+      duration: Duration;
+      startDateTime: Time | null;
+      endDateTime: Time | null;
+      pickupLocation: Location;
+      dropoffLocation: Location | null;
+      phone: string;
+      landmark: string | null;
+    }) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.createTrip(
+        tripType,
+        journeyType,
+        vehicleType,
+        duration,
+        startDateTime,
+        endDateTime,
+        pickupLocation,
+        dropoffLocation,
+        phone,
+        landmark
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myTrips'] });
+    },
+  });
+}
+
+// Get caller's trips
+export function useGetMyTrips() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<Trip[]>({
+    queryKey: ['myTrips'],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getMyTrips();
+    },
+    enabled: !!actor && !actorFetching,
+  });
+}
+
+// Get requested trips (for drivers)
+export function useGetRequestedTrips() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<Trip[]>({
+    queryKey: ['requestedTrips'],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getRequestedTrips();
+    },
+    enabled: !!actor && !actorFetching,
+  });
+}
+
+// Accept a trip (driver)
+export function useAcceptTrip() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (tripId: string) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.acceptTrip(tripId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['requestedTrips'] });
+      queryClient.invalidateQueries({ queryKey: ['myTrips'] });
+    },
+  });
+}
+
+// Complete a trip (driver)
+export function useCompleteTrip() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (tripId: string) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.completeTrip(tripId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myTrips'] });
+    },
+  });
+}
+
+// Get all users (admin)
+export function useGetAllUsers() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<UserProfile[]>({
+    queryKey: ['allUsers'],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getAllUsers();
+    },
+    enabled: !!actor && !actorFetching,
+  });
+}
+
+// Get all trips (admin)
+export function useGetAllTrips() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<Trip[]>({
+    queryKey: ['allTrips'],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getAllTrips();
+    },
+    enabled: !!actor && !actorFetching,
+  });
+}
