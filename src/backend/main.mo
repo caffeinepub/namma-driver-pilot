@@ -6,10 +6,12 @@ import Runtime "mo:core/Runtime";
 import Principal "mo:core/Principal";
 import Time "mo:core/Time";
 import Text "mo:core/Text";
-import Nat64 "mo:core/Nat64";
+import Nat64 "mo:core/Nat";
+import Nat "mo:core/Nat";
+import Migration "migration";
+
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
-import Migration "migration";
 
 (with migration = Migration.run)
 actor {
@@ -27,12 +29,33 @@ actor {
     isLocked : Bool;
   };
 
+  public type VehicleExperience = {
+    #hatchback;
+    #sedan;
+    #suv;
+    #luxury;
+  };
+
+  public type TransmissionComfort = {
+    #manual;
+    #automatic;
+    #ev;
+  };
+
   public type UserProfile = {
     principalId : Principal;
     email : Text;
     fullName : Text;
     role : LockedRole;
     createdTime : Time.Time;
+    servicePincode : Text;
+    serviceAreaName : Text;
+    vehicleExperience : [VehicleExperience];
+    transmissionComfort : [TransmissionComfort];
+    isAvailable : Bool;
+    totalEarnings : Nat64;
+    languages : ?[Text];
+    isVerified : ?Bool;
   };
 
   public type TripStatus = {
@@ -87,6 +110,7 @@ actor {
     landmark : ?Text;
     status : TripStatus;
     createdTime : Time.Time;
+    transmissionType : TransmissionComfort;
   };
 
   module Profile {
@@ -263,7 +287,8 @@ actor {
     pickupLocation : Location,
     dropoffLocation : ?Location,
     phone : Text,
-    landmark : ?Text
+    landmark : ?Text,
+    transmissionType : TransmissionComfort
   ) : async Text {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only authenticated users can create trips");
@@ -290,6 +315,7 @@ actor {
       landmark;
       status = #requested;
       createdTime = Time.now();
+      transmissionType;
     };
 
     trips.add(tripId, newTrip);
@@ -330,11 +356,84 @@ actor {
       Runtime.trap("Unauthorized: Only drivers can view requested trips");
     };
 
-    let requestedTrips = trips.values().toList<Trip>().filter(
-      func(trip) { trip.status == #requested }
+    let driverProfile = switch (userProfiles.get(caller)) {
+      case (null) {
+        Runtime.trap("Driver profile not found");
+      };
+      case (?profile) { profile };
+    };
+
+    // Step 1: Verify driver availability and verification status
+    if (not driverProfile.isAvailable) {
+      Runtime.trap("Driver is not available");
+    };
+
+    switch (driverProfile.isVerified) {
+      case (?isVerified) {
+        if (not isVerified) {
+          Runtime.trap("Driver is not verified");
+        };
+      };
+      case (null) { () };
+    };
+
+    // Step 2: Check if driver has any active trips
+    let activeTripExists = switch (trips.values().find(func(trip) {
+      switch (trip.driverId) {
+        case (?driverId) {
+          driverId == caller and trip.status == #accepted;
+        };
+        case (null) { false };
+      };
+    })) {
+      case (null) { false };
+      case (?_) { true };
+    };
+
+    if (activeTripExists) {
+      Runtime.trap("Driver has an active trip and cannot accept new requests");
+    };
+
+    let matchingAreas = List.empty<Trip>();
+    let otherRequests = List.empty<Trip>();
+
+    let tripsIter = trips.values();
+    tripsIter.forEach(
+      func(trip) {
+        // Step 3: Filter by required criteria
+        if (
+          trip.status == #requested
+            and trip.pickupLocation.pincode == driverProfile.servicePincode
+        ) {
+          let hasVehicleExperience = driverProfile.vehicleExperience.find(
+            func(experience) { experience == trip.vehicleType }
+          );
+
+          let hasTransmissionComfort = driverProfile.transmissionComfort.find(
+            func(comfort) { comfort == trip.transmissionType }
+          );
+
+          if (hasVehicleExperience != null and hasTransmissionComfort != null) {
+            // Step 4: Smart ordering based on area name match
+            let pickupAreaLower = trip.pickupLocation.area.toLower();
+            let serviceAreaLower = driverProfile.serviceAreaName.toLower();
+
+            if (pickupAreaLower.contains(#text serviceAreaLower)) {
+              matchingAreas.add(trip);
+            } else {
+              otherRequests.add(trip);
+            };
+          };
+        };
+      }
     );
 
-    requestedTrips.toArray();
+    // Combine matching areas and other requests
+    let resultList = List.empty<Trip>();
+    resultList.addAll(matchingAreas.values());
+    resultList.addAll(otherRequests.values());
+
+    resultList.toArray();
   };
 
   public shared ({ caller }) func acceptTrip(tripId : Text) : async () {

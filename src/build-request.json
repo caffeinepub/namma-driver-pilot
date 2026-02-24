@@ -1,388 +1,91 @@
 {
   "kind": "build_request",
-  "title": "Replace Customer booking form with comprehensive trip planning fields",
+  "title": "Driver Available Trips Filtering and Smart Ordering",
   "projectName": "Namma Driver Pilot",
   "priority": "normal",
   "requirements": [
     {
-      "id": "REQ-21",
-      "text": "Add Trip Type field to Customer booking form with two radio options: 'Local' and 'Outstation' (required field, no default selection)",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-user-booking-form-update"
-        ],
-        "quotes": [
-          "FIELDS + LOGIC (in this exact order):\n\n1) Trip Type (required)\n- Local\n- Outstation"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Trip Type field displays as first field in the booking form",
-        "Two radio button options: 'Local' and 'Outstation'",
-        "Field is marked as required and cannot be submitted empty",
-        "Selection affects visibility and behavior of subsequent fields (Hire Duration and Drop location fields)"
-      ]
-    },
-    {
-      "id": "REQ-22",
-      "text": "Add Journey Type field to Customer booking form with two radio options: 'One Way' and 'Round Trip' (required field, no default selection)",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-user-booking-form-update"
-        ],
-        "quotes": [
-          "2) Journey Type (required)\n- One Way\n- Round Trip"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Journey Type field displays as second field in the booking form",
-        "Two radio button options: 'One Way' and 'Round Trip'",
-        "Field is marked as required and cannot be submitted empty",
-        "Selection affects visibility of Drop location fields (combined with Trip Type)"
-      ]
-    },
-    {
-      "id": "REQ-23",
-      "text": "Display informational popup modal when customer selects a Journey Type option, showing explanation text based on selection: 'One Way: Pickup & Drop are at different locations in the city.' for One Way, or 'Round Trip: Pickup & Drop are the same location in the city (driver returns to pickup).' for Round Trip, with an OK button to dismiss",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-user-booking-form-update"
-        ],
-        "quotes": [
-          "When customer selects Journey Type, show a popup message:\n\nIf ONE WAY:\n\"One Way: Pickup & Drop are at different locations in the city.\"\n\nIf ROUND TRIP:\n\"Round Trip: Pickup & Drop are the same location in the city (driver returns to pickup).\"\n\nPopup has OK button."
-        ]
-      },
-      "acceptanceCriteria": [
-        "Popup appears immediately when user clicks either One Way or Round Trip radio button",
-        "Popup displays correct explanation text based on selected Journey Type",
-        "Popup has a single OK button that dismisses the modal",
-        "Popup is modal and must be dismissed before continuing form interaction"
-      ]
-    },
-    {
-      "id": "REQ-24",
-      "text": "Add Vehicle Type dropdown field to Customer booking form with four options: 'Hatchback', 'Sedan', 'SUV', 'Luxury' (required field, no default selection)",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-user-booking-form-update"
-        ],
-        "quotes": [
-          "3) Vehicle Type (required)\n- Hatchback\n- Sedan\n- SUV\n- Luxury"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Vehicle Type field displays as third field in the booking form",
-        "Dropdown includes exactly four options: Hatchback, Sedan, SUV, Luxury",
-        "Field is marked as required and cannot be submitted without selection",
-        "Selected vehicle type is saved to trip record"
-      ]
-    },
-    {
-      "id": "REQ-25",
-      "text": "Implement smart Hire Duration field for Local trips: display dropdown with options 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 hours, plus 'Custom' option that reveals a number input field (minimum value 2 hours) when selected",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-user-booking-form-update"
-        ],
-        "quotes": [
-          "4) Hire Duration (required)\nIf Local:\n- Minimum 2 hours\n- Dropdown: 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, Custom\n- If Custom selected, allow manual number input (must be >= 2)"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Hire Duration field only displays when Trip Type is 'Local'",
-        "Dropdown shows hour options from 2 to 12, plus 'Custom' option",
-        "When 'Custom' is selected, a number input field appears",
-        "Custom input enforces minimum value of 2 hours",
-        "Field is required when Local trip type is selected",
-        "Selected duration in hours is saved to trip record as durationHours"
-      ]
-    },
-    {
-      "id": "REQ-26",
-      "text": "Implement Hire Duration for Outstation trips: display Start Date & Time picker and End Date & Time picker fields (both required), auto-calculate duration in calendar days using formula durationDays = ceil((endDateTime - startDateTime) / 24 hours), display calculated duration as 'Duration: X days', enforce minimum 1 day and validate that End must be after Start (show error if End <= Start)",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-user-booking-form-update",
-          "msg-user-clarification"
-        ],
-        "quotes": [
-          "If Outstation:\n- Start Date & Time picker (required)\n- End Date & Time picker (required)\n- Auto-calculate days and show: \"Duration: X days\"\n- Minimum 1 day\n- If End < Start, show error",
-          "Count duration in CALENDAR DAYS, not strict 24-hour blocks.\n- Logic: durationDays = ceil( (endDateTime - startDateTime) / 24 hours )\n- Minimum 1 day always.\n- End must be AFTER start. If end <= start: show error and block submit."
-        ]
-      },
-      "acceptanceCriteria": [
-        "Start Date & Time and End Date & Time pickers only display when Trip Type is 'Outstation'",
-        "Both datetime pickers are required fields",
-        "Duration is calculated automatically using calendar days formula: ceil((end - start) / 24 hours)",
-        "Duration display shows 'Duration: X days' text below the End datetime picker",
-        "Minimum duration is 1 day (even if time difference is less than 24 hours)",
-        "If End datetime is before or equal to Start datetime, display validation error and prevent form submission",
-        "Start datetime, End datetime, and calculated durationDays are saved to trip record"
-      ]
-    },
-    {
-      "id": "REQ-27",
-      "text": "Add Location Mode toggle field to Customer booking form with two options: 'Manual Entry' (default) and 'Use GPS' (optional mode)",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-user-booking-form-update"
-        ],
-        "quotes": [
-          "5) Location Mode (required toggle)\n- Manual Entry (default)\n- Use GPS (optional)"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Location Mode toggle displays with 'Manual Entry' as default selection",
-        "Toggle includes two options: 'Manual Entry' and 'Use GPS'",
-        "Switching modes changes which location input fields are displayed and required",
-        "Toggle is always visible and user can switch between modes at any time"
-      ]
-    },
-    {
-      "id": "REQ-28",
-      "text": "Implement Manual Entry mode location fields: display Pickup Pincode (required, 6-digit validation) and Pickup Area Name (required text field), and conditionally show Drop Pincode (required, 6-digit validation) and Drop Area Name (required text field) only when Trip Type is 'Outstation' AND Journey Type is 'One Way'",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-user-booking-form-update"
-        ],
-        "quotes": [
-          "If Manual Entry:\n- Pickup Pincode (required, 6 digits)\n- Pickup Area Name (required)\n\nFor Outstation + One Way ONLY, also show:\n- Drop Pincode (required, 6 digits)\n- Drop Area Name (required)\n\nFor Local OR Round Trip:\n- Drop fields hidden and not required"
-        ]
-      },
-      "acceptanceCriteria": [
-        "When Location Mode is 'Manual Entry', display Pickup Pincode and Pickup Area Name fields",
-        "Pickup Pincode field validates for exactly 6 digits",
-        "Pickup Area Name is a required text field",
-        "Drop Pincode and Drop Area Name fields only display when Trip Type is 'Outstation' AND Journey Type is 'One Way'",
-        "Drop fields are hidden for Local trips or Round Trip journeys",
-        "Drop Pincode validates for exactly 6 digits when visible",
-        "All visible location fields are required for form submission",
-        "Values are saved to trip record as pickupPincode, pickupArea, dropPincode, dropArea"
-      ]
-    },
-    {
-      "id": "REQ-29",
-      "text": "Implement Use GPS mode with 'Get My Location' button: when clicked, request browser geolocation permission, capture pickup latitude and longitude coordinates, display captured pickup address text to user, make Pickup Pincode and Pickup Area fields optional (not required), and maintain same Drop field visibility rules (show Drop Pincode and Drop Area only for Outstation + One Way trips)",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-user-booking-form-update",
-          "msg-user-clarification"
-        ],
-        "quotes": [
-          "If Use GPS:\n- Ask permission\n- Capture pickup lat/lng\n- Show captured pickup address text\n- Manual Pickup Pincode/Area become optional (not required)\n- Drop fields still follow same rule above (outstation one-way requires drop)",
-          "When customer selects \"Use GPS\", show a clear button: \"Get My Location\".\n- Only when they click that button, request browser location permission."
-        ]
-      },
-      "acceptanceCriteria": [
-        "When Location Mode is 'Use GPS', display a 'Get My Location' button",
-        "Clicking the button triggers browser geolocation API permission request",
-        "Upon successful permission grant, capture latitude and longitude coordinates",
-        "Display captured pickup address text to the user (can be formatted coordinates if reverse geocoding is not available)",
-        "Pickup Pincode and Pickup Area fields become optional when GPS coordinates are captured",
-        "Drop Pincode and Drop Area fields follow same visibility rules: only required for Outstation + One Way trips",
-        "GPS coordinates are saved to trip record as pickupLat and pickupLng"
-      ]
-    },
-    {
-      "id": "REQ-30",
-      "text": "Implement GPS permission denial fallback: if geolocation permission is denied or fails, automatically switch Location Mode back to 'Manual Entry' and display error message 'Location permission denied. Please enter pickup pincode and area manually.'",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-user-clarification"
-        ],
-        "quotes": [
-          "If permission is denied or fails: automatically fall back to Manual Entry mode and show a message:\n  \"Location permission denied. Please enter pickup pincode and area manually.\"\n- GPS is optional; app must remain usable without it."
-        ]
-      },
-      "acceptanceCriteria": [
-        "When geolocation permission is denied, Location Mode automatically switches to 'Manual Entry'",
-        "Error message displays: 'Location permission denied. Please enter pickup pincode and area manually.'",
-        "Manual Entry fields (Pickup Pincode and Pickup Area) become required again",
-        "Form remains fully functional without GPS capability",
-        "User can attempt GPS location again by switching back to 'Use GPS' mode"
-      ]
-    },
-    {
-      "id": "REQ-31",
-      "text": "Add Contact section to Customer booking form with Phone Number field (required, 10-digit validation) and Landmark field (optional text field)",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-user-booking-form-update"
-        ],
-        "quotes": [
-          "6) Contact\n- Phone Number (required, 10 digits)\n- Landmark (optional)"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Contact section displays with Phone Number and Landmark fields",
-        "Phone Number field is required and validates for exactly 10 digits",
-        "Landmark field is optional text input",
-        "Values are saved to trip record as phone and landmark"
-      ]
-    },
-    {
-      "id": "REQ-32",
-      "text": "Remove distance field and fare amount field from Customer booking form if they exist in the current implementation",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-user-booking-form-update"
-        ],
-        "quotes": [
-          "7) Remove completely if present:\n- Distance (manual)\n- Fare amount (manual entry)"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Distance input field is removed from the booking form",
-        "Fare amount input field is removed from the booking form",
-        "No manual distance or fare entry is possible for customers"
-      ]
-    },
-    {
-      "id": "REQ-33",
-      "text": "Display informational message at the bottom of the Customer booking form: 'Fare will be calculated automatically and confirmed by admin pricing rules.'",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-user-booking-form-update"
-        ],
-        "quotes": [
-          "8) Bottom of form:\nShow \"Fare will be calculated automatically and confirmed by admin pricing rules.\""
-        ]
-      },
-      "acceptanceCriteria": [
-        "Message displays at the bottom of the booking form, before the submit button",
-        "Exact text: 'Fare will be calculated automatically and confirmed by admin pricing rules.'",
-        "Message is clearly visible and uses appropriate styling (info/muted style)"
-      ]
-    },
-    {
-      "id": "REQ-34",
-      "text": "Update backend Trip data model to include new fields: tripType (Local/Outstation), journeyType (OneWay/RoundTrip), vehicleType (Hatchback/Sedan/SUV/Luxury), durationHours (for Local trips), durationDays (for Outstation trips), startDateTime (for Outstation), endDateTime (for Outstation), pickupPincode, pickupArea, dropPincode (optional), dropArea (optional), pickupLat (optional), pickupLng (optional), phone, landmark (optional)",
+      "id": "REQ-61",
+      "text": "Update backend getRequestedTrips function to filter trips for driver's Available Trips section using ALL 7 criteria: (1) trip.status == \"requested\", (2) driver.isAvailable == true, (3) if driver.isVerified field exists then require driver.isVerified == true otherwise skip this check, (4) driver is NOT currently on an active trip (no trips assigned to driver with status in: \"accepted\", \"driver_arriving\", \"arrived\", \"on_trip\"), (5) trip.pickupPincode == driver.servicePincode, (6) trip.vehicleType is included in driver.vehicleExperience array, (7) trip.transmissionType is included in driver.transmissionComfort array",
       "target": "backend",
       "source": {
         "messageIds": [
-          "msg-user-booking-form-update"
+          "msg-recent"
         ],
         "quotes": [
-          "SAVE THESE VALUES into booking/trip record:\ntripType, journeyType, vehicleType,\ndurationHours OR durationDays,\nstartDateTime/endDateTime (for outstation),\npickupPincode, pickupArea, dropPincode, dropArea,\npickupLat, pickupLng (if GPS),\nphone, landmark"
+          "Available Trips must show ONLY trips where: 1. trip.status = \"requested\" 2. driver.isAvailable = true 3. driver.isVerified = true (if exists, otherwise ignore) 4. driver is NOT currently on active trip 5. trip.pickupPincode == driver.servicePincode 6. trip.vehicleType is included in driver.vehicleExperience array 7. trip.transmissionType is included in driver.transmissionComfort array"
         ]
       },
       "acceptanceCriteria": [
-        "Trip type definition includes tripType field with Text type",
-        "Trip type includes journeyType field with Text type",
-        "Trip type includes vehicleType field with Text type",
-        "Trip type includes optional durationHours field with Nat type for Local trips",
-        "Trip type includes optional durationDays field with Nat type for Outstation trips",
-        "Trip type includes optional startDateTime and endDateTime fields with Int type (Unix timestamp) for Outstation trips",
-        "Trip type includes pickupPincode and pickupArea fields with Text type",
-        "Trip type includes optional dropPincode and dropArea fields with Text type",
-        "Trip type includes optional pickupLat and pickupLng fields with Float type for GPS coordinates",
-        "Trip type includes phone field with Text type",
-        "Trip type includes optional landmark field with Text type",
-        "All fields are properly serialized and deserialized in backend operations"
+        "Backend getRequestedTrips function filters trips by status == \"requested\"",
+        "Function checks driver.isAvailable == true before returning trips",
+        "Function checks driver.isVerified == true if the field exists in UserProfile, otherwise skips this check",
+        "Function verifies driver has no active trips with status \"accepted\", \"driver_arriving\", \"arrived\", or \"on_trip\"",
+        "Function filters trips where trip.pickupPincode matches driver.servicePincode exactly",
+        "Function filters trips where trip.vehicleType is contained in driver.vehicleExperience array",
+        "Function filters trips where trip.transmissionType is contained in driver.transmissionComfort array",
+        "Only trips matching ALL 7 criteria are returned to driver"
       ]
     },
     {
-      "id": "REQ-35",
-      "text": "Update backend createTrip function to accept and validate all new trip fields (tripType, journeyType, vehicleType, duration fields, location fields, contact fields) from the customer booking form",
+      "id": "REQ-62",
+      "text": "Implement smart ordering logic in backend getRequestedTrips function: trips where trip.pickupAreaName contains driver.serviceAreaName (case-insensitive substring match) should appear FIRST, followed by other same-pincode trips that passed all filtering criteria",
       "target": "backend",
       "source": {
         "messageIds": [
-          "msg-user-booking-form-update"
+          "msg-recent"
         ],
         "quotes": [
-          "SAVE THESE VALUES into booking/trip record:\ntripType, journeyType, vehicleType,\ndurationHours OR durationDays,\nstartDateTime/endDateTime (for outstation),\npickupPincode, pickupArea, dropPincode, dropArea,\npickupLat, pickupLng (if GPS),\nphone, landmark"
+          "Smart Ordering: - Trips where trip.pickupAreaName matches driver.serviceAreaName (case-insensitive contains match) appear FIRST - Other same-pincode trips appear BELOW"
         ]
       },
       "acceptanceCriteria": [
-        "createTrip function signature updated to accept all new trip parameters",
-        "Function validates that required fields are present based on tripType and journeyType",
-        "For Local trips, durationHours is required and must be >= 2",
-        "For Outstation trips, startDateTime, endDateTime, and durationDays are required",
-        "pickupPincode and pickupArea are required when GPS coordinates are not provided",
-        "dropPincode and dropArea are required only for Outstation + One Way trips",
-        "phone field validation ensures 10-digit format",
-        "All validated fields are stored in the Trip record",
-        "Function returns appropriate error messages for validation failures"
+        "Backend performs case-insensitive substring match checking if trip.pickupAreaName contains driver.serviceAreaName",
+        "Trips with matching area names are sorted to appear first in the returned array",
+        "Other trips that passed filtering criteria appear below the area-matched trips",
+        "Ordering is consistent and deterministic across multiple requests"
       ]
     },
     {
-      "id": "REQ-36",
-      "text": "Update frontend RideRequestForm component to replace the existing simple pickup/dropoff form with the comprehensive booking form containing all new fields (Trip Type, Journey Type, Vehicle Type, Hire Duration, Location Mode, Contact) in the specified order, maintaining mobile-friendly single-scroll layout",
+      "id": "REQ-63",
+      "text": "Update frontend AvailableTripsSection component to display filtered and ordered trips from backend without any additional client-side filtering, maintaining existing UI layout and trip card display format",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-user-booking-form-update",
-          "msg-user-clarification",
-          "msg-user-final-instruction"
+          "msg-recent"
         ],
         "quotes": [
-          "FIELDS + LOGIC (in this exact order):",
-          "Replace the existing simple booking form completely with the new detailed booking form.\n- Keep UI mobile-friendly (single scroll form).",
-          "Important:\n- Replace the existing simple booking form completely.\n- Keep UI clean and mobile-friendly."
+          "Only update Available Trips filtering and ordering."
         ]
       },
       "acceptanceCriteria": [
-        "RideRequestForm component completely replaced with new comprehensive form",
-        "Fields appear in exact order: Trip Type, Journey Type, Vehicle Type, Hire Duration, Location Mode (with pickup/drop fields), Contact",
-        "Form is mobile-friendly with single-scroll vertical layout",
-        "Form maintains clean UI consistent with existing design system (Tailwind + Shadcn components)",
-        "All field validations work correctly before form submission",
-        "Form submission calls updated backend createTrip function with all new fields",
-        "Success and error toast notifications display appropriately"
-      ]
-    },
-    {
-      "id": "REQ-37",
-      "text": "Update frontend useCreateTrip mutation hook to pass all new trip fields (tripType, journeyType, vehicleType, duration fields, location fields, contact fields) to the backend createTrip function",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-user-booking-form-update"
-        ],
-        "quotes": [
-          "SAVE THESE VALUES into booking/trip record:\ntripType, journeyType, vehicleType,\ndurationHours OR durationDays,\nstartDateTime/endDateTime (for outstation),\npickupPincode, pickupArea, dropPincode, dropArea,\npickupLat, pickupLng (if GPS),\nphone, landmark"
-        ]
-      },
-      "acceptanceCriteria": [
-        "useCreateTrip hook updated to accept all new trip parameters",
-        "Hook passes all fields to backend actor's createTrip function",
-        "Optional fields are handled correctly (undefined/null when not provided)",
-        "Hook invalidates relevant queries after successful trip creation",
-        "Error handling displays appropriate messages for validation failures"
+        "AvailableTripsSection component renders trips returned from backend getRequestedTrips hook",
+        "No additional filtering logic is added in the frontend component",
+        "Existing trip card layout, pickup/dropoff display, and timestamp formatting remain unchanged",
+        "Loading and empty states continue to work correctly"
       ]
     }
   ],
   "constraints": [
-    "Do NOT modify dashboards, matching logic, or admin logic",
-    "Do NOT change any other pages outside the customer booking form",
-    "Only update the customer booking form (RideRequestForm component) and related data validation",
-    "Maintain mobile-friendly UI design consistent with existing design system",
-    "Preserve existing route guards and authentication flow",
-    "Do NOT modify backend/migration.mo unless absolutely necessary for new Trip type fields",
-    "Respect frontend immutable paths: useInternetIdentity hooks, useActor.ts, main.tsx, components/ui directory"
+    "Do NOT implement accept or reject trip functionality",
+    "Do NOT modify customer pages, forms, or logic",
+    "Do NOT modify admin dashboard or admin functions",
+    "Do NOT add rejection logs or new database tables",
+    "Only update Driver Dashboard Available Trips section backend filtering and frontend display",
+    "Do NOT change the existing Accept button behavior or UI in AvailableTripsSection",
+    "Maintain single-actor Motoko architecture in backend/main.mo",
+    "Do NOT modify frontend read-only paths: useInternetIdentity, useActor, main.tsx, components/ui"
   ],
   "nonGoals": [
-    "Modifying driver dashboard or available trips functionality",
-    "Changing admin dashboard or user/trip management views",
-    "Implementing fare calculation logic or pricing rules",
-    "Adding trip matching or assignment algorithms",
-    "Modifying authentication or role selection flows",
-    "Changing navigation or route guards",
-    "Implementing real-time location tracking features",
-    "Adding map visualization or geocoding services",
-    "Modifying existing trip status workflow (requested/accepted/completed)"
+    "Implementing accept trip functionality",
+    "Implementing reject trip functionality",
+    "Adding rejection logs or tracking",
+    "Modifying customer booking flow or forms",
+    "Changing admin dashboard or user/trip management",
+    "Adding new database tables or collections",
+    "Changing My Trips section for drivers",
+    "Modifying trip completion logic",
+    "Adding new trip statuses beyond existing ones"
   ],
   "imageRequirements": {
     "required": [],

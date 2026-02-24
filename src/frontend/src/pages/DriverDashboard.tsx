@@ -1,12 +1,18 @@
+import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AvailableTripsSection from '../components/AvailableTripsSection';
 import DriverTripList from '../components/DriverTripList';
+import DriverProfileSection from '../components/DriverProfileSection';
+import EditDriverProfileModal from '../components/EditDriverProfileModal';
 import { useGetRequestedTrips, useGetMyTrips } from '../hooks/useQueries';
+import { useGetCallerUserProfile } from '../hooks/useGetCallerUserProfile';
 
 export default function DriverDashboard() {
   const { data: requestedTrips, isLoading: loadingRequested } = useGetRequestedTrips();
   const { data: myTrips, isLoading: loadingMyTrips } = useGetMyTrips();
+  const { data: userProfile, isLoading: profileLoading, error: profileError } = useGetCallerUserProfile();
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -14,6 +20,21 @@ export default function DriverDashboard() {
         <h1 className="text-3xl font-bold mb-2">Driver Dashboard</h1>
         <p className="text-muted-foreground">Accept rides and manage your trips</p>
       </div>
+
+      <div className="mb-6">
+        <DriverProfileSection 
+          userProfile={userProfile} 
+          isLoading={profileLoading} 
+          error={profileError}
+          onEditClick={() => setIsEditModalOpen(true)}
+        />
+      </div>
+
+      <EditDriverProfileModal
+        open={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        userProfile={userProfile}
+      />
 
       <Tabs defaultValue="available" className="w-full">
         <TabsList className="grid w-full max-w-md grid-cols-2">

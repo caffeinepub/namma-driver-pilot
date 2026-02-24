@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 7,
+  "projectStateVersion": 15,
   "summary": "Building 'Namma Driver Pilot' - a ride-booking web app MVP with role-based access (customer/driver/admin), booking flow, and admin dashboards using React frontend and Supabase backend",
   "architectural_notes": [
     "Frontend: React (Vite) with mobile-friendly simple UI",
@@ -248,6 +248,134 @@
         "REQ-37"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-when-location-mode-is-set-to-use-gps-in-the-customer-booking-form-hide-pickup-pincode-and-pickup-area-name-fields-completely-make-them-not-visible-and-not-required",
+      "title": "When Location Mode is set to 'Use GPS' in the customer booking form, hide Pickup Pincode and Pickup Area Name fields completely (make them not visible and not required)",
+      "reqIds": [
+        "REQ-38"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-when-location-mode-is-set-to-manual-entry-in-the-customer-booking-form-show-pickup-pincode-and-pickup-area-name-fields-and-make-them-required",
+      "title": "When Location Mode is set to 'Manual Entry' in the customer booking form, show Pickup Pincode and Pickup Area Name fields and make them required",
+      "reqIds": [
+        "REQ-39"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-when-gps-permission-is-denied-or-location-fetch-fails-automatically-switch-location-mode-back-to-manual-entry-display-error-message-location-permission-denied-please-enter-pickup-manually-and-make-pickup-pincode-and-pickup-area-name-fields-visible-and-required",
+      "title": "When GPS permission is denied or location fetch fails, automatically switch Location Mode back to 'Manual Entry', display error message 'Location permission denied. Please enter pickup manually.', and make Pickup Pincode and Pickup Area Name fields visible and required",
+      "reqIds": [
+        "REQ-40"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-my-profile-section-component-on-driver-dashboard-driver-dashboard-that-displays-driver-profile-fields-in-read-only-format-servicepincode-serviceareaname-vehicleexperience-display-as-comma-separated-list-transmissioncomfort-display-as-comma-separated-list-isavailable-display-as-yes-no-or-on-off-totalearnings-display-with-currency-number-format-languages-display-as-comma-separated-list-or-none-if-empty",
+      "title": "Create 'My Profile' section component on Driver Dashboard (/driver/dashboard) that displays driver profile fields in read-only format: servicePincode, serviceAreaName, vehicleExperience (display as comma-separated list), transmissionComfort (display as comma-separated list), isAvailable (display as Yes/No or On/Off), totalEarnings (display with currency/number format), languages (display as comma-separated list or 'None' if empty)",
+      "reqIds": [
+        "REQ-49"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fetch-driver-profile-data-using-existing-usegetcalleruserprofile-hook-and-display-in-my-profile-section-without-requiring-additional-backend-queries",
+      "title": "Fetch driver profile data using existing useGetCallerUserProfile hook and display in 'My Profile' section without requiring additional backend queries",
+      "reqIds": [
+        "REQ-50"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-an-edit-profile-button-to-the-driver-dashboard-page-that-opens-an-editable-form-modal-or-section-for-driver-profile-fields",
+      "title": "Add an 'Edit Profile' button to the Driver Dashboard page that opens an editable form modal or section for driver profile fields",
+      "reqIds": [
+        "REQ-51"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-editable-profile-form-with-servicepincode-field-required-text-input-with-validation",
+      "title": "Create editable profile form with servicePincode field (required, text input with validation)",
+      "reqIds": [
+        "REQ-52"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-editable-profile-form-with-serviceareaname-field-required-text-input-with-validation",
+      "title": "Create editable profile form with serviceAreaName field (required, text input with validation)",
+      "reqIds": [
+        "REQ-53"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-editable-profile-form-with-vehicleexperience-field-as-multi-select-checkboxes-with-options-hatchback-sedan-suv-luxury",
+      "title": "Create editable profile form with vehicleExperience field as multi-select checkboxes with options: Hatchback, Sedan, SUV, Luxury",
+      "reqIds": [
+        "REQ-54"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-editable-profile-form-with-transmissioncomfort-field-as-multi-select-checkboxes-with-options-manual-automatic-ev",
+      "title": "Create editable profile form with transmissionComfort field as multi-select checkboxes with options: Manual, Automatic, EV",
+      "reqIds": [
+        "REQ-55"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-editable-profile-form-with-languages-field-optional-text-input-or-multi-select-implementation",
+      "title": "Create editable profile form with languages field (optional, text input or multi-select implementation)",
+      "reqIds": [
+        "REQ-56"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-editable-profile-form-with-isavailable-field-as-a-toggle-switch",
+      "title": "Create editable profile form with isAvailable field as a toggle switch",
+      "reqIds": [
+        "REQ-57"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-save-button-in-the-profile-edit-form-that-calls-the-existing-savecalleruserprofile-backend-function-with-all-form-field-values",
+      "title": "Implement Save button in the profile edit form that calls the existing saveCallerUserProfile backend function with all form field values",
+      "reqIds": [
+        "REQ-58"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-after-successful-save-immediately-update-the-my-profile-display-card-on-driver-dashboard-to-reflect-the-newly-saved-values-without-requiring-page-refresh",
+      "title": "After successful save, immediately update the My Profile display card on Driver Dashboard to reflect the newly saved values without requiring page refresh",
+      "reqIds": [
+        "REQ-59"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-driver-profile-data-persists-across-page-refresh-and-logout-login-cycles-by-verifying-backend-storage",
+      "title": "Ensure driver profile data persists across page refresh and logout/login cycles by verifying backend storage",
+      "reqIds": [
+        "REQ-60"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-frontend-availabletripssection-component-to-display-filtered-and-ordered-trips-from-backend-without-any-additional-client-side-filtering-maintaining-existing-ui-layout-and-trip-card-display-format",
+      "title": "Update frontend AvailableTripsSection component to display filtered and ordered trips from backend without any additional client-side filtering, maintaining existing UI layout and trip card display format",
+      "reqIds": [
+        "REQ-63"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -432,6 +560,140 @@
       "summary": "Update backend createTrip function to accept and validate all new trip fields (tripType, journeyType, vehicleType, duration fields, location fields, contact fields) from the customer booking form",
       "reqIds": [
         "REQ-35"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-46",
+      "summary": "Add driver profile qualification fields: servicePincode (text, required), serviceAreaName (text, required), vehicleExperience (multi-select array: Hatchback/Sedan/SUV/Luxury), transmissionComfort (multi-select array: Manual/Automatic/EV), isAvailable (boolean toggle, default false), totalEarnings (number, default 0), languages (optional list)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-47",
+      "summary": "Display driver profile fields (servicePincode, serviceAreaName, vehicleExperience, transmissionComfort, isAvailable, totalEarnings, languages) in 'My Profile' section on Driver dashboard as read-only display",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-48",
+      "summary": "Add servicePincode field to backend UserProfile type as Text (required field)",
+      "reqIds": [
+        "REQ-41"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-49",
+      "summary": "Add serviceAreaName field to backend UserProfile type as Text (required field)",
+      "reqIds": [
+        "REQ-42"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-50",
+      "summary": "Add vehicleExperience field to backend UserProfile type as array/list storing multi-select values: Hatchback, Sedan, SUV, Luxury",
+      "reqIds": [
+        "REQ-43"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-51",
+      "summary": "Add transmissionComfort field to backend UserProfile type as array/list storing multi-select values: Manual, Automatic, EV",
+      "reqIds": [
+        "REQ-44"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-52",
+      "summary": "Add isAvailable field to backend UserProfile type as boolean with default value false",
+      "reqIds": [
+        "REQ-45"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-53",
+      "summary": "Add totalEarnings field to backend UserProfile type as number with default value 0",
+      "reqIds": [
+        "REQ-46"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-54",
+      "summary": "Add languages field to backend UserProfile type as optional array/list",
+      "reqIds": [
+        "REQ-47"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-55",
+      "summary": "Update backend saveCallerUserProfile or equivalent profile update function to accept and persist the new driver profile fields: servicePincode, serviceAreaName, vehicleExperience, transmissionComfort, isAvailable, totalEarnings, languages",
+      "reqIds": [
+        "REQ-48"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-56",
+      "summary": "Add Edit Profile button to Driver Dashboard that opens an editable form for driver profile fields",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-57",
+      "summary": "Create editable profile form with fields: servicePincode (required), serviceAreaName (required), vehicleExperience (multi-select checkboxes), transmissionComfort (multi-select checkboxes), languages (text or multi-select), isAvailable (toggle)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-58",
+      "summary": "Implement Save button in profile edit form that persists data to backend using existing saveCallerUserProfile function",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-59",
+      "summary": "After saving profile, immediately update My Profile section display card to reflect saved values",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-60",
+      "summary": "Ensure driver profile data persists across page refresh and logout/login cycles",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-61",
+      "summary": "Driver Available Trips filtering: show only trips matching all 7 criteria (status=requested, driver isAvailable=true, isVerified=true if exists, driver NOT on active trip, pickupPincode matches driver servicePincode, vehicleType in driver vehicleExperience, transmissionType in driver transmissionComfort)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-62",
+      "summary": "Smart ordering for Driver Available Trips: trips where pickupAreaName contains driver serviceAreaName (case-insensitive) appear FIRST, other same-pincode trips below",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-63",
+      "summary": "Update backend getRequestedTrips function to filter trips for driver's Available Trips section using ALL 7 criteria: (1) trip.status == \"requested\", (2) driver.isAvailable == true, (3) if driver.isVerified field exists then require driver.isVerified == true otherwise skip this check, (4) driver is NOT currently on an active trip (no trips assigned to driver with status in: \"accepted\", \"driver_arriving\", \"arrived\", \"on_trip\"), (5) trip.pickupPincode == driver.servicePincode, (6) trip.vehicleType is included in driver.vehicleExperience array, (7) trip.transmissionType is included in driver.transmissionComfort array",
+      "reqIds": [
+        "REQ-61"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-64",
+      "summary": "Implement smart ordering logic in backend getRequestedTrips function: trips where trip.pickupAreaName contains driver.serviceAreaName (case-insensitive substring match) should appear FIRST, followed by other same-pincode trips that passed all filtering criteria",
+      "reqIds": [
+        "REQ-62"
       ],
       "status": "pending"
     }

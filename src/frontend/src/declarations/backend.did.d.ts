@@ -25,10 +25,14 @@ export interface Location {
 }
 export interface LockedRole { 'role' : AppRole, 'isLocked' : boolean }
 export type Time = bigint;
+export type TransmissionComfort = { 'ev' : null } |
+  { 'automatic' : null } |
+  { 'manual' : null };
 export interface Trip {
   'status' : TripStatus,
   'driverId' : [] | [Principal],
   'vehicleType' : VehicleType,
+  'transmissionType' : TransmissionComfort,
   'duration' : Duration,
   'tripType' : TripType,
   'dropoffLocation' : [] | [Location],
@@ -49,15 +53,27 @@ export type TripStatus = { 'requested' : null } |
 export type TripType = { 'local' : null } |
   { 'outstation' : null };
 export interface UserProfile {
+  'serviceAreaName' : string,
+  'servicePincode' : string,
   'role' : LockedRole,
+  'vehicleExperience' : Array<VehicleExperience>,
+  'languages' : [] | [Array<string>],
+  'isAvailable' : boolean,
   'fullName' : string,
   'createdTime' : Time,
   'email' : string,
+  'isVerified' : [] | [boolean],
+  'totalEarnings' : bigint,
+  'transmissionComfort' : Array<TransmissionComfort>,
   'principalId' : Principal,
 }
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
+export type VehicleExperience = { 'suv' : null } |
+  { 'sedan' : null } |
+  { 'luxury' : null } |
+  { 'hatchback' : null };
 export type VehicleType = { 'suv' : null } |
   { 'sedan' : null } |
   { 'luxury' : null } |
@@ -79,6 +95,7 @@ export interface _SERVICE {
       [] | [Location],
       string,
       [] | [string],
+      TransmissionComfort,
     ],
     string
   >,

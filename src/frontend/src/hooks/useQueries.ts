@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
-import type { Trip, UserProfile, AppRole, TripType, JourneyType, VehicleType, Duration, Location, Time } from '../backend';
+import type { Trip, UserProfile, AppRole, TripType, JourneyType, Duration, Location, Time, TransmissionComfort } from '../backend';
 
 // Get caller's user profile
 export function useGetCallerUserProfile() {
@@ -55,6 +55,9 @@ export function useUpdateUserRoleAndLock() {
   });
 }
 
+// Define VehicleType locally since it's used in Trip but not exported from backend
+type VehicleType = 'hatchback' | 'sedan' | 'suv' | 'luxury';
+
 // Create a new trip with comprehensive fields
 export function useCreateTrip() {
   const { actor } = useActor();
@@ -72,6 +75,7 @@ export function useCreateTrip() {
       dropoffLocation,
       phone,
       landmark,
+      transmissionType,
     }: {
       tripType: TripType;
       journeyType: JourneyType;
@@ -83,19 +87,21 @@ export function useCreateTrip() {
       dropoffLocation: Location | null;
       phone: string;
       landmark: string | null;
+      transmissionType: TransmissionComfort;
     }) => {
       if (!actor) throw new Error('Actor not available');
       return actor.createTrip(
         tripType,
         journeyType,
-        vehicleType,
+        vehicleType as any,
         duration,
         startDateTime,
         endDateTime,
         pickupLocation,
         dropoffLocation,
         phone,
-        landmark
+        landmark,
+        transmissionType
       );
     },
     onSuccess: () => {

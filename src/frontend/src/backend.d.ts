@@ -21,6 +21,7 @@ export interface Trip {
     status: TripStatus;
     driverId?: Principal;
     vehicleType: VehicleType;
+    transmissionType: TransmissionComfort;
     duration: Duration;
     tripType: TripType;
     dropoffLocation?: Location;
@@ -43,10 +44,18 @@ export type Duration = {
     days: bigint;
 };
 export interface UserProfile {
+    serviceAreaName: string;
+    servicePincode: string;
     role: LockedRole;
+    vehicleExperience: Array<VehicleExperience>;
+    languages?: Array<string>;
+    isAvailable: boolean;
     fullName: string;
     createdTime: Time;
     email: string;
+    isVerified?: boolean;
+    totalEarnings: bigint;
+    transmissionComfort: Array<TransmissionComfort>;
     principalId: Principal;
 }
 export enum AppRole {
@@ -57,6 +66,11 @@ export enum AppRole {
 export enum JourneyType {
     roundTrip = "roundTrip",
     oneWay = "oneWay"
+}
+export enum TransmissionComfort {
+    ev = "ev",
+    automatic = "automatic",
+    manual = "manual"
 }
 export enum TripStatus {
     requested = "requested",
@@ -73,7 +87,7 @@ export enum UserRole {
     user = "user",
     guest = "guest"
 }
-export enum VehicleType {
+export enum VehicleExperience {
     suv = "suv",
     sedan = "sedan",
     luxury = "luxury",
@@ -83,7 +97,7 @@ export interface backendInterface {
     acceptTrip(tripId: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     completeTrip(tripId: string): Promise<void>;
-    createTrip(tripType: TripType, journeyType: JourneyType, vehicleType: VehicleType, duration: Duration, startDateTime: Time | null, endDateTime: Time | null, pickupLocation: Location, dropoffLocation: Location | null, phone: string, landmark: string | null): Promise<string>;
+    createTrip(tripType: TripType, journeyType: JourneyType, vehicleType: VehicleType, duration: Duration, startDateTime: Time | null, endDateTime: Time | null, pickupLocation: Location, dropoffLocation: Location | null, phone: string, landmark: string | null, transmissionType: TransmissionComfort): Promise<string>;
     getAllTrips(): Promise<Array<Trip>>;
     getAllUsers(): Promise<Array<UserProfile>>;
     getCallerUserProfile(): Promise<UserProfile | null>;

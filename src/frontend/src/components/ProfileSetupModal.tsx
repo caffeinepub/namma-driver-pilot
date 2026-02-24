@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { type UserProfile } from '../backend';
+import { type UserProfile, AppRole } from '../backend';
 
 export default function ProfileSetupModal() {
   const { identity } = useInternetIdentity();
@@ -32,10 +32,17 @@ export default function ProfileSetupModal() {
       email,
       fullName,
       role: {
-        role: null as any, // Role will be set in role selection screen
+        role: AppRole.customer, // Default to customer, will be changed in role selection
         isLocked: false,
       },
       createdTime: BigInt(Date.now() * 1000000),
+      servicePincode: '',
+      serviceAreaName: '',
+      vehicleExperience: [],
+      transmissionComfort: [],
+      isAvailable: false,
+      totalEarnings: BigInt(0),
+      languages: undefined,
     };
 
     try {

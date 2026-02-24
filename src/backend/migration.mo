@@ -1,10 +1,16 @@
 import Map "mo:core/Map";
+import Nat "mo:core/Nat";
 import Principal "mo:core/Principal";
-import Text "mo:core/Text";
+import Nat64 "mo:core/Nat64";
 import Time "mo:core/Time";
 
 module {
-  type UserRole = { #admin; #user; #guest };
+  // Type aliases for migration
+  type UserRole = {
+    #admin;
+    #user;
+    #guest;
+  };
 
   type AppRole = {
     #customer;
@@ -17,32 +23,59 @@ module {
     isLocked : Bool;
   };
 
-  type UserProfile = {
-    principalId : Principal.Principal;
+  type VehicleExperience = {
+    #hatchback;
+    #sedan;
+    #suv;
+    #luxury;
+  };
+
+  type TransmissionComfort = {
+    #manual;
+    #automatic;
+    #ev;
+  };
+
+  // Old UserProfile type (without isVerified)
+  type OldUserProfile = {
+    principalId : Principal;
     email : Text;
     fullName : Text;
     role : LockedRole;
     createdTime : Time.Time;
+    servicePincode : Text;
+    serviceAreaName : Text;
+    vehicleExperience : [VehicleExperience];
+    transmissionComfort : [TransmissionComfort];
+    isAvailable : Bool;
+    totalEarnings : Nat64;
+    languages : ?[Text];
   };
 
-  type OldTripStatus = {
+  // New UserProfile type (with isVerified)
+  type NewUserProfile = {
+    principalId : Principal;
+    email : Text;
+    fullName : Text;
+    role : LockedRole;
+    createdTime : Time.Time;
+    servicePincode : Text;
+    serviceAreaName : Text;
+    vehicleExperience : [VehicleExperience];
+    transmissionComfort : [TransmissionComfort];
+    isAvailable : Bool;
+    totalEarnings : Nat64;
+    languages : ?[Text];
+    isVerified : ?Bool;
+  };
+
+  type TripStatus = {
     #requested;
     #accepted;
     #completed;
     #cancelled;
   };
 
-  type OldTrip = {
-    tripId : Text;
-    customerId : Principal.Principal;
-    driverId : ?Principal.Principal;
-    pickupLocation : Text;
-    dropoffLocation : Text;
-    status : OldTripStatus;
-    createdTime : Time.Time;
-  };
-
-  // New types for old data migration
   type TripType = {
     #local;
     #outstation;
@@ -72,17 +105,11 @@ module {
     longitude : ?Float;
   };
 
-  type NewTripStatus = {
-    #requested;
-    #accepted;
-    #completed;
-    #cancelled;
-  };
-
-  type NewTrip = {
+  // Old Trip type (without transmissionType)
+  type OldTrip = {
     tripId : Text;
-    customerId : Principal.Principal;
-    driverId : ?Principal.Principal;
+    customerId : Principal;
+    driverId : ?Principal;
     tripType : TripType;
     journeyType : JourneyType;
     vehicleType : VehicleType;
@@ -93,54 +120,54 @@ module {
     dropoffLocation : ?Location;
     phone : Text;
     landmark : ?Text;
-    status : NewTripStatus;
+    status : TripStatus;
     createdTime : Time.Time;
   };
 
-  // Old actor type (before migration)
+  // New Trip type (with transmissionType)
+  type NewTrip = {
+    tripId : Text;
+    customerId : Principal;
+    driverId : ?Principal;
+    tripType : TripType;
+    journeyType : JourneyType;
+    vehicleType : VehicleType;
+    duration : Duration;
+    startDateTime : ?Time.Time;
+    endDateTime : ?Time.Time;
+    pickupLocation : Location;
+    dropoffLocation : ?Location;
+    phone : Text;
+    landmark : ?Text;
+    status : TripStatus;
+    createdTime : Time.Time;
+    transmissionType : TransmissionComfort;
+  };
+
   type OldActor = {
-    userProfiles : Map.Map<Principal.Principal, UserProfile>;
+    userProfiles : Map.Map<Principal, OldUserProfile>;
     trips : Map.Map<Text, OldTrip>;
   };
 
-  // New actor type (after migration)
   type NewActor = {
-    userProfiles : Map.Map<Principal.Principal, UserProfile>;
+    userProfiles : Map.Map<Principal, NewUserProfile>;
     trips : Map.Map<Text, NewTrip>;
   };
 
+  // Migration function
   public func run(old : OldActor) : NewActor {
-    let newTrips = old.trips.map<Text, OldTrip, NewTrip>(
-      func(_id, oldTrip) {
-        {
-          tripId = oldTrip.tripId;
-          customerId = oldTrip.customerId;
-          driverId = oldTrip.driverId;
-          tripType = #local; // Default
-          journeyType = #oneWay; // Default
-          vehicleType = #hatchback; // Default
-          duration = #hours(0); // Default
-          startDateTime = null;
-          endDateTime = null;
-          pickupLocation = {
-            pincode = "unknown";
-            area = oldTrip.pickupLocation;
-            latitude = null;
-            longitude = null;
-          };
-          dropoffLocation = ?{
-            pincode = "unknown";
-            area = oldTrip.dropoffLocation;
-            latitude = null;
-            longitude = null;
-          };
-          phone = "unknown";
-          landmark = null;
-          status = oldTrip.status;
-          createdTime = oldTrip.createdTime;
-        };
+    let newUserProfiles = old.userProfiles.map<Principal, OldUserProfile, NewUserProfile>(
+      func(_principal, oldProfile) {
+        { oldProfile with isVerified = null };
       }
     );
-    { old with trips = newTrips };
+
+    let newTrips = old.trips.map<Text, OldTrip, NewTrip>(
+      func(_tripId, oldTrip) {
+        { oldTrip with transmissionType = #manual };
+      }
+    );
+
+    { userProfiles = newUserProfiles; trips = newTrips };
   };
 };

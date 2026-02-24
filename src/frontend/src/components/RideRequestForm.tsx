@@ -8,13 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { MapPin, Phone, Navigation } from 'lucide-react';
-import { TripType, JourneyType, VehicleType } from '../backend';
+import { TripType, JourneyType, TransmissionComfort } from '../backend';
 
 export default function RideRequestForm() {
   // Form state
   const [tripType, setTripType] = useState<'local' | 'outstation'>('local');
   const [journeyType, setJourneyType] = useState<'oneWay' | 'roundTrip'>('oneWay');
   const [vehicleType, setVehicleType] = useState<string>('');
+  const [transmissionType, setTransmissionType] = useState<string>('');
   
   // Duration state
   const [durationHours, setDurationHours] = useState<string>('2');
@@ -99,7 +100,7 @@ export default function RideRequestForm() {
         setLocationMode('manual');
         setGpsCoords(null);
         setGpsAddress('');
-        toast.error('Location permission denied. Please enter pickup pincode and area manually.');
+        toast.error('Location permission denied. Please enter pickup manually.');
       }
     );
   };
@@ -111,7 +112,7 @@ export default function RideRequestForm() {
     e.preventDefault();
 
     // Validation
-    if (!tripType || !journeyType || !vehicleType) {
+    if (!tripType || !journeyType || !vehicleType || !transmissionType) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -139,13 +140,18 @@ export default function RideRequestForm() {
     }
 
     // Location validation
-    if (locationMode === 'manual' || !gpsCoords) {
+    if (locationMode === 'manual') {
       if (!pickupPincode.trim() || !pickupArea.trim()) {
         toast.error('Please enter pickup pincode and area');
         return;
       }
       if (!/^\d{6}$/.test(pickupPincode)) {
         toast.error('Pickup pincode must be exactly 6 digits');
+        return;
+      }
+    } else if (locationMode === 'gps') {
+      if (!gpsCoords) {
+        toast.error('Please capture your GPS location');
         return;
       }
     }
@@ -176,23 +182,15 @@ export default function RideRequestForm() {
       const tripTypeEnum = tripType === 'local' ? TripType.local : TripType.outstation;
       const journeyTypeEnum = journeyType === 'oneWay' ? JourneyType.oneWay : JourneyType.roundTrip;
       
-      let vehicleTypeEnum: VehicleType;
-      switch (vehicleType) {
-        case 'hatchback':
-          vehicleTypeEnum = VehicleType.hatchback;
-          break;
-        case 'sedan':
-          vehicleTypeEnum = VehicleType.sedan;
-          break;
-        case 'suv':
-          vehicleTypeEnum = VehicleType.suv;
-          break;
-        case 'luxury':
-          vehicleTypeEnum = VehicleType.luxury;
-          break;
-        default:
-          throw new Error('Invalid vehicle type');
-      }
+      // VehicleType is a string literal type matching backend enum values
+      const vehicleTypeValue = vehicleType as 'hatchback' | 'sedan' | 'suv' | 'luxury';
+
+      // TransmissionComfort enum mapping
+      const transmissionComfortEnum = transmissionType === 'manual' 
+        ? TransmissionComfort.manual 
+        : transmissionType === 'automatic' 
+        ? TransmissionComfort.automatic 
+        : TransmissionComfort.ev;
 
       const duration = tripType === 'local'
         ? { __kind__: 'hours' as const, hours: BigInt(durationHours === 'custom' ? customHours : durationHours) }
@@ -225,7 +223,7 @@ export default function RideRequestForm() {
       await createTrip.mutateAsync({
         tripType: tripTypeEnum,
         journeyType: journeyTypeEnum,
-        vehicleType: vehicleTypeEnum,
+        vehicleType: vehicleTypeValue,
         duration,
         startDateTime: startDateTimeValue,
         endDateTime: endDateTimeValue,
@@ -233,6 +231,7 @@ export default function RideRequestForm() {
         dropoffLocation,
         phone,
         landmark: landmark.trim() || null,
+        transmissionType: transmissionComfortEnum,
       });
 
       toast.success('Trip requested successfully!');
@@ -241,6 +240,7 @@ export default function RideRequestForm() {
       setTripType('local');
       setJourneyType('oneWay');
       setVehicleType('');
+      setTransmissionType('');
       setDurationHours('2');
       setCustomHours('');
       setStartDateTime('');
@@ -304,6 +304,21 @@ export default function RideRequestForm() {
               <SelectItem value="sedan">Sedan</SelectItem>
               <SelectItem value="suv">SUV</SelectItem>
               <SelectItem value="luxury">Luxury</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Transmission Type */}
+        <div className="space-y-3">
+          <Label htmlFor="transmissionType" className="text-base font-semibold">Transmission Type *</Label>
+          <Select value={transmissionType} onValueChange={setTransmissionType}>
+            <SelectTrigger id="transmissionType">
+              <SelectValue placeholder="Select transmission type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="manual">Manual</SelectItem>
+              <SelectItem value="automatic">Automatic</SelectItem>
+              <SelectItem value="ev">EV</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -409,125 +424,128 @@ export default function RideRequestForm() {
           </div>
         )}
 
-        {/* Pickup Location - Manual or Optional with GPS */}
-        <div className="space-y-4">
-          <div className="space-y-3">
-            <Label htmlFor="pickupPincode" className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-primary" />
-              Pickup Pincode {locationMode === 'manual' && '*'}
-            </Label>
-            <Input
-              id="pickupPincode"
-              type="text"
-              placeholder="Enter 6-digit pincode"
-              value={pickupPincode}
-              onChange={(e) => setPickupPincode(e.target.value)}
-              pattern="\d{6}"
-              maxLength={6}
-              required={locationMode === 'manual'}
-            />
-          </div>
-          <div className="space-y-3">
-            <Label htmlFor="pickupArea">
-              Pickup Area Name {locationMode === 'manual' && '*'}
-            </Label>
-            <Input
-              id="pickupArea"
-              type="text"
-              placeholder="Enter area name"
-              value={pickupArea}
-              onChange={(e) => setPickupArea(e.target.value)}
-              required={locationMode === 'manual'}
-            />
-          </div>
-        </div>
-
-        {/* Drop Location - Only for Outstation One Way */}
-        {showDropFields && (
-          <div className="space-y-4 border-t pt-4">
+        {/* Pickup Location - Manual Entry Only */}
+        {locationMode === 'manual' && (
+          <>
             <div className="space-y-3">
-              <Label htmlFor="dropPincode" className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-destructive" />
+              <Label htmlFor="pickupPincode" className="text-base font-semibold flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Pickup Pincode *
+              </Label>
+              <Input
+                id="pickupPincode"
+                type="text"
+                placeholder="e.g., 560001"
+                value={pickupPincode}
+                onChange={(e) => setPickupPincode(e.target.value)}
+                maxLength={6}
+                required
+              />
+            </div>
+
+            <div className="space-y-3">
+              <Label htmlFor="pickupArea" className="text-base font-semibold">Pickup Area Name *</Label>
+              <Input
+                id="pickupArea"
+                type="text"
+                placeholder="e.g., Koramangala, Indiranagar"
+                value={pickupArea}
+                onChange={(e) => setPickupArea(e.target.value)}
+                required
+              />
+            </div>
+          </>
+        )}
+
+        {/* Drop Location - Only for Outstation One-Way */}
+        {showDropFields && (
+          <>
+            <div className="space-y-3">
+              <Label htmlFor="dropPincode" className="text-base font-semibold flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
                 Drop Pincode *
               </Label>
               <Input
                 id="dropPincode"
                 type="text"
-                placeholder="Enter 6-digit pincode"
+                placeholder="e.g., 560001"
                 value={dropPincode}
                 onChange={(e) => setDropPincode(e.target.value)}
-                pattern="\d{6}"
                 maxLength={6}
                 required
               />
             </div>
+
             <div className="space-y-3">
-              <Label htmlFor="dropArea">Drop Area Name *</Label>
+              <Label htmlFor="dropArea" className="text-base font-semibold">Drop Area Name *</Label>
               <Input
                 id="dropArea"
                 type="text"
-                placeholder="Enter area name"
+                placeholder="e.g., Whitefield, Electronic City"
                 value={dropArea}
                 onChange={(e) => setDropArea(e.target.value)}
                 required
               />
             </div>
-          </div>
+          </>
         )}
 
-        {/* Contact */}
-        <div className="space-y-4 border-t pt-4">
-          <div className="space-y-3">
-            <Label htmlFor="phone" className="flex items-center gap-2">
-              <Phone className="h-4 w-4" />
-              Phone Number *
-            </Label>
-            <Input
-              id="phone"
-              type="tel"
-              placeholder="Enter 10-digit phone number"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              pattern="\d{10}"
-              maxLength={10}
-              required
-            />
-          </div>
-          <div className="space-y-3">
-            <Label htmlFor="landmark">Landmark (Optional)</Label>
-            <Input
-              id="landmark"
-              type="text"
-              placeholder="Enter nearby landmark"
-              value={landmark}
-              onChange={(e) => setLandmark(e.target.value)}
-            />
-          </div>
+        {/* Contact Information */}
+        <div className="space-y-3">
+          <Label htmlFor="phone" className="text-base font-semibold flex items-center gap-2">
+            <Phone className="h-4 w-4" />
+            Phone Number *
+          </Label>
+          <Input
+            id="phone"
+            type="tel"
+            placeholder="10-digit mobile number"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            maxLength={10}
+            required
+          />
         </div>
 
-        {/* Fare Information */}
-        <div className="bg-muted p-4 rounded-md">
-          <p className="text-sm text-muted-foreground text-center">
-            Fare will be calculated automatically and confirmed by admin pricing rules.
+        <div className="space-y-3">
+          <Label htmlFor="landmark" className="text-base font-semibold">Landmark (Optional)</Label>
+          <Input
+            id="landmark"
+            type="text"
+            placeholder="e.g., Near Metro Station, Opposite Mall"
+            value={landmark}
+            onChange={(e) => setLandmark(e.target.value)}
+          />
+        </div>
+
+        {/* Fare Calculation Message */}
+        <div className="bg-muted p-4 rounded-lg">
+          <p className="text-sm text-muted-foreground">
+            💡 Fare will be calculated based on trip type, vehicle, duration, and distance. A driver will contact you shortly after accepting your request.
           </p>
         </div>
 
-        <Button type="submit" className="w-full" disabled={createTrip.isPending}>
-          {createTrip.isPending ? 'Requesting Trip...' : 'Request Trip'}
+        {/* Submit Button */}
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={createTrip.isPending}
+        >
+          {createTrip.isPending ? 'Requesting...' : 'Request Ride'}
         </Button>
       </form>
 
-      {/* Journey Type Info Modal */}
+      {/* Journey Type Modal */}
       <Dialog open={showJourneyModal} onOpenChange={setShowJourneyModal}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Journey Type Information</DialogTitle>
-            <DialogDescription className="pt-4 text-base">
+            <DialogDescription>
               {journeyModalText}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button onClick={() => setShowJourneyModal(false)}>OK</Button>
+            <Button onClick={() => setShowJourneyModal(false)}>Got it</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -35,6 +35,11 @@ export const Location = IDL.Record({
   'longitude' : IDL.Opt(IDL.Float64),
   'pincode' : IDL.Text,
 });
+export const TransmissionComfort = IDL.Variant({
+  'ev' : IDL.Null,
+  'automatic' : IDL.Null,
+  'manual' : IDL.Null,
+});
 export const TripStatus = IDL.Variant({
   'requested' : IDL.Null,
   'cancelled' : IDL.Null,
@@ -45,6 +50,7 @@ export const Trip = IDL.Record({
   'status' : TripStatus,
   'driverId' : IDL.Opt(IDL.Principal),
   'vehicleType' : VehicleType,
+  'transmissionType' : TransmissionComfort,
   'duration' : Duration,
   'tripType' : TripType,
   'dropoffLocation' : IDL.Opt(Location),
@@ -67,11 +73,25 @@ export const LockedRole = IDL.Record({
   'role' : AppRole,
   'isLocked' : IDL.Bool,
 });
+export const VehicleExperience = IDL.Variant({
+  'suv' : IDL.Null,
+  'sedan' : IDL.Null,
+  'luxury' : IDL.Null,
+  'hatchback' : IDL.Null,
+});
 export const UserProfile = IDL.Record({
+  'serviceAreaName' : IDL.Text,
+  'servicePincode' : IDL.Text,
   'role' : LockedRole,
+  'vehicleExperience' : IDL.Vec(VehicleExperience),
+  'languages' : IDL.Opt(IDL.Vec(IDL.Text)),
+  'isAvailable' : IDL.Bool,
   'fullName' : IDL.Text,
   'createdTime' : Time,
   'email' : IDL.Text,
+  'isVerified' : IDL.Opt(IDL.Bool),
+  'totalEarnings' : IDL.Nat64,
+  'transmissionComfort' : IDL.Vec(TransmissionComfort),
   'principalId' : IDL.Principal,
 });
 
@@ -92,6 +112,7 @@ export const idlService = IDL.Service({
         IDL.Opt(Location),
         IDL.Text,
         IDL.Opt(IDL.Text),
+        TransmissionComfort,
       ],
       [IDL.Text],
       [],
@@ -139,6 +160,11 @@ export const idlFactory = ({ IDL }) => {
     'longitude' : IDL.Opt(IDL.Float64),
     'pincode' : IDL.Text,
   });
+  const TransmissionComfort = IDL.Variant({
+    'ev' : IDL.Null,
+    'automatic' : IDL.Null,
+    'manual' : IDL.Null,
+  });
   const TripStatus = IDL.Variant({
     'requested' : IDL.Null,
     'cancelled' : IDL.Null,
@@ -149,6 +175,7 @@ export const idlFactory = ({ IDL }) => {
     'status' : TripStatus,
     'driverId' : IDL.Opt(IDL.Principal),
     'vehicleType' : VehicleType,
+    'transmissionType' : TransmissionComfort,
     'duration' : Duration,
     'tripType' : TripType,
     'dropoffLocation' : IDL.Opt(Location),
@@ -168,11 +195,25 @@ export const idlFactory = ({ IDL }) => {
     'driver' : IDL.Null,
   });
   const LockedRole = IDL.Record({ 'role' : AppRole, 'isLocked' : IDL.Bool });
+  const VehicleExperience = IDL.Variant({
+    'suv' : IDL.Null,
+    'sedan' : IDL.Null,
+    'luxury' : IDL.Null,
+    'hatchback' : IDL.Null,
+  });
   const UserProfile = IDL.Record({
+    'serviceAreaName' : IDL.Text,
+    'servicePincode' : IDL.Text,
     'role' : LockedRole,
+    'vehicleExperience' : IDL.Vec(VehicleExperience),
+    'languages' : IDL.Opt(IDL.Vec(IDL.Text)),
+    'isAvailable' : IDL.Bool,
     'fullName' : IDL.Text,
     'createdTime' : Time,
     'email' : IDL.Text,
+    'isVerified' : IDL.Opt(IDL.Bool),
+    'totalEarnings' : IDL.Nat64,
+    'transmissionComfort' : IDL.Vec(TransmissionComfort),
     'principalId' : IDL.Principal,
   });
   
@@ -193,6 +234,7 @@ export const idlFactory = ({ IDL }) => {
           IDL.Opt(Location),
           IDL.Text,
           IDL.Opt(IDL.Text),
+          TransmissionComfort,
         ],
         [IDL.Text],
         [],
