@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 import type { AppRole } from '../backend';
 
-const roleColors: Record<AppRole, string> = {
+const roleColors: Record<string, string> = {
   customer: 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20',
   driver: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
   admin: 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20',
@@ -61,11 +61,12 @@ export default function AdminUsersTab() {
                   <TableCell className="font-medium">{user.email}</TableCell>
                   <TableCell>{user.fullName}</TableCell>
                   <TableCell>
-                    {user.role.role && (
-                      <Badge variant="outline" className={roleColors[user.role.role]}>
-                        {user.role.role}
-                        {user.role.isLocked && ' 🔒'}
+                    {user.role ? (
+                      <Badge variant="outline" className={roleColors[user.role] ?? ''}>
+                        {user.role}
                       </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">No role</span>
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">

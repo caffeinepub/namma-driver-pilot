@@ -1,189 +1,35 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Add Edit Profile functionality to Driver Dashboard",
+  "title": "Admin Recovery Patch: /admin/upgrade route + upgradeCurrentUserToAdmin backend function",
   "requirements": [
     {
-      "id": "REQ-51",
-      "summary": "Add 'Edit Profile' button to Driver Dashboard that opens an editable form modal for driver profile fields",
+      "id": "REQ-2",
+      "summary": "Add a hidden /admin/upgrade route accessible by direct URL only for authenticated users to upgrade their role to admin using a secret code, with success redirect to /admin/dashboard and error display on invalid code",
       "acceptanceCriteria": [
-        "Edit Profile button is visible on Driver Dashboard page",
-        "Button opens an editable form when clicked",
-        "Form displays all required driver profile fields"
+        "Navigating directly to `/admin/upgrade` while logged in shows the Admin Upgrade page with the title, input field, and button.",
+        "Unauthenticated users navigating to `/admin/upgrade` are redirected to the landing page (consistent with existing auth guard behavior).",
+        "Entering code NAMMA5600 and clicking \"Upgrade to Admin\" calls the backend function, and on success redirects to `/admin/dashboard`.",
+        "Entering an incorrect code displays the error message \"Invalid admin code\" on the page.",
+        "No link, button, or reference to `/admin/upgrade` is added anywhere in the existing UI (Navigation, LandingPage, dashboards, modals, etc.).",
+        "The existing `/admin/dashboard` route guard (requires role == admin) is not modified.",
+        "No other existing pages, components, or logic are changed."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/DriverDashboard.tsx",
-          "operation": "modify",
-          "description": "Add state management for edit modal visibility and wire an 'Edit Profile' button to the DriverProfileSection component that opens the edit form modal when clicked"
-        },
-        {
-          "path": "frontend/src/components/DriverProfileSection.tsx",
-          "operation": "modify",
-          "description": "Add an 'Edit Profile' button to the profile display card and pass an onEditClick callback prop from parent to trigger modal opening"
-        },
-        {
-          "path": "frontend/src/components/EditDriverProfileModal.tsx",
+          "path": "frontend/src/pages/AdminUpgradePage.tsx",
           "operation": "create",
-          "description": "Create modal component that wraps the editable profile form. Include open/onClose props to control modal visibility and render the EditDriverProfileForm component inside"
-        }
-      ]
-    },
-    {
-      "id": "REQ-52",
-      "summary": "Create servicePincode field in profile edit form with required validation",
-      "acceptanceCriteria": [
-        "servicePincode field is rendered as text input",
-        "Field is marked as required",
-        "Form validation prevents submission if servicePincode is empty"
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/EditDriverProfileForm.tsx",
-          "operation": "create",
-          "description": "Create form component with servicePincode text input field marked as required with validation that prevents empty submission. Initialize form state with current profile data from useGetCallerUserProfile hook"
-        }
-      ]
-    },
-    {
-      "id": "REQ-53",
-      "summary": "Create serviceAreaName field in profile edit form with required validation",
-      "acceptanceCriteria": [
-        "serviceAreaName field is rendered as text input",
-        "Field is marked as required",
-        "Form validation prevents submission if serviceAreaName is empty"
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/EditDriverProfileForm.tsx",
-          "operation": "modify",
-          "description": "Add serviceAreaName text input field marked as required with validation that prevents empty submission to the form component"
-        }
-      ]
-    },
-    {
-      "id": "REQ-54",
-      "summary": "Create vehicleExperience field as multi-select checkboxes with Hatchback, Sedan, SUV, Luxury options",
-      "acceptanceCriteria": [
-        "vehicleExperience field displays as multiple checkboxes",
-        "Checkboxes include options: Hatchback, Sedan, SUV, Luxury",
-        "Multiple checkboxes can be selected simultaneously",
-        "Selected values are stored as an array"
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/EditDriverProfileForm.tsx",
-          "operation": "modify",
-          "description": "Add vehicleExperience field as checkbox group with options: hatchback, sedan, suv, luxury matching the VehicleExperience enum. Store selected values as array and handle multiple checkbox selections simultaneously"
-        }
-      ]
-    },
-    {
-      "id": "REQ-55",
-      "summary": "Create transmissionComfort field as multi-select checkboxes with Manual, Automatic, EV options",
-      "acceptanceCriteria": [
-        "transmissionComfort field displays as multiple checkboxes",
-        "Checkboxes include options: Manual, Automatic, EV",
-        "Multiple checkboxes can be selected simultaneously",
-        "Selected values are stored as an array"
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/EditDriverProfileForm.tsx",
-          "operation": "modify",
-          "description": "Add transmissionComfort field as checkbox group with options: manual, automatic, ev matching the TransmissionComfort enum. Store selected values as array and handle multiple checkbox selections simultaneously"
-        }
-      ]
-    },
-    {
-      "id": "REQ-56",
-      "summary": "Create optional languages field in profile edit form",
-      "acceptanceCriteria": [
-        "languages field is rendered (text input or multi-select)",
-        "Field is optional and does not prevent form submission when empty",
-        "Input value is stored as array or comma-separated list"
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/EditDriverProfileForm.tsx",
-          "operation": "modify",
-          "description": "Add optional languages text input field that accepts comma-separated values and converts them to an array for storage. Field does not prevent form submission when empty"
-        }
-      ]
-    },
-    {
-      "id": "REQ-57",
-      "summary": "Create isAvailable field as toggle switch in profile edit form",
-      "acceptanceCriteria": [
-        "isAvailable field displays as a toggle switch",
-        "Toggle can be switched between on/off states",
-        "Toggle state is stored as boolean value"
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/EditDriverProfileForm.tsx",
-          "operation": "modify",
-          "description": "Add isAvailable toggle switch component that controls boolean state and can be switched between on/off"
-        }
-      ]
-    },
-    {
-      "id": "REQ-58",
-      "summary": "Implement Save button that calls saveCallerUserProfile with all form field values",
-      "acceptanceCriteria": [
-        "Save button is rendered in the edit form",
-        "Clicking Save calls saveCallerUserProfile with form data",
-        "Form data includes all fields: servicePincode, serviceAreaName, vehicleExperience array, transmissionComfort array, languages, isAvailable boolean",
-        "Loading state is shown during save operation"
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/EditDriverProfileForm.tsx",
-          "operation": "modify",
-          "description": "Add Save button that calls useSaveCallerUserProfile hook with complete UserProfile object containing all form fields: servicePincode, serviceAreaName, vehicleExperience array, transmissionComfort array, languages array (optional), isAvailable boolean, plus existing immutable fields (fullName, email, role, principalId, createdTime, totalEarnings). Display loading state during save operation using mutation's isPending status"
-        }
-      ]
-    },
-    {
-      "id": "REQ-59",
-      "summary": "After successful save, immediately update My Profile display card without page refresh",
-      "acceptanceCriteria": [
-        "After save completes successfully, My Profile section updates automatically",
-        "Updated values are visible in the My Profile display card",
-        "No page refresh is required to see changes",
-        "Edit form closes after successful save"
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/EditDriverProfileForm.tsx",
-          "operation": "modify",
-          "description": "In the onSuccess callback of useSaveCallerUserProfile mutation, invalidate the currentUserProfile query key to trigger automatic refetch of profile data, then call onClose prop to close the modal"
+          "description": "Create a new page component AdminUpgradePage that renders a centered card with title \"Admin Upgrade\", a text input labelled \"Enter Admin Setup Code\", and a button labelled \"Upgrade to Admin\". On button click, call the backend upgradeCurrentUserToAdmin function with the entered code. On success (non-null return), invalidate the user profile query and redirect to /admin/dashboard using TanStack Router navigation. On failure (null return or error), display the error message \"Invalid admin code\" below the input field. Include loading state during the backend call and disable the button while loading. Use existing shadcn/ui components (Card, Input, Button) for consistent styling."
         },
         {
-          "path": "frontend/src/components/DriverProfileSection.tsx",
+          "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Ensure the component automatically re-renders when currentUserProfile query data updates by using the useGetCallerUserProfile hook that refetches after mutation success"
-        }
-      ]
-    },
-    {
-      "id": "REQ-60",
-      "summary": "Ensure driver profile data persists across page refresh and logout/login cycles",
-      "acceptanceCriteria": [
-        "After saving profile and refreshing the page, saved values are still displayed in My Profile section",
-        "After saving profile, logging out, and logging back in, saved values are still displayed",
-        "Backend correctly stores and retrieves all driver profile field values"
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/EditDriverProfileForm.tsx",
-          "operation": "modify",
-          "description": "Verify that the form passes the complete UserProfile object to saveCallerUserProfile including all newly added fields (servicePincode, serviceAreaName, vehicleExperience, transmissionComfort, languages, isAvailable) along with existing immutable fields to ensure persistence across sessions"
+          "description": "Add a new route configuration for /admin/upgrade in the TanStack Router setup. The route must use an auth guard that only checks if the user is logged in (identity exists) and redirects unauthenticated users to the landing page. Do not check the user's role. Import and render the AdminUpgradePage component at this route. Place this route registration alongside the existing dashboard routes but ensure it does not appear in any navigation menus or UI elements."
         },
         {
-          "path": "frontend/src/pages/DriverDashboard.tsx",
+          "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Verify that the DriverProfileSection receives profile data from useGetCallerUserProfile hook which fetches fresh data on page load and after authentication, ensuring persistence across refresh and login cycles"
+          "description": "Add a new mutation hook useUpgradeToAdmin that calls the backend upgradeCurrentUserToAdmin function with a code parameter. The mutation should return the result string (success message) or null (on error). On success, invalidate the 'currentUserProfile' query key to refresh the user's profile data. Include proper error handling and use the existing actor instance from useActor hook."
         }
       ]
     }

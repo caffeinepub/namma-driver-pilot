@@ -23,7 +23,6 @@ export interface Location {
   'longitude' : [] | [number],
   'pincode' : string,
 }
-export interface LockedRole { 'role' : AppRole, 'isLocked' : boolean }
 export type Time = bigint;
 export type TransmissionComfort = { 'ev' : null } |
   { 'automatic' : null } |
@@ -54,7 +53,7 @@ export type TripType = { 'local' : null } |
 export interface UserProfile {
   'serviceAreaName' : string,
   'servicePincode' : string,
-  'role' : LockedRole,
+  'role' : [] | [AppRole],
   'vehicleExperience' : Array<VehicleExperience>,
   'languages' : [] | [Array<string>],
   'isAvailable' : boolean,
@@ -79,6 +78,7 @@ export type VehicleType = { 'suv' : null } |
 export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'acceptTrip' : ActorMethod<[string], undefined>,
+  'adminAssignRole' : ActorMethod<[Principal, AppRole], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'completeTrip' : ActorMethod<[string], undefined>,
   'createTrip' : ActorMethod<
@@ -105,7 +105,8 @@ export interface _SERVICE {
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
-  'updateUserRoleAndLock' : ActorMethod<[AppRole], undefined>,
+  'updateUserRole' : ActorMethod<[AppRole], undefined>,
+  'upgradeCurrentUserToAdmin' : ActorMethod<[string], [] | [string]>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

@@ -8,6 +8,11 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
+export const AppRole = IDL.Variant({
+  'admin' : IDL.Null,
+  'customer' : IDL.Null,
+  'driver' : IDL.Null,
+});
 export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
   'user' : IDL.Null,
@@ -58,15 +63,6 @@ export const Trip = IDL.Record({
   'startDateTime' : IDL.Opt(Time),
   'pickupLocation' : Location,
 });
-export const AppRole = IDL.Variant({
-  'admin' : IDL.Null,
-  'customer' : IDL.Null,
-  'driver' : IDL.Null,
-});
-export const LockedRole = IDL.Record({
-  'role' : AppRole,
-  'isLocked' : IDL.Bool,
-});
 export const VehicleExperience = IDL.Variant({
   'suv' : IDL.Null,
   'sedan' : IDL.Null,
@@ -81,7 +77,7 @@ export const TransmissionComfort = IDL.Variant({
 export const UserProfile = IDL.Record({
   'serviceAreaName' : IDL.Text,
   'servicePincode' : IDL.Text,
-  'role' : LockedRole,
+  'role' : IDL.Opt(AppRole),
   'vehicleExperience' : IDL.Vec(VehicleExperience),
   'languages' : IDL.Opt(IDL.Vec(IDL.Text)),
   'isAvailable' : IDL.Bool,
@@ -96,6 +92,7 @@ export const UserProfile = IDL.Record({
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'acceptTrip' : IDL.Func([IDL.Text], [], []),
+  'adminAssignRole' : IDL.Func([IDL.Principal, AppRole], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'completeTrip' : IDL.Func([IDL.Text], [], []),
   'createTrip' : IDL.Func(
@@ -127,12 +124,18 @@ export const idlService = IDL.Service({
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
-  'updateUserRoleAndLock' : IDL.Func([AppRole], [], []),
+  'updateUserRole' : IDL.Func([AppRole], [], []),
+  'upgradeCurrentUserToAdmin' : IDL.Func([IDL.Text], [IDL.Opt(IDL.Text)], []),
 });
 
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
+  const AppRole = IDL.Variant({
+    'admin' : IDL.Null,
+    'customer' : IDL.Null,
+    'driver' : IDL.Null,
+  });
   const UserRole = IDL.Variant({
     'admin' : IDL.Null,
     'user' : IDL.Null,
@@ -180,12 +183,6 @@ export const idlFactory = ({ IDL }) => {
     'startDateTime' : IDL.Opt(Time),
     'pickupLocation' : Location,
   });
-  const AppRole = IDL.Variant({
-    'admin' : IDL.Null,
-    'customer' : IDL.Null,
-    'driver' : IDL.Null,
-  });
-  const LockedRole = IDL.Record({ 'role' : AppRole, 'isLocked' : IDL.Bool });
   const VehicleExperience = IDL.Variant({
     'suv' : IDL.Null,
     'sedan' : IDL.Null,
@@ -200,7 +197,7 @@ export const idlFactory = ({ IDL }) => {
   const UserProfile = IDL.Record({
     'serviceAreaName' : IDL.Text,
     'servicePincode' : IDL.Text,
-    'role' : LockedRole,
+    'role' : IDL.Opt(AppRole),
     'vehicleExperience' : IDL.Vec(VehicleExperience),
     'languages' : IDL.Opt(IDL.Vec(IDL.Text)),
     'isAvailable' : IDL.Bool,
@@ -215,6 +212,7 @@ export const idlFactory = ({ IDL }) => {
   return IDL.Service({
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'acceptTrip' : IDL.Func([IDL.Text], [], []),
+    'adminAssignRole' : IDL.Func([IDL.Principal, AppRole], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'completeTrip' : IDL.Func([IDL.Text], [], []),
     'createTrip' : IDL.Func(
@@ -246,7 +244,8 @@ export const idlFactory = ({ IDL }) => {
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
-    'updateUserRoleAndLock' : IDL.Func([AppRole], [], []),
+    'updateUserRole' : IDL.Func([AppRole], [], []),
+    'upgradeCurrentUserToAdmin' : IDL.Func([IDL.Text], [IDL.Opt(IDL.Text)], []),
   });
 };
 

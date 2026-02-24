@@ -3,7 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Edit } from 'lucide-react';
-import type { UserProfile, VehicleExperience, TransmissionComfort } from '../backend';
+import type { UserProfile } from '../backend';
+
+type VehicleExperience = 'hatchback' | 'sedan' | 'suv' | 'luxury';
+type TransmissionComfort = 'manual' | 'automatic' | 'ev';
 
 interface DriverProfileSectionProps {
   userProfile: UserProfile | null | undefined;
@@ -111,12 +114,12 @@ export default function DriverProfileSection({ userProfile, isLoading, error, on
 
           <div>
             <p className="text-sm font-medium text-muted-foreground">Vehicle Experience</p>
-            <p className="text-base">{formatVehicleExperience(userProfile.vehicleExperience)}</p>
+            <p className="text-base">{formatVehicleExperience(userProfile.vehicleExperience as VehicleExperience[])}</p>
           </div>
 
           <div>
             <p className="text-sm font-medium text-muted-foreground">Transmission Comfort</p>
-            <p className="text-base">{formatTransmissionComfort(userProfile.transmissionComfort)}</p>
+            <p className="text-base">{formatTransmissionComfort(userProfile.transmissionComfort as TransmissionComfort[])}</p>
           </div>
 
           <div>

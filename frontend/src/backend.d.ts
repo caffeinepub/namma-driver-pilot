@@ -13,10 +13,6 @@ export interface Location {
     longitude?: number;
     pincode: string;
 }
-export interface LockedRole {
-    role: AppRole;
-    isLocked: boolean;
-}
 export interface Trip {
     status: TripStatus;
     driverId?: Principal;
@@ -45,7 +41,7 @@ export type Duration = {
 export interface UserProfile {
     serviceAreaName: string;
     servicePincode: string;
-    role: LockedRole;
+    role?: AppRole;
     vehicleExperience: Array<VehicleExperience>;
     languages?: Array<string>;
     isAvailable: boolean;
@@ -85,7 +81,7 @@ export enum UserRole {
     user = "user",
     guest = "guest"
 }
-export enum VehicleExperience {
+export enum VehicleType {
     suv = "suv",
     sedan = "sedan",
     luxury = "luxury",
@@ -93,6 +89,7 @@ export enum VehicleExperience {
 }
 export interface backendInterface {
     acceptTrip(tripId: string): Promise<void>;
+    adminAssignRole(user: Principal, role: AppRole): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     completeTrip(tripId: string): Promise<void>;
     createTrip(tripType: TripType, journeyType: JourneyType, vehicleType: VehicleType, duration: Duration, startDateTime: Time | null, endDateTime: Time | null, pickupLocation: Location, dropoffLocation: Location | null, phone: string, landmark: string | null): Promise<string>;
@@ -105,5 +102,6 @@ export interface backendInterface {
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    updateUserRoleAndLock(role: AppRole): Promise<void>;
+    updateUserRole(role: AppRole): Promise<void>;
+    upgradeCurrentUserToAdmin(code: string): Promise<string | null>;
 }

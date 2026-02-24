@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { type UserProfile, AppRole } from '../backend';
+import { type UserProfile } from '../backend';
 
 export default function ProfileSetupModal() {
   const { identity } = useInternetIdentity();
@@ -27,14 +27,12 @@ export default function ProfileSetupModal() {
       return;
     }
 
+    // Save profile with no role yet — role will be selected on the Role Selection screen
     const profile: UserProfile = {
       principalId: identity.getPrincipal(),
       email,
       fullName,
-      role: {
-        role: AppRole.customer, // Default to customer, will be changed in role selection
-        isLocked: false,
-      },
+      role: undefined, // no role assigned yet
       createdTime: BigInt(Date.now() * 1000000),
       servicePincode: '',
       serviceAreaName: '',
@@ -47,7 +45,7 @@ export default function ProfileSetupModal() {
 
     try {
       await saveProfile.mutateAsync(profile);
-      toast.success('Profile created successfully!');
+      toast.success('Profile created! Please select your role.');
     } catch (error: any) {
       toast.error(error.message || 'Failed to create profile');
     }

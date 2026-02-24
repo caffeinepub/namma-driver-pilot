@@ -7,29 +7,32 @@ import { Car, MapPin, Users, Shield } from 'lucide-react';
 
 export default function LandingPage() {
   const { identity, login, loginStatus } = useInternetIdentity();
-  const { data: userProfile, isLoading } = useGetCallerUserProfile();
+  const { data: userProfile, isLoading, isFetched } = useGetCallerUserProfile();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (identity && userProfile && !isLoading) {
-      const role = userProfile.role.role;
-      
-      // If no role set, redirect to role selection
-      if (!role) {
-        navigate({ to: '/role-selection' });
-        return;
-      }
+    // Only act once profile fetch is complete
+    if (!identity || isLoading || !isFetched) return;
 
-      // Redirect to appropriate dashboard based on role
-      if (role === 'admin') {
-        navigate({ to: '/admin/dashboard' });
-      } else if (role === 'driver') {
-        navigate({ to: '/driver/dashboard' });
-      } else if (role === 'customer') {
-        navigate({ to: '/customer/dashboard' });
-      }
+    // No profile yet — ProfileSetupModal will handle this via RootLayout
+    if (!userProfile) return;
+
+    // No role set yet — go to role selection
+    if (userProfile.role == null) {
+      navigate({ to: '/role-selection' });
+      return;
     }
-  }, [identity, userProfile, isLoading, navigate]);
+
+    // Role is set — route to the appropriate dashboard
+    const role = userProfile.role;
+    if (role === 'admin') {
+      navigate({ to: '/admin/dashboard' });
+    } else if (role === 'driver') {
+      navigate({ to: '/driver/dashboard' });
+    } else if (role === 'customer') {
+      navigate({ to: '/customer/dashboard' });
+    }
+  }, [identity, userProfile, isLoading, isFetched, navigate]);
 
   const handleLogin = () => {
     try {
@@ -101,24 +104,6 @@ export default function LandingPage() {
               </p>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="container mx-auto px-4 py-16 text-center">
-        <div className="max-w-2xl mx-auto space-y-6">
-          <h2 className="text-3xl font-bold">Ready to ride?</h2>
-          <p className="text-lg text-muted-foreground">
-            Join thousands of satisfied customers and drivers on our platform
-          </p>
-          <Button
-            size="lg"
-            onClick={handleLogin}
-            disabled={isLoggingIn}
-            className="min-w-[200px] h-12 text-lg"
-          >
-            {isLoggingIn ? 'Connecting...' : 'Sign Up Now'}
-          </Button>
         </div>
       </section>
     </div>

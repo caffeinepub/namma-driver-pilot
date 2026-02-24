@@ -1,16 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { useGetCallerUserProfile } from '../hooks/useGetCallerUserProfile';
 import RoleSelectionWarningModal from '../components/RoleSelectionWarningModal';
-import { Button } from '@/components/ui/button';
-import { Car, Users } from 'lucide-react';
+import { Car, Users, ShieldCheck } from 'lucide-react';
 
 export default function RoleSelectionPage() {
   const { identity } = useInternetIdentity();
-  const { data: userProfile, isLoading } = useGetCallerUserProfile();
+  const { data: userProfile, isLoading, isFetched } = useGetCallerUserProfile();
   const navigate = useNavigate();
-  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     // Redirect if not authenticated
@@ -19,9 +17,18 @@ export default function RoleSelectionPage() {
       return;
     }
 
-    // Redirect if user already has a role
-    if (userProfile && userProfile.role.role) {
-      const role = userProfile.role.role;
+    // Only act once profile fetch is complete
+    if (!isFetched || isLoading) return;
+
+    // If no profile at all, go back to landing (ProfileSetupModal will handle it)
+    if (!userProfile) {
+      navigate({ to: '/' });
+      return;
+    }
+
+    // If role is already set, redirect to the appropriate dashboard
+    if (userProfile.role != null) {
+      const role = userProfile.role;
       if (role === 'admin') {
         navigate({ to: '/admin/dashboard' });
       } else if (role === 'driver') {
@@ -29,14 +36,9 @@ export default function RoleSelectionPage() {
       } else if (role === 'customer') {
         navigate({ to: '/customer/dashboard' });
       }
-      return;
     }
-
-    // Show modal automatically when page loads
-    if (userProfile && !userProfile.role.role) {
-      setShowModal(true);
-    }
-  }, [identity, userProfile, isLoading, navigate]);
+    // If role is null/undefined, the modal below will handle selection
+  }, [identity, userProfile, isLoading, isFetched, navigate]);
 
   if (isLoading) {
     return (
@@ -49,6 +51,9 @@ export default function RoleSelectionPage() {
     );
   }
 
+  // Show the role selection modal when profile exists but no role is set
+  const showModal = !!userProfile && (userProfile.role == null);
+
   return (
     <>
       <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4">
@@ -60,7 +65,7 @@ export default function RoleSelectionPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 mt-12">
+          <div className="grid md:grid-cols-3 gap-6 mt-12">
             <div className="bg-card p-8 rounded-lg border-2 border-border hover:border-primary transition-colors">
               <div className="flex flex-col items-center text-center space-y-4">
                 <div className="flex items-center justify-center w-20 h-20 bg-primary/10 rounded-full">
@@ -91,6 +96,23 @@ export default function RoleSelectionPage() {
                   <li>• View available trips</li>
                   <li>• Accept ride requests</li>
                   <li>• Manage your trips</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="bg-card p-8 rounded-lg border-2 border-border hover:border-primary transition-colors">
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="flex items-center justify-center w-20 h-20 bg-primary/10 rounded-full">
+                  <ShieldCheck className="h-10 w-10 text-primary" />
+                </div>
+                <h2 className="text-2xl font-bold">Admin</h2>
+                <p className="text-muted-foreground">
+                  Manage the platform and oversee all activity
+                </p>
+                <ul className="text-sm text-muted-foreground space-y-2 text-left w-full">
+                  <li>• View all users</li>
+                  <li>• Monitor all trips</li>
+                  <li>• Platform oversight</li>
                 </ul>
               </div>
             </div>

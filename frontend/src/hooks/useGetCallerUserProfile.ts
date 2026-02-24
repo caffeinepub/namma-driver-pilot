@@ -9,7 +9,9 @@ export function useGetCallerUserProfile() {
     queryKey: ['currentUserProfile'],
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
-      return actor.getCallerUserProfile();
+      const profile = await actor.getCallerUserProfile();
+      console.log('Role fetched:', profile?.role ?? null);
+      return profile;
     },
     enabled: !!actor && !actorFetching,
     retry: false,

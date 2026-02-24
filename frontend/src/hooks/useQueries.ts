@@ -39,18 +39,40 @@ export function useSaveCallerUserProfile() {
   });
 }
 
-// Update user role and lock it permanently
-export function useUpdateUserRoleAndLock() {
+// Update user role (calls backend updateUserRole)
+export function useUpdateUserRole() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (role: AppRole) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.updateUserRoleAndLock(role);
+      return actor.updateUserRole(role);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+    },
+  });
+}
+
+// Keep old name as alias for backward compatibility with any remaining references
+export const useUpdateUserRoleAndLock = useUpdateUserRole;
+
+// Upgrade current user to admin using a secret setup code
+export function useUpgradeToAdmin() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (code: string): Promise<string | null> => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.upgradeCurrentUserToAdmin(code);
+    },
+    onSuccess: (result) => {
+      // null result means success (no error message returned)
+      if (result === null) {
+        queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+      }
     },
   });
 }

@@ -27,10 +27,10 @@ export default function Navigation() {
   };
 
   const handleNavigateToDashboard = () => {
-    if (userProfile && userProfile.role.role) {
-      if (userProfile.role.role === 'admin') {
+    if (userProfile?.role) {
+      if (userProfile.role === 'admin') {
         navigate({ to: '/admin/dashboard' });
-      } else if (userProfile.role.role === 'driver') {
+      } else if (userProfile.role === 'driver') {
         navigate({ to: '/driver/dashboard' });
       } else {
         navigate({ to: '/customer/dashboard' });
@@ -59,18 +59,19 @@ export default function Navigation() {
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium">{userProfile.fullName}</p>
                   <p className="text-xs text-muted-foreground">{userProfile.email}</p>
-                  {userProfile.role.role && (
+                  {userProfile.role && (
                     <p className="text-xs text-muted-foreground capitalize">
-                      Role: {userProfile.role.role}
-                      {userProfile.role.isLocked && ' 🔒'}
+                      Role: {userProfile.role}
                     </p>
                   )}
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleNavigateToDashboard}>
-                Dashboard
-              </DropdownMenuItem>
+              {userProfile.role && (
+                <DropdownMenuItem onClick={handleNavigateToDashboard}>
+                  Dashboard
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />

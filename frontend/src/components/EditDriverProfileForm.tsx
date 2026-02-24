@@ -6,7 +6,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Loader2 } from 'lucide-react';
 import { useSaveCallerUserProfile } from '../hooks/useQueries';
-import type { UserProfile, VehicleExperience, TransmissionComfort } from '../backend';
+import type { UserProfile } from '../backend';
+
+type VehicleExperience = 'hatchback' | 'sedan' | 'suv' | 'luxury';
+type TransmissionComfort = 'manual' | 'automatic' | 'ev';
 
 interface EditDriverProfileFormProps {
   userProfile: UserProfile;
@@ -17,10 +20,10 @@ export default function EditDriverProfileForm({ userProfile, onClose }: EditDriv
   const [servicePincode, setServicePincode] = useState(userProfile.servicePincode || '');
   const [serviceAreaName, setServiceAreaName] = useState(userProfile.serviceAreaName || '');
   const [vehicleExperience, setVehicleExperience] = useState<VehicleExperience[]>(
-    userProfile.vehicleExperience || []
+    (userProfile.vehicleExperience || []) as VehicleExperience[]
   );
   const [transmissionComfort, setTransmissionComfort] = useState<TransmissionComfort[]>(
-    userProfile.transmissionComfort || []
+    (userProfile.transmissionComfort || []) as TransmissionComfort[]
   );
   const [languages, setLanguages] = useState(
     userProfile.languages ? userProfile.languages.join(', ') : ''
@@ -62,8 +65,8 @@ export default function EditDriverProfileForm({ userProfile, onClose }: EditDriv
       ...userProfile,
       servicePincode: servicePincode.trim(),
       serviceAreaName: serviceAreaName.trim(),
-      vehicleExperience,
-      transmissionComfort,
+      vehicleExperience: vehicleExperience as any,
+      transmissionComfort: transmissionComfort as any,
       languages: languagesArray.length > 0 ? languagesArray : undefined,
       isAvailable,
     };

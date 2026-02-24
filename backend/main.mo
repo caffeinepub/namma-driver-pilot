@@ -12,7 +12,6 @@ import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
 
 actor {
-  // Types
   public type UserRole = AccessControl.UserRole;
 
   public type AppRole = {
@@ -21,9 +20,19 @@ actor {
     #admin;
   };
 
-  public type LockedRole = {
-    role : AppRole;
-    isLocked : Bool;
+  public type UserProfile = {
+    principalId : Principal;
+    email : Text;
+    fullName : Text;
+    role : ?AppRole;
+    createdTime : Time.Time;
+    servicePincode : Text;
+    serviceAreaName : Text;
+    vehicleExperience : [VehicleExperience];
+    transmissionComfort : [TransmissionComfort];
+    isAvailable : Bool;
+    totalEarnings : Nat64;
+    languages : ?[Text];
   };
 
   public type VehicleExperience = {
@@ -37,21 +46,6 @@ actor {
     #manual;
     #automatic;
     #ev;
-  };
-
-  public type UserProfile = {
-    principalId : Principal;
-    email : Text;
-    fullName : Text;
-    role : LockedRole;
-    createdTime : Time.Time;
-    servicePincode : Text;
-    serviceAreaName : Text;
-    vehicleExperience : [VehicleExperience];
-    transmissionComfort : [TransmissionComfort];
-    isAvailable : Bool;
-    totalEarnings : Nat64;
-    languages : ?[Text];
   };
 
   public type TripStatus = {
@@ -140,33 +134,29 @@ actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
-  // Helper function to get user's app role
   private func getUserAppRole(user : Principal) : ?AppRole {
     switch (userProfiles.get(user)) {
-      case (?profile) { ?profile.role.role };
+      case (?profile) { profile.role };
       case (null) { null };
     };
   };
 
-  // Helper function to check if user is a customer
   private func isCustomer(user : Principal) : Bool {
     switch (getUserAppRole(user)) {
       case (?#customer) { true };
-      case (?#admin) { true }; // Admins can act as customers
+      case (?#admin) { true };
       case (_) { false };
     };
   };
 
-  // Helper function to check if user is a driver
   private func isDriver(user : Principal) : Bool {
     switch (getUserAppRole(user)) {
       case (?#driver) { true };
-      case (?#admin) { true }; // Admins can act as drivers
+      case (?#admin) { true };
       case (_) { false };
     };
   };
 
-  // Helper function to check if user is an admin
   private func isAppAdmin(user : Principal) : Bool {
     switch (getUserAppRole(user)) {
       case (?#admin) { true };
@@ -196,81 +186,100 @@ actor {
       Runtime.trap("Unauthorized: Only users can save profiles");
     };
 
-    // CRITICAL: Users can NEVER set their own role to admin through this endpoint
-    // Admin role can only be assigned through AccessControl.assignRole (admin-only) or admin secret code
-    if (profile.role.role == #admin) {
-      Runtime.trap("Unauthorized: Admin role cannot be self-assigned");
+    if (profile.principalId != caller) {
+      Runtime.trap("Unauthorized: principalId must match the caller");
+    };
+
+    switch (profile.role) {
+      case (?#admin) {
+        if (not isAppAdmin(caller)) {
+          Runtime.trap("Unauthorized: Cannot self-assign the admin role");
+        };
+      };
+      case (_) {};
     };
 
     switch (userProfiles.get(caller)) {
       case (?existingProfile) {
-        // Prevent changing locked role
-        if (existingProfile.role.isLocked) {
-          if (existingProfile.role.role != profile.role.role) {
-            Runtime.trap("Role is locked and cannot be changed");
-          };
-
-          // If the locked role matches, allow profile update but preserve the locked role
-          userProfiles.add(caller, { profile with
-            role = existingProfile.role;
-          });
-          return;
-        };
-
-        // If role is not locked, allow update but ensure it's not admin
-        if (profile.role.role == #admin) {
-          Runtime.trap("Unauthorized: Admin role cannot be self-assigned");
+        if (existingProfile.role != null and existingProfile.role != profile.role) {
+          Runtime.trap("Role cannot be changed after being set");
         };
       };
-      case (null) {
-        // New user - ensure they cannot create themselves as admin
-        if (profile.role.role == #admin) {
-          Runtime.trap("Unauthorized: Admin role cannot be self-assigned");
-        };
-      };
+      case (null) {};
     };
 
     userProfiles.add(caller, profile);
   };
 
-  public shared ({ caller }) func updateUserRoleAndLock(role : AppRole) : async () {
+  public shared ({ caller }) func updateUserRole(role : AppRole) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can update roles");
     };
 
-    // CRITICAL: Users can only lock customer or driver roles, never admin
-    // Admin role can only be assigned through AccessControl.assignRole or admin secret code
-    if (role == #admin) {
-      Runtime.trap("Unauthorized: Admin role cannot be self-assigned");
+    if (role == #admin and not isAppAdmin(caller)) {
+      Runtime.trap("Unauthorized: Cannot self-assign the admin role");
     };
 
     switch (userProfiles.get(caller)) {
       case (null) {
-        Runtime.trap("User not found");
+        Runtime.trap("User profile not found");
       };
       case (?userProfile) {
-        if (userProfile.role.isLocked) {
-          Runtime.trap("Role is already locked and cannot be changed");
-        };
-
-        // Ensure the role being locked is not admin
-        if (role == #admin) {
-          Runtime.trap("Unauthorized: Admin role cannot be self-assigned");
+        if (userProfile.role != null and userProfile.role != ?role) {
+          Runtime.trap("Role cannot be changed after being set");
         };
 
         let updatedProfile : UserProfile = {
-          userProfile with
-          role = {
-            role;
-            isLocked = true;
-          };
+          userProfile with role = ?role;
         };
         userProfiles.add(caller, updatedProfile);
       };
     };
   };
 
-  // Trip Management
+  public shared ({ caller }) func adminAssignRole(user : Principal, role : AppRole) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only authenticated users can perform this action");
+    };
+    if (not isAppAdmin(caller)) {
+      Runtime.trap("Unauthorized: Only admins can assign roles to other users");
+    };
+
+    switch (userProfiles.get(user)) {
+      case (null) {
+        Runtime.trap("Target user profile not found");
+      };
+      case (?userProfile) {
+        let updatedProfile : UserProfile = {
+          userProfile with role = ?role;
+        };
+        userProfiles.add(user, updatedProfile);
+      };
+    };
+  };
+
+  public shared ({ caller }) func upgradeCurrentUserToAdmin(code : Text) : async ?Text {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only authenticated users can upgrade to admin");
+    };
+
+    if (code != "NAMMA5600") {
+      return ?"Invalid admin code";
+    };
+
+    switch (userProfiles.get(caller)) {
+      case (null) {
+        return ?"User profile not found";
+      };
+      case (?userProfile) {
+        let updatedProfile : UserProfile = {
+          userProfile with role = ?#admin;
+        };
+        userProfiles.add(caller, updatedProfile);
+        return null;
+      };
+    };
+  };
 
   public shared ({ caller }) func createTrip(
     tripType : TripType,
@@ -284,7 +293,7 @@ actor {
     phone : Text,
     landmark : ?Text
   ) : async Text {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can create trips");
     };
 
@@ -316,17 +325,15 @@ actor {
   };
 
   public query ({ caller }) func getMyTrips() : async [Trip] {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can view trips");
     };
 
     let userTrips = trips.values().toList<Trip>().filter(
       func(trip) {
-        // Customers see their own trips
         if (isCustomer(caller) and trip.customerId == caller) {
           return true;
         };
-        // Drivers see trips they accepted
         if (isDriver(caller)) {
           switch (trip.driverId) {
             case (?driverId) { return driverId == caller };
@@ -341,7 +348,7 @@ actor {
   };
 
   public query ({ caller }) func getRequestedTrips() : async [Trip] {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can view requested trips");
     };
 
@@ -357,7 +364,7 @@ actor {
   };
 
   public shared ({ caller }) func acceptTrip(tripId : Text) : async () {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can accept trips");
     };
 
@@ -374,7 +381,6 @@ actor {
           Runtime.trap("Trip is not available for acceptance");
         };
 
-        // Prevent customers from accepting their own trips
         if (trip.customerId == caller) {
           Runtime.trap("Unauthorized: Cannot accept your own trip");
         };
@@ -389,7 +395,7 @@ actor {
   };
 
   public shared ({ caller }) func completeTrip(tripId : Text) : async () {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can complete trips");
     };
 
@@ -424,7 +430,7 @@ actor {
   };
 
   public query ({ caller }) func getAllUsers() : async [UserProfile] {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can view users");
     };
 
@@ -436,7 +442,7 @@ actor {
   };
 
   public query ({ caller }) func getAllTrips() : async [Trip] {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can view trips");
     };
 
