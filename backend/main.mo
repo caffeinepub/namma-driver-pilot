@@ -429,6 +429,46 @@ actor {
     };
   };
 
+  public shared ({ caller }) func updateAvailability(isAvailable : Bool) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only authenticated users can update availability");
+    };
+
+    func hasAcceptedTrips(driverId : Principal) : Bool {
+      let hasAcceptedTrip = trips.values().any(
+        func(trip) {
+          switch (trip.driverId) {
+            case (?dId) { dId == driverId and trip.status == #accepted };
+            case (null) { false };
+          };
+        }
+      );
+
+      hasAcceptedTrip;
+    };
+
+    switch (userProfiles.get(caller)) {
+      case (null) {
+        Runtime.trap("User profile not found");
+      };
+      case (?profile) {
+        switch (profile.role) {
+          case (?#driver) {
+            if (not isAvailable and hasAcceptedTrips(caller)) {
+              Runtime.trap("Cannot set Unavailable while you have an accepted trip");
+            };
+
+            let updatedProfile : UserProfile = { profile with isAvailable };
+            userProfiles.add(caller, updatedProfile);
+          };
+          case (_) {
+            Runtime.trap("Only drivers can update availability");
+          };
+        };
+      };
+    };
+  };
+
   public query ({ caller }) func getAllUsers() : async [UserProfile] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can view users");

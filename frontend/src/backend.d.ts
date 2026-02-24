@@ -102,6 +102,7 @@ export interface backendInterface {
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    updateAvailability(isAvailable: boolean): Promise<void>;
     updateUserRole(role: AppRole): Promise<void>;
     upgradeCurrentUserToAdmin(code: string): Promise<string | null>;
 }

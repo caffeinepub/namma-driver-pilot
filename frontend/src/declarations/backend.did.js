@@ -124,6 +124,7 @@ export const idlService = IDL.Service({
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'updateAvailability' : IDL.Func([IDL.Bool], [], []),
   'updateUserRole' : IDL.Func([AppRole], [], []),
   'upgradeCurrentUserToAdmin' : IDL.Func([IDL.Text], [IDL.Opt(IDL.Text)], []),
 });
@@ -244,6 +245,7 @@ export const idlFactory = ({ IDL }) => {
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'updateAvailability' : IDL.Func([IDL.Bool], [], []),
     'updateUserRole' : IDL.Func([AppRole], [], []),
     'upgradeCurrentUserToAdmin' : IDL.Func([IDL.Text], [IDL.Opt(IDL.Text)], []),
   });

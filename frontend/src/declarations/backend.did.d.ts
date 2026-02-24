@@ -105,6 +105,7 @@ export interface _SERVICE {
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'updateAvailability' : ActorMethod<[boolean], undefined>,
   'updateUserRole' : ActorMethod<[AppRole], undefined>,
   'upgradeCurrentUserToAdmin' : ActorMethod<[string], [] | [string]>,
 }

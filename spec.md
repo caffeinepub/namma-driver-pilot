@@ -1,11 +1,12 @@
 # Specification
 
 ## Summary
-**Goal:** Add a hidden admin recovery route and backend function that allows any logged-in user to upgrade their role to admin using a secret code.
+**Goal:** Lock the driver availability toggle whenever the driver has an accepted trip, preventing them from setting themselves Unavailable mid-trip, and automatically unlock it once all accepted trips are completed.
 
 **Planned changes:**
-- Add a new backend function `upgradeCurrentUserToAdmin(code : Text)` to the existing main actor that overwrites the caller's role to `#admin` in existing user profile storage if the code matches `"NAMMA5600"`, otherwise returns an error result with message `"Invalid admin code"`
-- Add a new frontend route `/admin/upgrade` (accessible to any logged-in user, not linked anywhere in the UI) that renders a title "Admin Upgrade", a text input labelled "Enter Admin Setup Code", and a button labelled "Upgrade to Admin"
-- On successful upgrade, redirect the user to `/admin/dashboard`; on failure, display the error message returned by the backend
+- Backend: Add a guard to the `updateAvailability` function that rejects attempts to set availability to `false` when the driver has any trip with status `accepted`, returning a descriptive error message.
+- Frontend (Driver Dashboard): Derive a `hasAcceptedTrip` boolean from the driver's accepted trips list; when true, force the availability toggle to display Available, render it as disabled/greyed-out, and show helper text: "Availability is locked while you have an accepted trip."
+- Frontend (Driver Dashboard): When the accepted trips list becomes empty after marking a trip as completed, re-enable the availability toggle and restore the driver's last persisted availability value.
+- Frontend (Driver Dashboard): Add a post-build checklist as a code comment or dev/QA callout with two steps: (1) Accept trip → toggle disabled and availability shows Available; (2) Complete trip → toggle re-enabled.
 
-**User-visible outcome:** A user who knows the direct URL `/admin/upgrade` can navigate to it while logged in, enter the secret code, and have their role upgraded to admin, after which they are redirected to the admin dashboard.
+**User-visible outcome:** Drivers with an active accepted trip will see their availability toggle greyed out and locked to Available. Once the accepted trip is marked as completed, the toggle becomes interactive again and reflects the driver's previously saved availability value.

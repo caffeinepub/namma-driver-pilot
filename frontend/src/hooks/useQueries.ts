@@ -186,6 +186,24 @@ export function useCompleteTrip() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myTrips'] });
+      // Also refresh profile so availability reflects latest saved value after unlock
+      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+    },
+  });
+}
+
+// Update driver availability — blocked by backend when accepted trip exists
+export function useUpdateAvailability() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (isAvailable: boolean) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.updateAvailability(isAvailable);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
     },
   });
 }

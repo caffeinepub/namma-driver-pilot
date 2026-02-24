@@ -2,12 +2,12 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-add-a-new-frontend-route-admin-upgrade-to-the-existing-tanstack-router-configuration-in-frontend-src-app-tsx-this-route-must-require-only-that-the-user-is-logged-in-no-role-restriction-the-page-must-render-a-title-admin-upgrade-a-text-input-labelled-enter-admin-setup-code-and-a-button-labelled-upgrade-to-admin-on-button-click-call-the-backend-upgradecurrentusertoadmin-function-with-the-entered-code-on-success-redirect-the-user-to-admin-dashboard-on-failure-display-the-error-message-returned-by-the-backend-this-route-must-not-be-linked-or-referenced-anywhere-in-the-ui-it-is-accessible-by-direct-url-only",
-      "featureTitle": "Add a new frontend route `/admin/upgrade` to the existing TanStack Router configuration in `frontend/src/App.tsx`. This route must require only that the user is logged in (no role restriction). The page must render: a title \"Admin Upgrade\", a text input labelled \"Enter Admin Setup Code\", and a button labelled \"Upgrade to Admin\". On button click, call the backend `upgradeCurrentUserToAdmin` function with the entered code. On success, redirect the user to `/admin/dashboard`. On failure, display the error message returned by the backend. This route must NOT be linked or referenced anywhere in the UI — it is accessible by direct URL only.",
+      "featureId": "feature-on-the-driver-dashboard-frontend-derive-a-boolean-hasacceptedtrip-by-checking-whether-the-driver-s-my-accepted-trips-list-contains-any-trip-with-status-accepted-when-hasacceptedtrip-is-true-a-force-the-displayed-availability-to-available-true-regardless-of-the-stored-value-b-render-the-availability-toggle-in-a-disabled-greyed-out-state-so-the-driver-cannot-interact-with-it-and-c-display-helper-text-directly-beneath-the-toggle-reading-availability-is-locked-while-you-have-an-accepted-trip",
+      "featureTitle": "On the Driver Dashboard frontend, derive a boolean `hasAcceptedTrip` by checking whether the driver's 'My Accepted Trips' list contains any trip with status `accepted`. When `hasAcceptedTrip` is true: (a) force the displayed availability to Available/true regardless of the stored value, (b) render the availability toggle in a disabled/greyed-out state so the driver cannot interact with it, and (c) display helper text directly beneath the toggle reading: 'Availability is locked while you have an accepted trip.'",
       "files": [
-        "frontend/src/App.tsx",
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/pages/AdminUpgradePage.tsx"
+        "frontend/src/components/DriverProfileSection.tsx",
+        "frontend/src/components/EditDriverProfileForm.tsx",
+        "frontend/src/components/EditDriverProfileModal.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -19,6 +19,44 @@
       ],
       "testIds": [
         "REQ-2"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-when-the-driver-clicks-mark-as-completed-and-the-trip-transitions-out-of-accepted-status-i-e-the-accepted-trips-list-becomes-empty-or-no-accepted-trips-remain-re-enable-the-availability-toggle-and-restore-it-to-the-driver-s-last-persisted-availability-value-from-their-profile",
+      "featureTitle": "When the driver clicks 'Mark as Completed' and the trip transitions out of `accepted` status (i.e., the accepted trips list becomes empty or no accepted trips remain), re-enable the availability toggle and restore it to the driver's last persisted availability value from their profile.",
+      "files": [
+        "frontend/src/components/DriverProfileSection.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-3"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-a-post-build-checklist-comment-block-as-a-visible-ui-element-or-inline-code-comment-confirming-the-two-verification-steps-1-accept-trip-toggle-is-disabled-and-availability-shows-available-2-complete-trip-toggle-is-re-enabled",
+      "featureTitle": "Add a post-build checklist comment block (as a visible UI element or inline code comment) confirming the two verification steps: (1) Accept trip → toggle is disabled and availability shows Available; (2) Complete trip → toggle is re-enabled.",
+      "files": [
+        "frontend/src/components/DriverProfileSection.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-4"
       ],
       "confidence": "high"
     }

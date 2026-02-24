@@ -12,9 +12,16 @@ interface EditDriverProfileModalProps {
   open: boolean;
   onClose: () => void;
   userProfile: UserProfile | null | undefined;
+  /** True when the driver has at least one trip with status "accepted" */
+  hasAcceptedTrip: boolean;
 }
 
-export default function EditDriverProfileModal({ open, onClose, userProfile }: EditDriverProfileModalProps) {
+export default function EditDriverProfileModal({
+  open,
+  onClose,
+  userProfile,
+  hasAcceptedTrip,
+}: EditDriverProfileModalProps) {
   if (!userProfile) return null;
 
   return (
@@ -26,7 +33,11 @@ export default function EditDriverProfileModal({ open, onClose, userProfile }: E
             Update your service area, vehicle experience, and availability settings
           </DialogDescription>
         </DialogHeader>
-        <EditDriverProfileForm userProfile={userProfile} onClose={onClose} />
+        <EditDriverProfileForm
+          userProfile={userProfile}
+          onClose={onClose}
+          hasAcceptedTrip={hasAcceptedTrip}
+        />
       </DialogContent>
     </Dialog>
   );

@@ -185,6 +185,7 @@ export interface backendInterface {
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    updateAvailability(isAvailable: boolean): Promise<void>;
     updateUserRole(role: AppRole): Promise<void>;
     upgradeCurrentUserToAdmin(code: string): Promise<string | null>;
 }
@@ -398,6 +399,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.saveCallerUserProfile(to_candid_UserProfile_n53(this._uploadFile, this._downloadFile, arg0));
+            return result;
+        }
+    }
+    async updateAvailability(arg0: boolean): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateAvailability(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateAvailability(arg0);
             return result;
         }
     }

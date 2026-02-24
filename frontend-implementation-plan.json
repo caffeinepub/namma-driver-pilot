@@ -1,35 +1,65 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Admin Recovery Patch: /admin/upgrade route + upgradeCurrentUserToAdmin backend function",
+  "title": "Lock Driver Availability Toggle When Accepted Trip Exists",
   "requirements": [
     {
       "id": "REQ-2",
-      "summary": "Add a hidden /admin/upgrade route accessible by direct URL only for authenticated users to upgrade their role to admin using a secret code, with success redirect to /admin/dashboard and error display on invalid code",
+      "summary": "Lock availability toggle when driver has accepted trips",
       "acceptanceCriteria": [
-        "Navigating directly to `/admin/upgrade` while logged in shows the Admin Upgrade page with the title, input field, and button.",
-        "Unauthenticated users navigating to `/admin/upgrade` are redirected to the landing page (consistent with existing auth guard behavior).",
-        "Entering code NAMMA5600 and clicking \"Upgrade to Admin\" calls the backend function, and on success redirects to `/admin/dashboard`.",
-        "Entering an incorrect code displays the error message \"Invalid admin code\" on the page.",
-        "No link, button, or reference to `/admin/upgrade` is added anywhere in the existing UI (Navigation, LandingPage, dashboards, modals, etc.).",
-        "The existing `/admin/dashboard` route guard (requires role == admin) is not modified.",
-        "No other existing pages, components, or logic are changed."
+        "When the driver has at least one accepted trip, the availability toggle is visually disabled (greyed out) and cannot be clicked.",
+        "The toggle displays Available (true) regardless of the driver's last saved value while any accepted trip exists.",
+        "Helper text 'Availability is locked while you have an accepted trip.' is visible beneath the toggle when locked.",
+        "Helper text is hidden and toggle is enabled when no accepted trips exist.",
+        "No changes are made to the Available Trips section, My Accepted Trips section layout, or any customer/admin UI."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/AdminUpgradePage.tsx",
-          "operation": "create",
-          "description": "Create a new page component AdminUpgradePage that renders a centered card with title \"Admin Upgrade\", a text input labelled \"Enter Admin Setup Code\", and a button labelled \"Upgrade to Admin\". On button click, call the backend upgradeCurrentUserToAdmin function with the entered code. On success (non-null return), invalidate the user profile query and redirect to /admin/dashboard using TanStack Router navigation. On failure (null return or error), display the error message \"Invalid admin code\" below the input field. Include loading state during the backend call and disable the button while loading. Use existing shadcn/ui components (Card, Input, Button) for consistent styling."
+          "path": "frontend/src/components/DriverProfileSection.tsx",
+          "operation": "modify",
+          "description": "Add logic to compute `hasAcceptedTrip` by checking if any trip in the driver's My Accepted Trips list has status 'accepted'. When true: force the displayed availability to true (Available), disable the availability toggle, and show helper text 'Availability is locked while you have an accepted trip.' beneath the toggle. When false: enable the toggle and hide the helper text. Fetch the driver's accepted trips using `useGetMyTrips` hook and filter for trips with `status === 'accepted'`."
         },
         {
-          "path": "frontend/src/App.tsx",
+          "path": "frontend/src/components/EditDriverProfileForm.tsx",
           "operation": "modify",
-          "description": "Add a new route configuration for /admin/upgrade in the TanStack Router setup. The route must use an auth guard that only checks if the user is logged in (identity exists) and redirects unauthenticated users to the landing page. Do not check the user's role. Import and render the AdminUpgradePage component at this route. Place this route registration alongside the existing dashboard routes but ensure it does not appear in any navigation menus or UI elements."
+          "description": "Accept a new prop `hasAcceptedTrip: boolean`. When true: disable the availability toggle field (set disabled attribute), force its value to true (Available), and display helper text 'Availability is locked while you have an accepted trip.' beneath the toggle. When false: enable the toggle and hide the helper text. Ensure the form does not allow submitting availability = false when `hasAcceptedTrip` is true."
         },
         {
-          "path": "frontend/src/hooks/useQueries.ts",
+          "path": "frontend/src/components/EditDriverProfileModal.tsx",
           "operation": "modify",
-          "description": "Add a new mutation hook useUpgradeToAdmin that calls the backend upgradeCurrentUserToAdmin function with a code parameter. The mutation should return the result string (success message) or null (on error). On success, invalidate the 'currentUserProfile' query key to refresh the user's profile data. Include proper error handling and use the existing actor instance from useActor hook."
+          "description": "Pass the `hasAcceptedTrip` boolean prop from the parent DriverProfileSection to EditDriverProfileForm so the availability toggle is locked in both the profile card and edit modal when accepted trips exist."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Re-enable availability toggle after completing all accepted trips",
+      "acceptanceCriteria": [
+        "After marking a trip as completed, if no other accepted trips remain, the availability toggle becomes interactive again.",
+        "The toggle reflects the driver's last saved availability value (from their profile) after unlocking.",
+        "If the driver had multiple accepted trips and only one is completed, the toggle remains locked until all accepted trips are resolved.",
+        "No changes are made to the Mark as Completed mutation logic or the DriverTripList layout."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/DriverProfileSection.tsx",
+          "operation": "modify",
+          "description": "Ensure the `hasAcceptedTrip` computation reactively updates when trips change. After `useCompleteTrip` mutation succeeds, React Query will invalidate and refetch the driver's trips. The `hasAcceptedTrip` boolean will automatically recalculate: if no accepted trips remain, the toggle unlocks and displays the driver's persisted availability value from their profile. No additional logic needed beyond existing query invalidation."
+        }
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "summary": "Add post-build verification checklist comment",
+      "acceptanceCriteria": [
+        "A post-build checklist with the two steps is either rendered as a visible UI note on the Driver Dashboard (e.g., a small dev/QA callout) or included as a clearly labeled comment in the relevant component file.",
+        "The checklist does not affect production UI for end users if rendered only as a code comment."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/DriverProfileSection.tsx",
+          "operation": "modify",
+          "description": "Add a clearly labeled comment block at the top of the component file with the post-build checklist: '(1) Accept trip → toggle is disabled and availability shows Available; (2) Complete trip → toggle is re-enabled.' Format as a JSDoc-style comment or inline comment for developer visibility during code review."
         }
       ]
     }
