@@ -1,0 +1,208 @@
+{
+  "kind": "build_request",
+  "title": "Add Edit Profile functionality to Driver Dashboard",
+  "projectName": "Namma Driver Pilot",
+  "priority": "high",
+  "requirements": [
+    {
+      "id": "REQ-51",
+      "text": "Add an 'Edit Profile' button to the Driver Dashboard page that opens an editable form modal or section for driver profile fields",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-5"
+        ],
+        "quotes": [
+          "On Driver Dashboard add an \"Edit Profile\" button."
+        ]
+      },
+      "acceptanceCriteria": [
+        "Edit Profile button is visible on Driver Dashboard page",
+        "Button opens an editable form when clicked",
+        "Form displays all required driver profile fields"
+      ]
+    },
+    {
+      "id": "REQ-52",
+      "text": "Create editable profile form with servicePincode field (required, text input with validation)",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-5"
+        ],
+        "quotes": [
+          "servicePincode (required)"
+        ]
+      },
+      "acceptanceCriteria": [
+        "servicePincode field is rendered as text input",
+        "Field is marked as required",
+        "Form validation prevents submission if servicePincode is empty"
+      ]
+    },
+    {
+      "id": "REQ-53",
+      "text": "Create editable profile form with serviceAreaName field (required, text input with validation)",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-5"
+        ],
+        "quotes": [
+          "serviceAreaName (required)"
+        ]
+      },
+      "acceptanceCriteria": [
+        "serviceAreaName field is rendered as text input",
+        "Field is marked as required",
+        "Form validation prevents submission if serviceAreaName is empty"
+      ]
+    },
+    {
+      "id": "REQ-54",
+      "text": "Create editable profile form with vehicleExperience field as multi-select checkboxes with options: Hatchback, Sedan, SUV, Luxury",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-5"
+        ],
+        "quotes": [
+          "vehicleExperience (multi-select checkboxes)"
+        ]
+      },
+      "acceptanceCriteria": [
+        "vehicleExperience field displays as multiple checkboxes",
+        "Checkboxes include options: Hatchback, Sedan, SUV, Luxury",
+        "Multiple checkboxes can be selected simultaneously",
+        "Selected values are stored as an array"
+      ]
+    },
+    {
+      "id": "REQ-55",
+      "text": "Create editable profile form with transmissionComfort field as multi-select checkboxes with options: Manual, Automatic, EV",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-5"
+        ],
+        "quotes": [
+          "transmissionComfort (multi-select checkboxes)"
+        ]
+      },
+      "acceptanceCriteria": [
+        "transmissionComfort field displays as multiple checkboxes",
+        "Checkboxes include options: Manual, Automatic, EV",
+        "Multiple checkboxes can be selected simultaneously",
+        "Selected values are stored as an array"
+      ]
+    },
+    {
+      "id": "REQ-56",
+      "text": "Create editable profile form with languages field (optional, text input or multi-select implementation)",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-5"
+        ],
+        "quotes": [
+          "languages (text or multi-select ok)"
+        ]
+      },
+      "acceptanceCriteria": [
+        "languages field is rendered (text input or multi-select)",
+        "Field is optional and does not prevent form submission when empty",
+        "Input value is stored as array or comma-separated list"
+      ]
+    },
+    {
+      "id": "REQ-57",
+      "text": "Create editable profile form with isAvailable field as a toggle switch",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-5"
+        ],
+        "quotes": [
+          "isAvailable (toggle)"
+        ]
+      },
+      "acceptanceCriteria": [
+        "isAvailable field displays as a toggle switch",
+        "Toggle can be switched between on/off states",
+        "Toggle state is stored as boolean value"
+      ]
+    },
+    {
+      "id": "REQ-58",
+      "text": "Implement Save button in the profile edit form that calls the existing saveCallerUserProfile backend function with all form field values",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-5"
+        ],
+        "quotes": [
+          "persist to backend using existing saveCallerUserProfile (or the same profile save function already used in app)"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Save button is rendered in the edit form",
+        "Clicking Save calls saveCallerUserProfile with form data",
+        "Form data includes all fields: servicePincode, serviceAreaName, vehicleExperience array, transmissionComfort array, languages, isAvailable boolean",
+        "Loading state is shown during save operation"
+      ]
+    },
+    {
+      "id": "REQ-59",
+      "text": "After successful save, immediately update the My Profile display card on Driver Dashboard to reflect the newly saved values without requiring page refresh",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-5"
+        ],
+        "quotes": [
+          "update the My Profile card immediately"
+        ]
+      },
+      "acceptanceCriteria": [
+        "After save completes successfully, My Profile section updates automatically",
+        "Updated values are visible in the My Profile display card",
+        "No page refresh is required to see changes",
+        "Edit form closes after successful save"
+      ]
+    },
+    {
+      "id": "REQ-60",
+      "text": "Ensure driver profile data persists across page refresh and logout/login cycles by verifying backend storage",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-5"
+        ],
+        "quotes": [
+          "data must persist after refresh + logout/login"
+        ]
+      },
+      "acceptanceCriteria": [
+        "After saving profile and refreshing the page, saved values are still displayed in My Profile section",
+        "After saving profile, logging out, and logging back in, saved values are still displayed",
+        "Backend correctly stores and retrieves all driver profile field values"
+      ]
+    }
+  ],
+  "constraints": [
+    "Do NOT modify trip logic or trip-related backend functions",
+    "Do NOT modify customer pages or customer-facing components",
+    "Use the existing saveCallerUserProfile backend function for persistence",
+    "Only modify Driver Dashboard and driver profile-related components"
+  ],
+  "nonGoals": [
+    "Changes to trip creation, acceptance, or completion logic",
+    "Changes to customer booking form or customer dashboard",
+    "Changes to admin dashboard or admin functionality",
+    "Adding new backend functions beyond existing saveCallerUserProfile"
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  }
+}

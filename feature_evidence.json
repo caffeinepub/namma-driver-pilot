@@ -1,0 +1,199 @@
+{
+  "kind": "feature_evidence_report",
+  "features": [
+    {
+      "featureId": "feature-add-an-edit-profile-button-to-the-driver-dashboard-page-that-opens-an-editable-form-modal-or-section-for-driver-profile-fields",
+      "featureTitle": "Add an 'Edit Profile' button to the Driver Dashboard page that opens an editable form modal or section for driver profile fields",
+      "files": [
+        "frontend/src/components/DriverProfileSection.tsx",
+        "frontend/src/components/EditDriverProfileModal.tsx",
+        "frontend/src/pages/DriverDashboard.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-51"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-create-editable-profile-form-with-servicepincode-field-required-text-input-with-validation",
+      "featureTitle": "Create editable profile form with servicePincode field (required, text input with validation)",
+      "files": [
+        "frontend/src/components/EditDriverProfileForm.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-52"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-create-editable-profile-form-with-serviceareaname-field-required-text-input-with-validation",
+      "featureTitle": "Create editable profile form with serviceAreaName field (required, text input with validation)",
+      "files": [
+        "frontend/src/components/EditDriverProfileForm.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-53"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-create-editable-profile-form-with-vehicleexperience-field-as-multi-select-checkboxes-with-options-hatchback-sedan-suv-luxury",
+      "featureTitle": "Create editable profile form with vehicleExperience field as multi-select checkboxes with options: Hatchback, Sedan, SUV, Luxury",
+      "files": [
+        "frontend/src/components/EditDriverProfileForm.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-54"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-create-editable-profile-form-with-transmissioncomfort-field-as-multi-select-checkboxes-with-options-manual-automatic-ev",
+      "featureTitle": "Create editable profile form with transmissionComfort field as multi-select checkboxes with options: Manual, Automatic, EV",
+      "files": [
+        "frontend/src/components/EditDriverProfileForm.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-55"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-create-editable-profile-form-with-languages-field-optional-text-input-or-multi-select-implementation",
+      "featureTitle": "Create editable profile form with languages field (optional, text input or multi-select implementation)",
+      "files": [
+        "frontend/src/components/EditDriverProfileForm.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-56"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-create-editable-profile-form-with-isavailable-field-as-a-toggle-switch",
+      "featureTitle": "Create editable profile form with isAvailable field as a toggle switch",
+      "files": [
+        "frontend/src/components/EditDriverProfileForm.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-57"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-implement-save-button-in-the-profile-edit-form-that-calls-the-existing-savecalleruserprofile-backend-function-with-all-form-field-values",
+      "featureTitle": "Implement Save button in the profile edit form that calls the existing saveCallerUserProfile backend function with all form field values",
+      "files": [
+        "frontend/src/components/EditDriverProfileForm.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-58"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-after-successful-save-immediately-update-the-my-profile-display-card-on-driver-dashboard-to-reflect-the-newly-saved-values-without-requiring-page-refresh",
+      "featureTitle": "After successful save, immediately update the My Profile display card on Driver Dashboard to reflect the newly saved values without requiring page refresh",
+      "files": [
+        "frontend/src/components/DriverProfileSection.tsx",
+        "frontend/src/components/EditDriverProfileForm.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-59"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-ensure-driver-profile-data-persists-across-page-refresh-and-logout-login-cycles-by-verifying-backend-storage",
+      "featureTitle": "Ensure driver profile data persists across page refresh and logout/login cycles by verifying backend storage",
+      "files": [
+        "frontend/src/components/EditDriverProfileForm.tsx",
+        "frontend/src/pages/DriverDashboard.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-60"
+      ],
+      "confidence": "high"
+    }
+  ]
+}

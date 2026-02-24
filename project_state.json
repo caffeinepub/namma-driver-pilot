@@ -1,0 +1,669 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 13,
+  "summary": "Building 'Namma Driver Pilot' - a ride-booking web app MVP with role-based access (customer/driver/admin), booking flow, and admin dashboards using React frontend and Supabase backend",
+  "architectural_notes": [
+    "Frontend: React (Vite) with mobile-friendly simple UI",
+    "Backend: Supabase (Auth + Postgres) - NOT using platform's cloud backend",
+    "Database: Public schema with profiles, user_roles, trips tables",
+    "Auth: Supabase Auth with email/password",
+    "RLS policies for data security by role",
+    "Environment variables: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY",
+    "Auto-trigger on user signup to create profile and default customer role",
+    "Admin bootstrap: first user or manual SQL promotion by email",
+    "Role selection screen shown only if user has no role assigned",
+    "60-second countdown timer on role selection warning popup before user can confirm"
+  ],
+  "known_issues": [],
+  "isFixRequest": true,
+  "existing_features": [
+    {
+      "id": "feature-implement-internet-identity-authentication-integration-with-email-support-for-user-login-and-signup",
+      "title": "Implement Internet Identity authentication integration with email support for user login and signup",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-landing-page-at-root-route-with-login-and-sign-up-buttons-simple-hero-section-and-brief-app-description",
+      "title": "Create landing page at root route (/) with Login and Sign Up buttons, simple hero section, and brief app description",
+      "reqIds": [
+        "REQ-7"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-customer-dashboard-at-customer-dashboard-with-a-ride-request-form-pickup-location-dropoff-location-submit-button-and-a-list-of-the-customer-s-trips-showing-pickup-dropoff-status-and-creation-time",
+      "title": "Create Customer Dashboard at /customer/dashboard with a ride request form (pickup location, dropoff location, submit button) and a list of the customer's trips showing pickup, dropoff, status, and creation time",
+      "reqIds": [
+        "REQ-8"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-driver-dashboard-at-driver-dashboard-with-two-sections-available-trips-requested-trips-with-accept-button-and-my-trips-accepted-trips-with-complete-button",
+      "title": "Create Driver Dashboard at /driver/dashboard with two sections: Available Trips (requested trips with Accept button) and My Trips (accepted trips with Complete button)",
+      "reqIds": [
+        "REQ-9"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-admin-dashboard-at-admin-dashboard-with-two-tabs-users-list-all-users-with-email-full-name-role-and-trips-list-all-trips-with-customer-email-driver-email-if-assigned-pickup-dropoff-status-timestamp",
+      "title": "Create Admin Dashboard at /admin/dashboard with two tabs: Users (list all users with email, full name, role) and Trips (list all trips with customer email, driver email if assigned, pickup, dropoff, status, timestamp)",
+      "reqIds": [
+        "REQ-10"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-route-protection-and-role-based-navigation-redirect-unauthenticated-users-to-landing-page-redirect-authenticated-users-to-their-role-specific-dashboard-customer-dashboard-for-customers-driver-dashboard-for-drivers-admin-dashboard-for-admins-prevent-access-to-dashboards-for-unauthorized-roles",
+      "title": "Implement route protection and role-based navigation: redirect unauthenticated users to landing page, redirect authenticated users to their role-specific dashboard (/customer/dashboard for customers, /driver/dashboard for drivers, /admin/dashboard for admins), prevent access to dashboards for unauthorized roles",
+      "reqIds": [
+        "REQ-11"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-design-a-simple-mobile-friendly-ui-with-clean-layout-readable-typography-and-a-professional-color-scheme-distinct-from-blue-and-purple-that-works-well-for-a-ride-booking-application",
+      "title": "Design a simple, mobile-friendly UI with clean layout, readable typography, and a professional color scheme distinct from blue and purple that works well for a ride-booking application",
+      "reqIds": [
+        "REQ-12"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-role-selection-screen-that-displays-after-login-when-a-user-has-no-role-assigned-showing-two-buttons-customer-and-driver-and-automatically-triggering-a-warning-popup-modal",
+      "title": "Create a Role Selection screen that displays after login when a user has no role assigned, showing two buttons: 'Customer' and 'Driver', and automatically triggering a warning popup modal",
+      "reqIds": [
+        "REQ-13"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-warning-popup-modal-with-message-choose-carefully-role-cannot-be-changed-later-a-60-second-countdown-timer-and-two-disabled-action-buttons-continue-as-customer-and-continue-as-driver-that-become-enabled-only-after-the-timer-reaches-zero",
+      "title": "Implement warning popup modal with message 'Choose carefully. Role cannot be changed later.', a 60-second countdown timer, and two disabled action buttons ('Continue as Customer' and 'Continue as Driver') that become enabled only after the timer reaches zero",
+      "reqIds": [
+        "REQ-14"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-when-user-clicks-continue-as-customer-or-continue-as-driver-after-the-countdown-completes-save-the-selected-role-permanently-to-the-backend-user-profile-and-mark-the-role-as-locked-to-prevent-future-changes",
+      "title": "When user clicks 'Continue as Customer' or 'Continue as Driver' after the countdown completes, save the selected role permanently to the backend user profile and mark the role as locked to prevent future changes",
+      "reqIds": [
+        "REQ-15"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-strict-route-guard-for-customer-pages-customer-that-redirects-non-customer-users-to-their-correct-dashboard-if-they-attempt-to-access-customer-routes",
+      "title": "Implement strict route guard for customer pages (/customer/*) that redirects non-customer users to their correct dashboard if they attempt to access customer routes",
+      "reqIds": [
+        "REQ-17"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-strict-route-guard-for-driver-pages-driver-that-redirects-non-driver-users-to-their-correct-dashboard-if-they-attempt-to-access-driver-routes",
+      "title": "Implement strict route guard for driver pages (/driver/*) that redirects non-driver users to their correct dashboard if they attempt to access driver routes",
+      "reqIds": [
+        "REQ-18"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-strict-route-guard-for-admin-pages-admin-that-redirects-non-admin-users-to-their-correct-dashboard-if-they-attempt-to-access-admin-routes",
+      "title": "Implement strict route guard for admin pages (/admin/*) that redirects non-admin users to their correct dashboard if they attempt to access admin routes",
+      "reqIds": [
+        "REQ-19"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-post-login-navigation-logic-to-check-if-authenticated-user-has-a-role-assigned-if-no-role-exists-redirect-to-role-selection-screen-if-role-exists-redirect-to-their-role-specific-dashboard",
+      "title": "Update the post-login navigation logic to check if authenticated user has a role assigned: if no role exists, redirect to Role Selection screen; if role exists, redirect to their role-specific dashboard",
+      "reqIds": [
+        "REQ-20"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-trip-type-field-to-customer-booking-form-with-two-radio-options-local-and-outstation-required-field-no-default-selection",
+      "title": "Add Trip Type field to Customer booking form with two radio options: 'Local' and 'Outstation' (required field, no default selection)",
+      "reqIds": [
+        "REQ-21"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-journey-type-field-to-customer-booking-form-with-two-radio-options-one-way-and-round-trip-required-field-no-default-selection",
+      "title": "Add Journey Type field to Customer booking form with two radio options: 'One Way' and 'Round Trip' (required field, no default selection)",
+      "reqIds": [
+        "REQ-22"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-display-informational-popup-modal-when-customer-selects-a-journey-type-option-showing-explanation-text-based-on-selection-one-way-pickup-drop-are-at-different-locations-in-the-city-for-one-way-or-round-trip-pickup-drop-are-the-same-location-in-the-city-driver-returns-to-pickup-for-round-trip-with-an-ok-button-to-dismiss",
+      "title": "Display informational popup modal when customer selects a Journey Type option, showing explanation text based on selection: 'One Way: Pickup & Drop are at different locations in the city.' for One Way, or 'Round Trip: Pickup & Drop are the same location in the city (driver returns to pickup).' for Round Trip, with an OK button to dismiss",
+      "reqIds": [
+        "REQ-23"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-vehicle-type-dropdown-field-to-customer-booking-form-with-four-options-hatchback-sedan-suv-luxury-required-field-no-default-selection",
+      "title": "Add Vehicle Type dropdown field to Customer booking form with four options: 'Hatchback', 'Sedan', 'SUV', 'Luxury' (required field, no default selection)",
+      "reqIds": [
+        "REQ-24"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-smart-hire-duration-field-for-local-trips-display-dropdown-with-options-2-3-4-5-6-7-8-9-10-11-12-hours-plus-custom-option-that-reveals-a-number-input-field-minimum-value-2-hours-when-selected",
+      "title": "Implement smart Hire Duration field for Local trips: display dropdown with options 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 hours, plus 'Custom' option that reveals a number input field (minimum value 2 hours) when selected",
+      "reqIds": [
+        "REQ-25"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-hire-duration-for-outstation-trips-display-start-date-time-picker-and-end-date-time-picker-fields-both-required-auto-calculate-duration-in-calendar-days-using-formula-durationdays-ceil-enddatetime-startdatetime-24-hours-display-calculated-duration-as-duration-x-days-enforce-minimum-1-day-and-validate-that-end-must-be-after-start-show-error-if-end-start",
+      "title": "Implement Hire Duration for Outstation trips: display Start Date & Time picker and End Date & Time picker fields (both required), auto-calculate duration in calendar days using formula durationDays = ceil((endDateTime - startDateTime) / 24 hours), display calculated duration as 'Duration: X days', enforce minimum 1 day and validate that End must be after Start (show error if End <= Start)",
+      "reqIds": [
+        "REQ-26"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-location-mode-toggle-field-to-customer-booking-form-with-two-options-manual-entry-default-and-use-gps-optional-mode",
+      "title": "Add Location Mode toggle field to Customer booking form with two options: 'Manual Entry' (default) and 'Use GPS' (optional mode)",
+      "reqIds": [
+        "REQ-27"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-manual-entry-mode-location-fields-display-pickup-pincode-required-6-digit-validation-and-pickup-area-name-required-text-field-and-conditionally-show-drop-pincode-required-6-digit-validation-and-drop-area-name-required-text-field-only-when-trip-type-is-outstation-and-journey-type-is-one-way",
+      "title": "Implement Manual Entry mode location fields: display Pickup Pincode (required, 6-digit validation) and Pickup Area Name (required text field), and conditionally show Drop Pincode (required, 6-digit validation) and Drop Area Name (required text field) only when Trip Type is 'Outstation' AND Journey Type is 'One Way'",
+      "reqIds": [
+        "REQ-28"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-use-gps-mode-with-get-my-location-button-when-clicked-request-browser-geolocation-permission-capture-pickup-latitude-and-longitude-coordinates-display-captured-pickup-address-text-to-user-make-pickup-pincode-and-pickup-area-fields-optional-not-required-and-maintain-same-drop-field-visibility-rules-show-drop-pincode-and-drop-area-only-for-outstation-one-way-trips",
+      "title": "Implement Use GPS mode with 'Get My Location' button: when clicked, request browser geolocation permission, capture pickup latitude and longitude coordinates, display captured pickup address text to user, make Pickup Pincode and Pickup Area fields optional (not required), and maintain same Drop field visibility rules (show Drop Pincode and Drop Area only for Outstation + One Way trips)",
+      "reqIds": [
+        "REQ-29"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-gps-permission-denial-fallback-if-geolocation-permission-is-denied-or-fails-automatically-switch-location-mode-back-to-manual-entry-and-display-error-message-location-permission-denied-please-enter-pickup-pincode-and-area-manually",
+      "title": "Implement GPS permission denial fallback: if geolocation permission is denied or fails, automatically switch Location Mode back to 'Manual Entry' and display error message 'Location permission denied. Please enter pickup pincode and area manually.'",
+      "reqIds": [
+        "REQ-30"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-contact-section-to-customer-booking-form-with-phone-number-field-required-10-digit-validation-and-landmark-field-optional-text-field",
+      "title": "Add Contact section to Customer booking form with Phone Number field (required, 10-digit validation) and Landmark field (optional text field)",
+      "reqIds": [
+        "REQ-31"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-remove-distance-field-and-fare-amount-field-from-customer-booking-form-if-they-exist-in-the-current-implementation",
+      "title": "Remove distance field and fare amount field from Customer booking form if they exist in the current implementation",
+      "reqIds": [
+        "REQ-32"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-display-informational-message-at-the-bottom-of-the-customer-booking-form-fare-will-be-calculated-automatically-and-confirmed-by-admin-pricing-rules",
+      "title": "Display informational message at the bottom of the Customer booking form: 'Fare will be calculated automatically and confirmed by admin pricing rules.'",
+      "reqIds": [
+        "REQ-33"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-frontend-riderequestform-component-to-replace-the-existing-simple-pickup-dropoff-form-with-the-comprehensive-booking-form-containing-all-new-fields-trip-type-journey-type-vehicle-type-hire-duration-location-mode-contact-in-the-specified-order-maintaining-mobile-friendly-single-scroll-layout",
+      "title": "Update frontend RideRequestForm component to replace the existing simple pickup/dropoff form with the comprehensive booking form containing all new fields (Trip Type, Journey Type, Vehicle Type, Hire Duration, Location Mode, Contact) in the specified order, maintaining mobile-friendly single-scroll layout",
+      "reqIds": [
+        "REQ-36"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-frontend-usecreatetrip-mutation-hook-to-pass-all-new-trip-fields-triptype-journeytype-vehicletype-duration-fields-location-fields-contact-fields-to-the-backend-createtrip-function",
+      "title": "Update frontend useCreateTrip mutation hook to pass all new trip fields (tripType, journeyType, vehicleType, duration fields, location fields, contact fields) to the backend createTrip function",
+      "reqIds": [
+        "REQ-37"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-when-location-mode-is-set-to-use-gps-in-the-customer-booking-form-hide-pickup-pincode-and-pickup-area-name-fields-completely-make-them-not-visible-and-not-required",
+      "title": "When Location Mode is set to 'Use GPS' in the customer booking form, hide Pickup Pincode and Pickup Area Name fields completely (make them not visible and not required)",
+      "reqIds": [
+        "REQ-38"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-when-location-mode-is-set-to-manual-entry-in-the-customer-booking-form-show-pickup-pincode-and-pickup-area-name-fields-and-make-them-required",
+      "title": "When Location Mode is set to 'Manual Entry' in the customer booking form, show Pickup Pincode and Pickup Area Name fields and make them required",
+      "reqIds": [
+        "REQ-39"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-when-gps-permission-is-denied-or-location-fetch-fails-automatically-switch-location-mode-back-to-manual-entry-display-error-message-location-permission-denied-please-enter-pickup-manually-and-make-pickup-pincode-and-pickup-area-name-fields-visible-and-required",
+      "title": "When GPS permission is denied or location fetch fails, automatically switch Location Mode back to 'Manual Entry', display error message 'Location permission denied. Please enter pickup manually.', and make Pickup Pincode and Pickup Area Name fields visible and required",
+      "reqIds": [
+        "REQ-40"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-my-profile-section-component-on-driver-dashboard-driver-dashboard-that-displays-driver-profile-fields-in-read-only-format-servicepincode-serviceareaname-vehicleexperience-display-as-comma-separated-list-transmissioncomfort-display-as-comma-separated-list-isavailable-display-as-yes-no-or-on-off-totalearnings-display-with-currency-number-format-languages-display-as-comma-separated-list-or-none-if-empty",
+      "title": "Create 'My Profile' section component on Driver Dashboard (/driver/dashboard) that displays driver profile fields in read-only format: servicePincode, serviceAreaName, vehicleExperience (display as comma-separated list), transmissionComfort (display as comma-separated list), isAvailable (display as Yes/No or On/Off), totalEarnings (display with currency/number format), languages (display as comma-separated list or 'None' if empty)",
+      "reqIds": [
+        "REQ-49"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fetch-driver-profile-data-using-existing-usegetcalleruserprofile-hook-and-display-in-my-profile-section-without-requiring-additional-backend-queries",
+      "title": "Fetch driver profile data using existing useGetCallerUserProfile hook and display in 'My Profile' section without requiring additional backend queries",
+      "reqIds": [
+        "REQ-50"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-an-edit-profile-button-to-the-driver-dashboard-page-that-opens-an-editable-form-modal-or-section-for-driver-profile-fields",
+      "title": "Add an 'Edit Profile' button to the Driver Dashboard page that opens an editable form modal or section for driver profile fields",
+      "reqIds": [
+        "REQ-51"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-editable-profile-form-with-servicepincode-field-required-text-input-with-validation",
+      "title": "Create editable profile form with servicePincode field (required, text input with validation)",
+      "reqIds": [
+        "REQ-52"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-editable-profile-form-with-serviceareaname-field-required-text-input-with-validation",
+      "title": "Create editable profile form with serviceAreaName field (required, text input with validation)",
+      "reqIds": [
+        "REQ-53"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-editable-profile-form-with-vehicleexperience-field-as-multi-select-checkboxes-with-options-hatchback-sedan-suv-luxury",
+      "title": "Create editable profile form with vehicleExperience field as multi-select checkboxes with options: Hatchback, Sedan, SUV, Luxury",
+      "reqIds": [
+        "REQ-54"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-editable-profile-form-with-transmissioncomfort-field-as-multi-select-checkboxes-with-options-manual-automatic-ev",
+      "title": "Create editable profile form with transmissionComfort field as multi-select checkboxes with options: Manual, Automatic, EV",
+      "reqIds": [
+        "REQ-55"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-editable-profile-form-with-languages-field-optional-text-input-or-multi-select-implementation",
+      "title": "Create editable profile form with languages field (optional, text input or multi-select implementation)",
+      "reqIds": [
+        "REQ-56"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-editable-profile-form-with-isavailable-field-as-a-toggle-switch",
+      "title": "Create editable profile form with isAvailable field as a toggle switch",
+      "reqIds": [
+        "REQ-57"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-save-button-in-the-profile-edit-form-that-calls-the-existing-savecalleruserprofile-backend-function-with-all-form-field-values",
+      "title": "Implement Save button in the profile edit form that calls the existing saveCallerUserProfile backend function with all form field values",
+      "reqIds": [
+        "REQ-58"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-after-successful-save-immediately-update-the-my-profile-display-card-on-driver-dashboard-to-reflect-the-newly-saved-values-without-requiring-page-refresh",
+      "title": "After successful save, immediately update the My Profile display card on Driver Dashboard to reflect the newly saved values without requiring page refresh",
+      "reqIds": [
+        "REQ-59"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-driver-profile-data-persists-across-page-refresh-and-logout-login-cycles-by-verifying-backend-storage",
+      "title": "Ensure driver profile data persists across page refresh and logout/login cycles by verifying backend storage",
+      "reqIds": [
+        "REQ-60"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Email/password authentication using Supabase Auth",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Role-based access control (customer/driver/admin)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Customer dashboard with ride request form and trip list",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Driver dashboard to view/accept requested trips and mark completed",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-5",
+      "summary": "Admin dashboard with tabs for viewing all users and trips",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-6",
+      "summary": "Supabase database schema with profiles, user_roles, and trips tables",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-7",
+      "summary": "Route protection and role-based navigation guards",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-9",
+      "summary": "Create backend data models for User profiles with fields: principal ID, email, full name, role (customer/driver/admin), and creation timestamp",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-10",
+      "summary": "Create backend Trip data model with fields: trip ID, customer ID, driver ID (optional), pickup location, dropoff location, status (requested/accepted/completed/cancelled), and creation timestamp",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-11",
+      "summary": "Implement role-based authorization: customers can create and view their own trips, drivers can view all requested trips and trips they accepted, admins can view all users and all trips",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-12",
+      "summary": "Create backend functions: createTrip (customer only), getMyTrips (customer/driver), getRequestedTrips (driver only), acceptTrip (driver only, assigns driver ID and changes status to accepted), completeTrip (driver only for their trips), getAllUsers (admin only), getAllTrips (admin only)",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-13",
+      "summary": "Implement admin promotion functionality: automatically assign 'admin' role to the first user who signs up, and create a backend function updateUserRole (admin only) to promote other users",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-14",
+      "summary": "Role selection screen after login for users without role, with warning popup and 60-second countdown timer before confirming Customer or Driver role",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-15",
+      "summary": "Role locking: once role is chosen (Customer/Driver), save permanently and prevent role changes",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-16",
+      "summary": "Redirect users to correct dashboard if they try to access another role's route",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-17",
+      "summary": "Admin role must not be user-selectable; admins created only via backend admin list or admin secret code",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-18",
+      "summary": "Strict route guards: customer pages only for customers, driver pages only for drivers (and verified), admin pages only for admins",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-22",
+      "summary": "Update backend authorization to ensure admin role is NOT user-selectable and can only be assigned through the backend admin list or by using the admin secret code mechanism already in place",
+      "reqIds": [
+        "REQ-16"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-23",
+      "summary": "Customer booking form update: Trip Type (Local/Outstation), Journey Type (One Way/Round Trip) with popup explanations",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-24",
+      "summary": "Vehicle Type selection: Hatchback, Sedan, SUV, Luxury",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-25",
+      "summary": "Smart Hire Duration: hours dropdown for Local (min 2hrs with Custom option), date-time pickers for Outstation with auto-calculated calendar days (min 1 day)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-26",
+      "summary": "Location Mode toggle: Manual Entry (pincode + area) vs Use GPS with 'Get My Location' button and auto-fallback on permission denial",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-27",
+      "summary": "Dynamic pickup/drop fields: drop pincode and area only required for Outstation + One Way trips",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-28",
+      "summary": "Contact fields: 10-digit phone number (required) and landmark (optional)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-29",
+      "summary": "Remove distance and fare manual entry fields; display 'Fare will be calculated automatically' message",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-30",
+      "summary": "Save comprehensive booking data: tripType, journeyType, vehicleType, duration fields, location data (pincode/area/GPS), contact info to trip records",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-44",
+      "summary": "Update backend Trip data model to include new fields: tripType (Local/Outstation), journeyType (OneWay/RoundTrip), vehicleType (Hatchback/Sedan/SUV/Luxury), durationHours (for Local trips), durationDays (for Outstation trips), startDateTime (for Outstation), endDateTime (for Outstation), pickupPincode, pickupArea, dropPincode (optional), dropArea (optional), pickupLat (optional), pickupLng (optional), phone, landmark (optional)",
+      "reqIds": [
+        "REQ-34"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-45",
+      "summary": "Update backend createTrip function to accept and validate all new trip fields (tripType, journeyType, vehicleType, duration fields, location fields, contact fields) from the customer booking form",
+      "reqIds": [
+        "REQ-35"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-46",
+      "summary": "Add driver profile qualification fields: servicePincode (text, required), serviceAreaName (text, required), vehicleExperience (multi-select array: Hatchback/Sedan/SUV/Luxury), transmissionComfort (multi-select array: Manual/Automatic/EV), isAvailable (boolean toggle, default false), totalEarnings (number, default 0), languages (optional list)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-47",
+      "summary": "Display driver profile fields (servicePincode, serviceAreaName, vehicleExperience, transmissionComfort, isAvailable, totalEarnings, languages) in 'My Profile' section on Driver dashboard as read-only display",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-48",
+      "summary": "Add servicePincode field to backend UserProfile type as Text (required field)",
+      "reqIds": [
+        "REQ-41"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-49",
+      "summary": "Add serviceAreaName field to backend UserProfile type as Text (required field)",
+      "reqIds": [
+        "REQ-42"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-50",
+      "summary": "Add vehicleExperience field to backend UserProfile type as array/list storing multi-select values: Hatchback, Sedan, SUV, Luxury",
+      "reqIds": [
+        "REQ-43"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-51",
+      "summary": "Add transmissionComfort field to backend UserProfile type as array/list storing multi-select values: Manual, Automatic, EV",
+      "reqIds": [
+        "REQ-44"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-52",
+      "summary": "Add isAvailable field to backend UserProfile type as boolean with default value false",
+      "reqIds": [
+        "REQ-45"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-53",
+      "summary": "Add totalEarnings field to backend UserProfile type as number with default value 0",
+      "reqIds": [
+        "REQ-46"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-54",
+      "summary": "Add languages field to backend UserProfile type as optional array/list",
+      "reqIds": [
+        "REQ-47"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-55",
+      "summary": "Update backend saveCallerUserProfile or equivalent profile update function to accept and persist the new driver profile fields: servicePincode, serviceAreaName, vehicleExperience, transmissionComfort, isAvailable, totalEarnings, languages",
+      "reqIds": [
+        "REQ-48"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-56",
+      "summary": "Add Edit Profile button to Driver Dashboard that opens an editable form for driver profile fields",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-57",
+      "summary": "Create editable profile form with fields: servicePincode (required), serviceAreaName (required), vehicleExperience (multi-select checkboxes), transmissionComfort (multi-select checkboxes), languages (text or multi-select), isAvailable (toggle)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-58",
+      "summary": "Implement Save button in profile edit form that persists data to backend using existing saveCallerUserProfile function",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-59",
+      "summary": "After saving profile, immediately update My Profile section display card to reflect saved values",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-60",
+      "summary": "Ensure driver profile data persists across page refresh and logout/login cycles",
+      "reqIds": [],
+      "status": "pending"
+    }
+  ],
+  "gameProjectType": "none",
+  "projectName": "Namma Driver Pilot",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}

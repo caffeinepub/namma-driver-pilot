@@ -1,0 +1,148 @@
+{
+  "kind": "coverage_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-23T23:44:08.897Z",
+  "sources": {
+    "buildRequest": true,
+    "implementationPlan": true
+  },
+  "requirements": {
+    "total": 10,
+    "implemented": 10,
+    "items": [
+      {
+        "id": "REQ-51",
+        "summary": "Add an 'Edit Profile' button to the Driver Dashboard page that opens an editable form modal or section for driver profile fields",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/DriverDashboard.tsx",
+          "frontend/src/components/DriverProfileSection.tsx",
+          "frontend/src/components/EditDriverProfileModal.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/DriverDashboard.tsx",
+          "frontend/src/components/DriverProfileSection.tsx",
+          "frontend/src/components/EditDriverProfileModal.tsx"
+        ]
+      },
+      {
+        "id": "REQ-52",
+        "summary": "Create editable profile form with servicePincode field (required, text input with validation)",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/EditDriverProfileForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/EditDriverProfileForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-53",
+        "summary": "Create editable profile form with serviceAreaName field (required, text input with validation)",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/EditDriverProfileForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/EditDriverProfileForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-54",
+        "summary": "Create editable profile form with vehicleExperience field as multi-select checkboxes with options: Hatchback, Sedan, SUV, Luxury",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/EditDriverProfileForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/EditDriverProfileForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-55",
+        "summary": "Create editable profile form with transmissionComfort field as multi-select checkboxes with options: Manual, Automatic, EV",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/EditDriverProfileForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/EditDriverProfileForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-56",
+        "summary": "Create editable profile form with languages field (optional, text input or multi-select implementation)",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/EditDriverProfileForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/EditDriverProfileForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-57",
+        "summary": "Create editable profile form with isAvailable field as a toggle switch",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/EditDriverProfileForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/EditDriverProfileForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-58",
+        "summary": "Implement Save button in the profile edit form that calls the existing saveCallerUserProfile backend function with all form field values",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/EditDriverProfileForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/EditDriverProfileForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-59",
+        "summary": "After successful save, immediately update the My Profile display card on Driver Dashboard to reflect the newly saved values without requiring page refresh",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/EditDriverProfileForm.tsx",
+          "frontend/src/components/DriverProfileSection.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/EditDriverProfileForm.tsx",
+          "frontend/src/components/DriverProfileSection.tsx"
+        ]
+      },
+      {
+        "id": "REQ-60",
+        "summary": "Ensure driver profile data persists across page refresh and logout/login cycles by verifying backend storage",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/EditDriverProfileForm.tsx",
+          "frontend/src/pages/DriverDashboard.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/EditDriverProfileForm.tsx",
+          "frontend/src/pages/DriverDashboard.tsx"
+        ]
+      }
+    ]
+  },
+  "changedFiles": [
+    "backend/main.mo",
+    "build-request.json",
+    "feature_evidence.json",
+    "frontend-file-summaries.txt",
+    "frontend-implementation-plan.json",
+    "frontend/src/components/DriverProfileSection.tsx",
+    "frontend/src/components/EditDriverProfileForm.tsx",
+    "frontend/src/components/EditDriverProfileModal.tsx",
+    "frontend/src/pages/DriverDashboard.tsx",
+    "project_state.json",
+    "scratch/component-selection.json",
+    "spec.md",
+    "spec_vs_diff_report.json"
+  ]
+}
