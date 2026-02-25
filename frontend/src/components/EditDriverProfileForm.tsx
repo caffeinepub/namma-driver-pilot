@@ -231,7 +231,7 @@ export default function EditDriverProfileForm({
         </div>
       </div>
 
-      {/* Availability Toggle */}
+      {/* Duty Status Toggle */}
       <div
         className={`flex items-center justify-between space-x-2 p-4 border rounded-lg transition-colors ${
           hasAcceptedTrip ? 'opacity-60 bg-muted/40 cursor-not-allowed' : ''
@@ -242,28 +242,33 @@ export default function EditDriverProfileForm({
             htmlFor="isAvailable"
             className={`text-base flex items-center gap-1.5 ${hasAcceptedTrip ? 'cursor-not-allowed' : ''}`}
           >
-            Availability Status
+            Duty Status
             {hasAcceptedTrip && <Lock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />}
           </Label>
           {hasAcceptedTrip ? (
             <p className="text-xs text-amber-600 dark:text-amber-400">
-              Availability is locked while you have an accepted trip.
+              Duty status is locked while you have an active trip.
             </p>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Set yourself as available to accept trips
+              Set yourself as on-duty to accept trips
             </p>
           )}
         </div>
-        <Switch
-          id="isAvailable"
-          checked={effectiveIsAvailable}
-          onCheckedChange={(val) => {
-            if (!hasAcceptedTrip) setIsAvailable(val);
-          }}
-          disabled={hasAcceptedTrip}
-          aria-disabled={hasAcceptedTrip}
-        />
+        <div className="flex items-center gap-2">
+          <span className={`text-sm font-medium ${effectiveIsAvailable ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
+            {effectiveIsAvailable ? 'On-Duty' : 'Off-Duty'}
+          </span>
+          <Switch
+            id="isAvailable"
+            checked={effectiveIsAvailable}
+            onCheckedChange={(val) => {
+              if (!hasAcceptedTrip) setIsAvailable(val);
+            }}
+            disabled={hasAcceptedTrip}
+            aria-disabled={hasAcceptedTrip}
+          />
+        </div>
       </div>
 
       {/* Actions */}

@@ -2,12 +2,29 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-on-the-driver-dashboard-frontend-derive-a-boolean-hasacceptedtrip-by-checking-whether-the-driver-s-my-accepted-trips-list-contains-any-trip-with-status-accepted-when-hasacceptedtrip-is-true-a-force-the-displayed-availability-to-available-true-regardless-of-the-stored-value-b-render-the-availability-toggle-in-a-disabled-greyed-out-state-so-the-driver-cannot-interact-with-it-and-c-display-helper-text-directly-beneath-the-toggle-reading-availability-is-locked-while-you-have-an-accepted-trip",
-      "featureTitle": "On the Driver Dashboard frontend, derive a boolean `hasAcceptedTrip` by checking whether the driver's 'My Accepted Trips' list contains any trip with status `accepted`. When `hasAcceptedTrip` is true: (a) force the displayed availability to Available/true regardless of the stored value, (b) render the availability toggle in a disabled/greyed-out state so the driver cannot interact with it, and (c) display helper text directly beneath the toggle reading: 'Availability is locked while you have an accepted trip.'",
+      "featureId": "feature-in-riderequestform-tsx-conditionally-render-the-pickup-pincode-and-pickup-area-fields-based-on-locationmode-state-when-locationmode-gps-hide-both-fields-completely-do-not-render-them-when-locationmode-manual-show-both-fields-and-keep-them-required",
+      "featureTitle": "In RideRequestForm.tsx, conditionally render the Pickup Pincode and Pickup Area fields based on locationMode state: when locationMode === 'gps', hide both fields completely (do not render them); when locationMode === 'manual', show both fields and keep them required.",
       "files": [
-        "frontend/src/components/DriverProfileSection.tsx",
-        "frontend/src/components/EditDriverProfileForm.tsx",
-        "frontend/src/components/EditDriverProfileModal.tsx"
+        "frontend/src/components/RideRequestForm.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-in-riderequestform-tsx-when-the-browser-s-gps-permission-is-denied-the-existing-geolocation-error-callback-fires-automatically-set-locationmode-back-to-manual-re-show-the-pickup-pincode-and-pickup-area-fields-and-display-the-inline-error-message-location-permission-denied-please-enter-pickup-manually-do-not-modify-the-existing-navigator-geolocation-logic-itself",
+      "featureTitle": "In RideRequestForm.tsx, when the browser's GPS permission is denied (the existing geolocation error callback fires), automatically set locationMode back to 'manual', re-show the Pickup Pincode and Pickup Area fields, and display the inline error message: 'Location permission denied. Please enter pickup manually.' Do NOT modify the existing navigator.geolocation logic itself.",
+      "files": [
+        "frontend/src/components/RideRequestForm.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -19,44 +36,6 @@
       ],
       "testIds": [
         "REQ-2"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-when-the-driver-clicks-mark-as-completed-and-the-trip-transitions-out-of-accepted-status-i-e-the-accepted-trips-list-becomes-empty-or-no-accepted-trips-remain-re-enable-the-availability-toggle-and-restore-it-to-the-driver-s-last-persisted-availability-value-from-their-profile",
-      "featureTitle": "When the driver clicks 'Mark as Completed' and the trip transitions out of `accepted` status (i.e., the accepted trips list becomes empty or no accepted trips remain), re-enable the availability toggle and restore it to the driver's last persisted availability value from their profile.",
-      "files": [
-        "frontend/src/components/DriverProfileSection.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-3"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-add-a-post-build-checklist-comment-block-as-a-visible-ui-element-or-inline-code-comment-confirming-the-two-verification-steps-1-accept-trip-toggle-is-disabled-and-availability-shows-available-2-complete-trip-toggle-is-re-enabled",
-      "featureTitle": "Add a post-build checklist comment block (as a visible UI element or inline code comment) confirming the two verification steps: (1) Accept trip → toggle is disabled and availability shows Available; (2) Complete trip → toggle is re-enabled.",
-      "files": [
-        "frontend/src/components/DriverProfileSection.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-4"
       ],
       "confidence": "high"
     }

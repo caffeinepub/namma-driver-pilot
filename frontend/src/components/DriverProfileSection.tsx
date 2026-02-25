@@ -1,7 +1,7 @@
 /**
- * POST-BUILD CHECKLIST (Driver Availability Lock):
- * (1) Accept trip → availability toggle is disabled (greyed out) and shows "Available"
- *     with helper text "Availability is locked while you have an accepted trip."
+ * POST-BUILD CHECKLIST (Driver Duty Status Lock):
+ * (1) Accept trip → duty status toggle is disabled (greyed out) and shows "On-Duty"
+ *     with helper text "Duty status is locked while you have an active trip."
  * (2) Complete trip → toggle is re-enabled and reflects the driver's last saved availability value.
  */
 
@@ -106,7 +106,7 @@ export default function DriverProfileSection({
     return `₹${earnings.toString()}`;
   };
 
-  // When locked, always display Available regardless of saved value
+  // When locked, always display On-Duty regardless of saved value
   const displayAvailable = hasAcceptedTrip ? true : userProfile.isAvailable;
 
   return (
@@ -141,17 +141,17 @@ export default function DriverProfileSection({
           </div>
 
           <div>
-            <p className="text-sm font-medium text-muted-foreground">Availability Status</p>
+            <p className="text-sm font-medium text-muted-foreground">Duty Status</p>
             <div className="mt-1 space-y-1">
               {displayAvailable ? (
-                <Badge variant="default" className="bg-green-600 hover:bg-green-700">Available</Badge>
+                <Badge variant="default" className="bg-green-600 hover:bg-green-700">On-Duty</Badge>
               ) : (
-                <Badge variant="secondary">Unavailable</Badge>
+                <Badge variant="secondary">Off-Duty</Badge>
               )}
               {hasAcceptedTrip && (
                 <p className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 mt-1">
                   <Lock className="h-3 w-3 shrink-0" />
-                  Availability is locked while you have an accepted trip.
+                  Duty status is locked while you have an active trip.
                 </p>
               )}
             </div>

@@ -30,7 +30,7 @@ export default function EditDriverProfileModal({
         <DialogHeader>
           <DialogTitle>Edit Driver Profile</DialogTitle>
           <DialogDescription>
-            Update your service area, vehicle experience, and availability settings
+            Update your service area, vehicle experience, and duty status settings
           </DialogDescription>
         </DialogHeader>
         <EditDriverProfileForm

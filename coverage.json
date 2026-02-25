@@ -1,76 +1,45 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-24T20:40:16.375Z",
+  "generatedAt": "2026-02-24T23:46:47.681Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 4,
-    "implemented": 3,
+    "total": 2,
+    "implemented": 2,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "In the backend, add a guard to the `updateAvailability` (or equivalent) function: if the calling driver has any trip with status `accepted`, reject any attempt to set availability to `false` (Unavailable) and return a descriptive error message such as 'Cannot set Unavailable while you have an accepted trip.'",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
+        "summary": "In RideRequestForm.tsx, conditionally render the Pickup Pincode and Pickup Area fields based on locationMode state: when locationMode === 'gps', hide both fields completely (do not render them); when locationMode === 'manual', show both fields and keep them required.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ]
       },
       {
         "id": "REQ-2",
-        "summary": "On the Driver Dashboard frontend, derive a boolean `hasAcceptedTrip` by checking whether the driver's 'My Accepted Trips' list contains any trip with status `accepted`. When `hasAcceptedTrip` is true: (a) force the displayed availability to Available/true regardless of the stored value, (b) render the availability toggle in a disabled/greyed-out state so the driver cannot interact with it, and (c) display helper text directly beneath the toggle reading: 'Availability is locked while you have an accepted trip.'",
+        "summary": "In RideRequestForm.tsx, when the browser's GPS permission is denied (the existing geolocation error callback fires), automatically set locationMode back to 'manual', re-show the Pickup Pincode and Pickup Area fields, and display the inline error message: 'Location permission denied. Please enter pickup manually.' Do NOT modify the existing navigator.geolocation logic itself.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/DriverProfileSection.tsx",
-          "frontend/src/components/EditDriverProfileForm.tsx",
-          "frontend/src/components/EditDriverProfileModal.tsx"
+          "frontend/src/components/RideRequestForm.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/components/DriverProfileSection.tsx",
-          "frontend/src/components/EditDriverProfileForm.tsx",
-          "frontend/src/components/EditDriverProfileModal.tsx"
-        ]
-      },
-      {
-        "id": "REQ-3",
-        "summary": "When the driver clicks 'Mark as Completed' and the trip transitions out of `accepted` status (i.e., the accepted trips list becomes empty or no accepted trips remain), re-enable the availability toggle and restore it to the driver's last persisted availability value from their profile.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/components/DriverProfileSection.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/components/DriverProfileSection.tsx"
-        ]
-      },
-      {
-        "id": "REQ-4",
-        "summary": "Add a post-build checklist comment block (as a visible UI element or inline code comment) confirming the two verification steps: (1) Accept trip → toggle is disabled and availability shows Available; (2) Complete trip → toggle is re-enabled.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/components/DriverProfileSection.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/components/DriverProfileSection.tsx"
+          "frontend/src/components/RideRequestForm.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
-    "backend/main.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/backend.d.ts",
-    "frontend/src/backend.ts",
-    "frontend/src/components/DriverProfileSection.tsx",
-    "frontend/src/components/EditDriverProfileForm.tsx",
-    "frontend/src/components/EditDriverProfileModal.tsx",
-    "frontend/src/declarations/backend.did.d.ts",
-    "frontend/src/declarations/backend.did.js",
-    "frontend/src/hooks/useQueries.ts",
-    "frontend/src/pages/DriverDashboard.tsx",
+    "frontend/src/components/RideRequestForm.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

@@ -20,6 +20,10 @@ export default function DriverDashboard() {
     (trip) => trip.status === TripStatus.accepted
   );
 
+  // Count trips by section for tab label
+  const currentTripCount = (myTrips ?? []).filter((t) => t.status === TripStatus.accepted).length;
+  const myTripsTotal = myTrips?.length ?? 0;
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <div className="mb-8">
@@ -50,7 +54,7 @@ export default function DriverDashboard() {
             Available Trips {!loadingRequested && `(${requestedTrips?.length || 0})`}
           </TabsTrigger>
           <TabsTrigger value="mytrips">
-            My Trips {!loadingMyTrips && `(${myTrips?.length || 0})`}
+            My Trips {!loadingMyTrips && `(${myTripsTotal})`}
           </TabsTrigger>
         </TabsList>
 
@@ -69,8 +73,12 @@ export default function DriverDashboard() {
         <TabsContent value="mytrips" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>My Accepted Trips</CardTitle>
-              <CardDescription>Trips you have accepted</CardDescription>
+              <CardTitle>My Trips</CardTitle>
+              <CardDescription>
+                {currentTripCount > 0
+                  ? `You have an active trip in progress — ${myTripsTotal} total`
+                  : `Your trip history — ${myTripsTotal} total`}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <DriverTripList />

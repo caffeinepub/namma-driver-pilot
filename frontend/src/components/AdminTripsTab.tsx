@@ -4,13 +4,21 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { useState, useMemo } from 'react';
-import type { TripStatus, Location } from '../backend';
+import { TripStatus } from '../backend';
+import type { Location } from '../backend';
 
 const statusColors: Record<TripStatus, string> = {
   requested: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
   accepted: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
   completed: 'bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-500/20',
   cancelled: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20',
+};
+
+const statusLabels: Record<TripStatus, string> = {
+  requested: 'Pending',
+  accepted: 'Accepted',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
 };
 
 function formatLocation(location: Location | undefined): string {
@@ -25,9 +33,9 @@ export default function AdminTripsTab() {
 
   // Create a map of principal to user for quick lookup
   const userMap = useMemo(() => {
-    const map = new Map();
+    const map = new Map<string, { email: string; fullName: string }>();
     users?.forEach((user) => {
-      map.set(user.principalId.toString(), user);
+      map.set(user.principalId.toString(), { email: user.email, fullName: user.fullName });
     });
     return map;
   }, [users]);
@@ -38,7 +46,8 @@ export default function AdminTripsTab() {
       trip.pickupLocation.pincode.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (trip.dropoffLocation && trip.dropoffLocation.area.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (trip.dropoffLocation && trip.dropoffLocation.pincode.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      trip.status.toLowerCase().includes(searchTerm.toLowerCase())
+      trip.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      statusLabels[trip.status].toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loadingTrips) {
@@ -71,8 +80,8 @@ export default function AdminTripsTab() {
               <TableHead>Driver</TableHead>
               <TableHead>Pickup</TableHead>
               <TableHead>Dropoff</TableHead>
+              <TableHead>Time</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Created</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -87,17 +96,24 @@ export default function AdminTripsTab() {
                       {customer?.email || 'Unknown'}
                     </TableCell>
                     <TableCell>
-                      {driver ? driver.email : <span className="text-muted-foreground">Not assigned</span>}
+                      {driver
+                        ? driver.email
+                        : <span className="text-muted-foreground text-xs">Not assigned</span>
+                      }
                     </TableCell>
-                    <TableCell className="max-w-[150px] truncate">{formatLocation(trip.pickupLocation)}</TableCell>
-                    <TableCell className="max-w-[150px] truncate">{formatLocation(trip.dropoffLocation)}</TableCell>
+                    <TableCell className="max-w-[140px] truncate">
+                      {formatLocation(trip.pickupLocation)}
+                    </TableCell>
+                    <TableCell className="max-w-[140px] truncate">
+                      {formatLocation(trip.dropoffLocation)}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground whitespace-nowrap">
+                      {new Date(Number(trip.createdTime) / 1000000).toLocaleString()}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={statusColors[trip.status]}>
-                        {trip.status}
+                        {statusLabels[trip.status]}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(Number(trip.createdTime) / 1000000).toLocaleDateString()}
                     </TableCell>
                   </TableRow>
                 );

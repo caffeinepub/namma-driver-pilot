@@ -1,100 +1,65 @@
 {
   "kind": "build_request",
-  "title": "Lock Driver Availability Toggle When Accepted Trip Exists",
+  "title": "GPS Mode Visibility Fix — Customer Booking Form",
   "projectName": "Namma Driver Pilot",
-  "priority": "high",
+  "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "In the backend, add a guard to the `updateAvailability` (or equivalent) function: if the calling driver has any trip with status `accepted`, reject any attempt to set availability to `false` (Unavailable) and return a descriptive error message such as 'Cannot set Unavailable while you have an accepted trip.'",
-      "target": "backend",
+      "text": "In RideRequestForm.tsx, conditionally render the Pickup Pincode and Pickup Area fields based on locationMode state: when locationMode === 'gps', hide both fields completely (do not render them); when locationMode === 'manual', show both fields and keep them required.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-4",
+          "msg-5"
         ],
         "quotes": [
-          "Block backend updates that try to set Unavailable while an accepted trip exists (return a clear error)"
+          "If locationMode === 'gps': Hide Pickup Pincode and Pickup Area fields completely.",
+          "When locationMode === 'gps', hide manual pickup fields. When locationMode === 'manual', show manual pickup fields."
         ]
       },
       "acceptanceCriteria": [
-        "Calling setAvailability(false) while the driver has an accepted trip returns an error variant with a clear message.",
-        "Calling setAvailability(true) or setAvailability(false) when no accepted trip exists succeeds as before.",
-        "No changes are made to trip acceptance, completion, or any other backend function."
+        "Selecting 'Use GPS' (locationMode === 'gps') causes Pickup Pincode and Pickup Area fields to disappear from the DOM or be hidden via conditional rendering.",
+        "Selecting 'Manual' (locationMode === 'manual') causes Pickup Pincode and Pickup Area fields to be visible and marked as required.",
+        "No other fields are affected by this change."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "On the Driver Dashboard frontend, derive a boolean `hasAcceptedTrip` by checking whether the driver's 'My Accepted Trips' list contains any trip with status `accepted`. When `hasAcceptedTrip` is true: (a) force the displayed availability to Available/true regardless of the stored value, (b) render the availability toggle in a disabled/greyed-out state so the driver cannot interact with it, and (c) display helper text directly beneath the toggle reading: 'Availability is locked while you have an accepted trip.'",
+      "text": "In RideRequestForm.tsx, when the browser's GPS permission is denied (the existing geolocation error callback fires), automatically set locationMode back to 'manual', re-show the Pickup Pincode and Pickup Area fields, and display the inline error message: 'Location permission denied. Please enter pickup manually.' Do NOT modify the existing navigator.geolocation logic itself.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-4",
+          "msg-5"
         ],
         "quotes": [
-          "Force availabilityStatus = Available (true)",
-          "Disable the availability toggle (greyed out)",
-          "Show helper text: \"Availability is locked while you have an accepted trip.\""
+          "When GPS permission is denied: Automatically set locationMode back to 'manual'. Display error message: 'Location permission denied. Please enter pickup manually.' Re-show manual fields and make them required again.",
+          "If GPS permission is denied, switch locationMode back to 'manual' and re-show fields."
         ]
       },
       "acceptanceCriteria": [
-        "When the driver has at least one accepted trip, the availability toggle is visually disabled (greyed out) and cannot be clicked.",
-        "The toggle displays Available (true) regardless of the driver's last saved value while any accepted trip exists.",
-        "Helper text 'Availability is locked while you have an accepted trip.' is visible beneath the toggle when locked.",
-        "Helper text is hidden and toggle is enabled when no accepted trips exist.",
-        "No changes are made to the Available Trips section, My Accepted Trips section layout, or any customer/admin UI."
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "text": "When the driver clicks 'Mark as Completed' and the trip transitions out of `accepted` status (i.e., the accepted trips list becomes empty or no accepted trips remain), re-enable the availability toggle and restore it to the driver's last persisted availability value from their profile.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-4"
-        ],
-        "quotes": [
-          "When driver clicks 'Mark as Completed' and the trip becomes completed (or removed from 'My Accepted Trips'): Re-enable the availability toggle, Restore the driver's last saved availability value"
-        ]
-      },
-      "acceptanceCriteria": [
-        "After marking a trip as completed, if no other accepted trips remain, the availability toggle becomes interactive again.",
-        "The toggle reflects the driver's last saved availability value (from their profile) after unlocking.",
-        "If the driver had multiple accepted trips and only one is completed, the toggle remains locked until all accepted trips are resolved.",
-        "No changes are made to the Mark as Completed mutation logic or the DriverTripList layout."
-      ]
-    },
-    {
-      "id": "REQ-4",
-      "text": "Add a post-build checklist comment block (as a visible UI element or inline code comment) confirming the two verification steps: (1) Accept trip → toggle is disabled and availability shows Available; (2) Complete trip → toggle is re-enabled.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-4"
-        ],
-        "quotes": [
-          "Add a short post-build checklist: Accept trip → toggle disabled and availability shows Available, Complete trip → toggle enabled again"
-        ]
-      },
-      "acceptanceCriteria": [
-        "A post-build checklist with the two steps is either rendered as a visible UI note on the Driver Dashboard (e.g., a small dev/QA callout) or included as a clearly labeled comment in the relevant component file.",
-        "The checklist does not affect production UI for end users if rendered only as a code comment."
+        "When the browser denies geolocation permission, locationMode is set to 'manual' automatically.",
+        "After permission denial, Pickup Pincode and Pickup Area fields reappear and are required.",
+        "The error message 'Location permission denied. Please enter pickup manually.' is displayed near the pickup section.",
+        "The existing navigator.geolocation call is not removed or restructured."
       ]
     }
   ],
   "constraints": [
-    "Do not change trip acceptance logic (acceptTrip mutation or backend function).",
-    "Do not modify the customer booking form or CustomerDashboard.",
-    "Do not modify admin pages, role locking, or login routing.",
-    "Do not change the layout or content of the Available Trips or My Accepted Trips sections.",
-    "Scope all frontend changes exclusively to the Driver Dashboard and its sub-components (availability toggle area).",
-    "Do not edit any file listed under frontend.immutablePaths."
+    "Do NOT modify drop location logic.",
+    "Do NOT modify the driver dashboard.",
+    "Do NOT modify the admin dashboard.",
+    "Do NOT modify trip filtering logic.",
+    "Do NOT modify pricing or payment logic.",
+    "Do NOT rebuild or restructure the existing navigator.geolocation GPS logic.",
+    "All changes must be scoped to RideRequestForm.tsx only."
   ],
   "nonGoals": [
-    "Changing availability lock behavior for any role other than driver.",
-    "Modifying trip status transitions beyond what is needed for the unlock trigger.",
-    "Adding new trip statuses or modifying the existing status enum.",
-    "Any real-time/WebSocket availability sync.",
-    "Admin override of driver availability lock."
+    "Rebuilding GPS logic from scratch.",
+    "Changes to the backend.",
+    "Changes to any dashboard outside the Customer Booking Form.",
+    "Adding new GPS features beyond what already exists."
   ],
   "imageRequirements": {
     "required": [],
