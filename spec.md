@@ -1,11 +1,12 @@
 # Specification
 
 ## Summary
-**Goal:** Fix conditional rendering logic for pickup and drop location fields in `RideRequestForm.tsx` to ensure correct visibility based on the appropriate state variables.
+**Goal:** Fix pickup and drop field visibility rules in `RideRequestForm.tsx` so they follow the correct independent logic based on `pickupLocationMode` and `journeyType`.
 
 **Planned changes:**
-- Fix pickup manual fields (pickup pincode + pickup area) to show only when `pickupLocationMode === 'manual'` and hide when `pickupLocationMode === 'gps'`, removing any dependency on `journeyType`.
-- Fix drop fields (drop pincode + drop area) visibility and required flags: show and require when `journeyType === 'oneway'`; hide when `journeyType === 'roundtrip'` and `returnToSamePickup === true`; show and require when `journeyType === 'roundtrip'` and `returnToSamePickup === false`.
-- In the GPS geolocation handler, set `pickupLocationMode` to `'manual'` when geolocation permission is denied or `getCurrentPosition` fails, causing pickup fields to become visible.
+- Fix pickup manual field visibility: show `pickupPincode` and `pickupArea` inputs if and only if `pickupLocationMode === 'manual'`, completely independent of `journeyType`.
+- Fix drop field visibility: when `journeyType === 'oneway'`, always show `dropPincode` and `dropArea` as required; when `journeyType === 'roundtrip'`, show a "Return to same pickup location" checkbox (default checked), hiding drop fields and mirroring pickup values in UI state when checked, or showing drop fields as required when unchecked.
+- Drop field visibility must never depend on `pickupLocationMode`.
+- In the existing GPS error/failure handler, set `pickupLocationMode = 'manual'` when geolocation permission is denied or the API call fails, causing pickup manual fields to reappear automatically.
 
-**User-visible outcome:** The booking form correctly shows/hides pickup and drop fields based on location mode and journey type selections, and automatically falls back to manual pickup entry if GPS access is denied or fails.
+**User-visible outcome:** The booking form correctly shows/hides pickup and drop location fields based on the selected location mode and journey type, and automatically falls back to manual pickup entry when GPS fails.

@@ -71,7 +71,7 @@ export default function RideRequestForm() {
     }
   }, [startDateTime, endDateTime, tripType]);
 
-  // When round trip toggle is ON, auto-sync drop fields to pickup fields
+  // When round trip toggle is ON, auto-sync drop fields to pickup fields (UI state only)
   useEffect(() => {
     if (journeyType === 'roundTrip' && returnToPickup) {
       setDropPincode(pickupPincode);
@@ -105,7 +105,7 @@ export default function RideRequestForm() {
     setGpsError('');
   };
 
-  // Handle GPS location
+  // Handle GPS location capture (do NOT rebuild GPS logic — only add fallback to manual on error)
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
       toast.error('Geolocation is not supported by your browser');
@@ -124,7 +124,7 @@ export default function RideRequestForm() {
       },
       (error) => {
         // GPS failed for any reason (permission denied OR other error):
-        // auto-switch back to manual so pickup fields become visible
+        // auto-switch back to manual so pickup manual fields become visible again (REQ-3)
         setLocationMode('manual');
         setGpsCoords(null);
         setGpsAddress('');
@@ -152,15 +152,16 @@ export default function RideRequestForm() {
 
   // ─── VISIBILITY FLAGS ────────────────────────────────────────────────────────
   //
-  // A) Pickup manual fields:
-  //    Visible ONLY when locationMode === 'manual'.
-  //    NEVER depends on journeyType.
+  // RULE 1 — Pickup manual fields:
+  //   Visible ONLY when locationMode === 'manual'.
+  //   NEVER depends on journeyType.
   const showPickupManualFields = locationMode === 'manual';
 
-  // B) Drop fields:
-  //    oneWay          → always show
-  //    roundTrip + returnToPickup=true  → hide
-  //    roundTrip + returnToPickup=false → show
+  // RULE 2 — Drop fields:
+  //   oneWay                              → always show
+  //   roundTrip + returnToPickup === true  → hide
+  //   roundTrip + returnToPickup === false → show
+  //   NEVER depends on locationMode / pickupLocationMode.
   const showDropFields =
     journeyType === 'oneWay' ||
     (journeyType === 'roundTrip' && !returnToPickup);
@@ -197,7 +198,7 @@ export default function RideRequestForm() {
       }
     }
 
-    // Location validation
+    // Pickup location validation
     if (locationMode === 'manual') {
       if (!pickupPincode.trim() || !pickupArea.trim()) {
         toast.error('Please enter pickup pincode and area');
@@ -214,7 +215,7 @@ export default function RideRequestForm() {
       }
     }
 
-    // Drop location validation
+    // Drop location validation — only when drop fields are visible
     if (showDropFields) {
       if (!dropPincode.trim() || !dropArea.trim()) {
         toast.error('Please enter drop pincode and area');
@@ -237,7 +238,6 @@ export default function RideRequestForm() {
     }
 
     try {
-      // Prepare trip data
       const tripTypeEnum = tripType === 'local' ? TripType.local : TripType.outstation;
       const journeyTypeEnum = journeyType === 'oneWay' ? JourneyType.oneWay : JourneyType.roundTrip;
 
@@ -272,7 +272,7 @@ export default function RideRequestForm() {
         };
       } else if (journeyType === 'roundTrip') {
         if (returnToPickup) {
-          // Auto-set drop = pickup
+          // Auto-set drop = pickup (UI state only, no backend schema change)
           dropoffLocation = {
             pincode: locationMode === 'manual' ? pickupPincode : 'gps',
             area: locationMode === 'manual' ? pickupArea : 'GPS Location',
@@ -339,10 +339,14 @@ export default function RideRequestForm() {
   return (
     <>
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Trip Type */}
+
+        {/* ── Trip Type ─────────────────────────────────────────────────────── */}
         <div className="space-y-3">
           <Label className="text-base font-semibold">Trip Type *</Label>
-          <RadioGroup value={tripType} onValueChange={(value) => setTripType(value as 'local' | 'outstation')}>
+          <RadioGroup
+            value={tripType}
+            onValueChange={(value) => setTripType(value as 'local' | 'outstation')}
+          >
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="local" id="local" />
               <Label htmlFor="local" className="font-normal cursor-pointer">Local</Label>
@@ -354,7 +358,7 @@ export default function RideRequestForm() {
           </RadioGroup>
         </div>
 
-        {/* Journey Type */}
+        {/* ── Journey Type ──────────────────────────────────────────────────── */}
         <div className="space-y-3">
           <Label className="text-base font-semibold">Journey Type *</Label>
           <RadioGroup value={journeyType} onValueChange={handleJourneyTypeChange}>
@@ -369,7 +373,7 @@ export default function RideRequestForm() {
           </RadioGroup>
         </div>
 
-        {/* Vehicle Type */}
+        {/* ── Vehicle Type ──────────────────────────────────────────────────── */}
         <div className="space-y-3">
           <Label htmlFor="vehicleType" className="text-base font-semibold">Vehicle Type *</Label>
           <Select value={vehicleType} onValueChange={setVehicleType}>
@@ -385,7 +389,7 @@ export default function RideRequestForm() {
           </Select>
         </div>
 
-        {/* Hire Duration - Local */}
+        {/* ── Hire Duration — Local ─────────────────────────────────────────── */}
         {tripType === 'local' && (
           <div className="space-y-3">
             <Label htmlFor="duration" className="text-base font-semibold">Hire Duration (Hours) *</Label>
@@ -417,7 +421,7 @@ export default function RideRequestForm() {
           </div>
         )}
 
-        {/* Hire Duration - Outstation */}
+        {/* ── Hire Duration — Outstation ────────────────────────────────────── */}
         {tripType === 'outstation' && (
           <div className="space-y-4">
             <div className="space-y-3">
@@ -451,7 +455,7 @@ export default function RideRequestForm() {
           </div>
         )}
 
-        {/* Pickup Location Mode */}
+        {/* ── Pickup Location Mode ──────────────────────────────────────────── */}
         <div className="space-y-3">
           <Label className="text-base font-semibold">Pickup Location Mode *</Label>
           <RadioGroup value={locationMode} onValueChange={handleLocationModeChange}>
@@ -474,7 +478,7 @@ export default function RideRequestForm() {
           )}
         </div>
 
-        {/* GPS Location button — shown ONLY when GPS mode is selected */}
+        {/* ── GPS Capture Button — shown ONLY when GPS mode is selected ─────── */}
         {locationMode === 'gps' && (
           <div className="space-y-3">
             <Button
@@ -495,7 +499,7 @@ export default function RideRequestForm() {
           </div>
         )}
 
-        {/* ── PICKUP MANUAL FIELDS ──────────────────────────────────────────────
+        {/* ── RULE 1: PICKUP MANUAL FIELDS ─────────────────────────────────────
             Visible ONLY when locationMode === 'manual'.
             NEVER depends on journeyType.
         ──────────────────────────────────────────────────────────────────────── */}
@@ -518,7 +522,7 @@ export default function RideRequestForm() {
             </div>
             <div className="space-y-3">
               <Label htmlFor="pickupArea" className="text-base font-semibold">
-                Pickup Area *
+                Pickup Area Name *
               </Label>
               <Input
                 id="pickupArea"
@@ -532,9 +536,12 @@ export default function RideRequestForm() {
           </div>
         )}
 
-        {/* Round Trip — "Return to same pickup location" checkbox */}
+        {/* ── RULE 2: ROUND TRIP — "Return to same pickup location" checkbox ───
+            Shown ONLY when journeyType === 'roundTrip'.
+            Controls whether drop fields are hidden or shown.
+        ──────────────────────────────────────────────────────────────────────── */}
         {journeyType === 'roundTrip' && (
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3 p-3 bg-muted/50 rounded-md border">
             <Checkbox
               id="returnToPickup"
               checked={returnToPickup}
@@ -546,10 +553,11 @@ export default function RideRequestForm() {
           </div>
         )}
 
-        {/* ── DROP FIELDS ───────────────────────────────────────────────────────
-            oneWay                              → visible + required
-            roundTrip + returnToPickup=true     → hidden
-            roundTrip + returnToPickup=false    → visible + required
+        {/* ── RULE 2: DROP FIELDS ───────────────────────────────────────────────
+            oneWay                               → always show
+            roundTrip + returnToPickup === true  → hide
+            roundTrip + returnToPickup === false → show
+            NEVER depends on locationMode / pickupLocationMode.
         ──────────────────────────────────────────────────────────────────────── */}
         {showDropFields && (
           <div className="space-y-4">
@@ -570,7 +578,7 @@ export default function RideRequestForm() {
             </div>
             <div className="space-y-3">
               <Label htmlFor="dropArea" className="text-base font-semibold">
-                Drop Area *
+                Drop Area Name *
               </Label>
               <Input
                 id="dropArea"
@@ -584,40 +592,42 @@ export default function RideRequestForm() {
           </div>
         )}
 
-        {/* Phone */}
-        <div className="space-y-3">
-          <Label htmlFor="phone" className="text-base font-semibold">Phone Number *</Label>
-          <div className="relative">
-            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        {/* ── Contact Details ───────────────────────────────────────────────── */}
+        <div className="space-y-4">
+          <div className="space-y-3">
+            <Label htmlFor="phone" className="text-base font-semibold">
+              Phone Number *
+            </Label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="phone"
+                type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                placeholder="Enter 10-digit phone number"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                className="pl-9"
+                required
+              />
+            </div>
+          </div>
+          <div className="space-y-3">
+            <Label htmlFor="landmark" className="text-base font-semibold">
+              Landmark <span className="text-muted-foreground font-normal">(optional)</span>
+            </Label>
             <Input
-              id="phone"
-              type="tel"
-              inputMode="numeric"
-              maxLength={10}
-              placeholder="10-digit mobile number"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-              className="pl-9"
-              required
+              id="landmark"
+              type="text"
+              placeholder="Nearby landmark for easy identification"
+              value={landmark}
+              onChange={(e) => setLandmark(e.target.value)}
             />
           </div>
         </div>
 
-        {/* Landmark (optional) */}
-        <div className="space-y-3">
-          <Label htmlFor="landmark" className="text-base font-semibold">
-            Landmark <span className="text-muted-foreground font-normal">(optional)</span>
-          </Label>
-          <Input
-            id="landmark"
-            type="text"
-            placeholder="Nearby landmark for easy identification"
-            value={landmark}
-            onChange={(e) => setLandmark(e.target.value)}
-          />
-        </div>
-
-        {/* Submit */}
+        {/* ── Submit ────────────────────────────────────────────────────────── */}
         <Button
           type="submit"
           className="w-full"
