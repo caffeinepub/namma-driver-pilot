@@ -1,27 +1,36 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Customer booking form app with GPS/manual pickup mode, drop location logic, and trip type handling (Local/Outstation, Oneway/Round Trip). Currently patching GPS mode visibility: hide manual pickup fields in GPS mode, show them in manual mode, auto-fallback to manual if GPS permission denied.",
+  "summary": "Booking form UI with strict visibility logic: pickup fields shown only when pickupLocationMode === 'manual', drop fields controlled by journeyType + returnToSamePickup, GPS fallback switches to manual mode on failure.",
   "architectural_notes": [
-    "Customer Booking Form uses locationMode state ('gps'|'manual') to conditionally render Pickup Pincode and Pickup Area fields",
-    "GPS permission denial auto-switches locationMode to 'manual' and displays error message; existing navigator.geolocation logic is not modified"
+    "Pickup fields visibility depends ONLY on pickupLocationMode ('manual' shows, 'gps' hides) — never on journeyType",
+    "Drop fields visibility: oneway => always show; roundtrip => show unless returnToSamePickup === true",
+    "GPS fallback: on permission denied or getCurrentPosition failure, set pickupLocationMode = 'manual'"
   ],
   "known_issues": [],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-in-riderequestform-tsx-conditionally-render-the-pickup-pincode-and-pickup-area-fields-based-on-locationmode-state-when-locationmode-gps-hide-both-fields-completely-do-not-render-them-when-locationmode-manual-show-both-fields-and-keep-them-required",
-      "title": "In RideRequestForm.tsx, conditionally render the Pickup Pincode and Pickup Area fields based on locationMode state: when locationMode === 'gps', hide both fields completely (do not render them); when locationMode === 'manual', show both fields and keep them required.",
+      "id": "feature-in-riderequestform-tsx-fix-pickup-manual-fields-pickup-pincode-pickup-area-visibility-so-they-are-shown-only-when-pickuplocationmode-manual-and-hidden-when-pickuplocationmode-gps-remove-any-existing-condition-that-ties-pickup-field-visibility-to-journeytype-pickup-visibility-must-depend-exclusively-on-pickuplocationmode",
+      "title": "In RideRequestForm.tsx, fix pickup manual fields (pickup pincode + pickup area) visibility so they are shown ONLY when pickupLocationMode === 'manual' and hidden when pickupLocationMode === 'gps'. Remove any existing condition that ties pickup field visibility to journeyType. Pickup visibility must depend exclusively on pickupLocationMode.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-in-riderequestform-tsx-when-the-browser-s-gps-permission-is-denied-the-existing-geolocation-error-callback-fires-automatically-set-locationmode-back-to-manual-re-show-the-pickup-pincode-and-pickup-area-fields-and-display-the-inline-error-message-location-permission-denied-please-enter-pickup-manually-do-not-modify-the-existing-navigator-geolocation-logic-itself",
-      "title": "In RideRequestForm.tsx, when the browser's GPS permission is denied (the existing geolocation error callback fires), automatically set locationMode back to 'manual', re-show the Pickup Pincode and Pickup Area fields, and display the inline error message: 'Location permission denied. Please enter pickup manually.' Do NOT modify the existing navigator.geolocation logic itself.",
+      "id": "feature-in-riderequestform-tsx-fix-drop-field-drop-pincode-drop-area-visibility-and-required-flags-using-exactly-these-rules-if-journeytype-oneway-show-drop-fields-and-mark-them-required-if-journeytype-roundtrip-and-returntosamepickup-true-hide-drop-fields-if-journeytype-roundtrip-and-returntosamepickup-false-show-drop-fields-and-mark-them-required-drop-visibility-must-depend-only-on-journeytype-and-returntosamepickup",
+      "title": "In RideRequestForm.tsx, fix drop field (drop pincode + drop area) visibility and required flags using exactly these rules: if journeyType === 'oneway', show drop fields and mark them required; if journeyType === 'roundtrip' and returnToSamePickup === true, hide drop fields; if journeyType === 'roundtrip' and returnToSamePickup === false, show drop fields and mark them required. Drop visibility must depend only on journeyType and returnToSamePickup.",
       "reqIds": [
         "REQ-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-riderequestform-tsx-in-the-gps-geolocation-handler-if-navigator-geolocation-permission-is-denied-or-if-getcurrentposition-fails-error-callback-set-pickuplocationmode-to-manual-so-that-pickup-fields-become-visible-this-must-be-applied-in-both-the-permission-denied-error-path-and-the-general-getcurrentposition-error-path",
+      "title": "In RideRequestForm.tsx, in the GPS geolocation handler, if navigator.geolocation permission is denied OR if getCurrentPosition fails (error callback), set pickupLocationMode to 'manual' so that pickup fields become visible. This must be applied in both the permission-denied error path and the general getCurrentPosition error path.",
+      "reqIds": [
+        "REQ-3"
       ],
       "version": 1
     }

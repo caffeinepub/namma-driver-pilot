@@ -1,10 +1,11 @@
 # Specification
 
 ## Summary
-**Goal:** Fix GPS mode visibility in the Customer Booking Form so that manual pickup fields are shown or hidden based on the selected location mode.
+**Goal:** Fix conditional rendering logic for pickup and drop location fields in `RideRequestForm.tsx` to ensure correct visibility based on the appropriate state variables.
 
 **Planned changes:**
-- In `RideRequestForm.tsx`, conditionally render the Pickup Pincode and Pickup Area fields: hide them when `locationMode === 'gps'`, show and require them when `locationMode === 'manual'`.
-- In `RideRequestForm.tsx`, when the geolocation error callback fires (GPS permission denied), automatically set `locationMode` back to `'manual'` and display the inline error message: "Location permission denied. Please enter pickup manually."
+- Fix pickup manual fields (pickup pincode + pickup area) to show only when `pickupLocationMode === 'manual'` and hide when `pickupLocationMode === 'gps'`, removing any dependency on `journeyType`.
+- Fix drop fields (drop pincode + drop area) visibility and required flags: show and require when `journeyType === 'oneway'`; hide when `journeyType === 'roundtrip'` and `returnToSamePickup === true`; show and require when `journeyType === 'roundtrip'` and `returnToSamePickup === false`.
+- In the GPS geolocation handler, set `pickupLocationMode` to `'manual'` when geolocation permission is denied or `getCurrentPosition` fails, causing pickup fields to become visible.
 
-**User-visible outcome:** When a customer selects "Use GPS," the manual pickup fields disappear. If GPS permission is denied, the form automatically switches back to manual mode, re-shows the pickup fields, and displays an explanatory error message.
+**User-visible outcome:** The booking form correctly shows/hides pickup and drop fields based on location mode and journey type selections, and automatically falls back to manual pickup entry if GPS access is denied or fails.

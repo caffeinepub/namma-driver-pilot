@@ -2,8 +2,8 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-in-riderequestform-tsx-conditionally-render-the-pickup-pincode-and-pickup-area-fields-based-on-locationmode-state-when-locationmode-gps-hide-both-fields-completely-do-not-render-them-when-locationmode-manual-show-both-fields-and-keep-them-required",
-      "featureTitle": "In RideRequestForm.tsx, conditionally render the Pickup Pincode and Pickup Area fields based on locationMode state: when locationMode === 'gps', hide both fields completely (do not render them); when locationMode === 'manual', show both fields and keep them required.",
+      "featureId": "feature-in-riderequestform-tsx-fix-pickup-manual-fields-pickup-pincode-pickup-area-visibility-so-they-are-shown-only-when-pickuplocationmode-manual-and-hidden-when-pickuplocationmode-gps-remove-any-existing-condition-that-ties-pickup-field-visibility-to-journeytype-pickup-visibility-must-depend-exclusively-on-pickuplocationmode",
+      "featureTitle": "In RideRequestForm.tsx, fix pickup manual fields (pickup pincode + pickup area) visibility so they are shown ONLY when pickupLocationMode === 'manual' and hidden when pickupLocationMode === 'gps'. Remove any existing condition that ties pickup field visibility to journeyType. Pickup visibility must depend exclusively on pickupLocationMode.",
       "files": [
         "frontend/src/components/RideRequestForm.tsx"
       ],
@@ -21,8 +21,8 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-in-riderequestform-tsx-when-the-browser-s-gps-permission-is-denied-the-existing-geolocation-error-callback-fires-automatically-set-locationmode-back-to-manual-re-show-the-pickup-pincode-and-pickup-area-fields-and-display-the-inline-error-message-location-permission-denied-please-enter-pickup-manually-do-not-modify-the-existing-navigator-geolocation-logic-itself",
-      "featureTitle": "In RideRequestForm.tsx, when the browser's GPS permission is denied (the existing geolocation error callback fires), automatically set locationMode back to 'manual', re-show the Pickup Pincode and Pickup Area fields, and display the inline error message: 'Location permission denied. Please enter pickup manually.' Do NOT modify the existing navigator.geolocation logic itself.",
+      "featureId": "feature-in-riderequestform-tsx-fix-drop-field-drop-pincode-drop-area-visibility-and-required-flags-using-exactly-these-rules-if-journeytype-oneway-show-drop-fields-and-mark-them-required-if-journeytype-roundtrip-and-returntosamepickup-true-hide-drop-fields-if-journeytype-roundtrip-and-returntosamepickup-false-show-drop-fields-and-mark-them-required-drop-visibility-must-depend-only-on-journeytype-and-returntosamepickup",
+      "featureTitle": "In RideRequestForm.tsx, fix drop field (drop pincode + drop area) visibility and required flags using exactly these rules: if journeyType === 'oneway', show drop fields and mark them required; if journeyType === 'roundtrip' and returnToSamePickup === true, hide drop fields; if journeyType === 'roundtrip' and returnToSamePickup === false, show drop fields and mark them required. Drop visibility must depend only on journeyType and returnToSamePickup.",
       "files": [
         "frontend/src/components/RideRequestForm.tsx"
       ],
@@ -36,6 +36,25 @@
       ],
       "testIds": [
         "REQ-2"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-in-riderequestform-tsx-in-the-gps-geolocation-handler-if-navigator-geolocation-permission-is-denied-or-if-getcurrentposition-fails-error-callback-set-pickuplocationmode-to-manual-so-that-pickup-fields-become-visible-this-must-be-applied-in-both-the-permission-denied-error-path-and-the-general-getcurrentposition-error-path",
+      "featureTitle": "In RideRequestForm.tsx, in the GPS geolocation handler, if navigator.geolocation permission is denied OR if getCurrentPosition fails (error callback), set pickupLocationMode to 'manual' so that pickup fields become visible. This must be applied in both the permission-denied error path and the general getCurrentPosition error path.",
+      "files": [
+        "frontend/src/components/RideRequestForm.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-3"
       ],
       "confidence": "high"
     }

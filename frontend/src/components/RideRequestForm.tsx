@@ -123,8 +123,8 @@ export default function RideRequestForm() {
         toast.success('Location captured successfully!');
       },
       (error) => {
-        console.error('Geolocation error:', error);
-        // Auto-switch back to manual entry on GPS permission denial
+        // GPS failed for any reason (permission denied OR other error):
+        // auto-switch back to manual so pickup fields become visible
         setLocationMode('manual');
         setGpsCoords(null);
         setGpsAddress('');
@@ -150,12 +150,21 @@ export default function RideRequestForm() {
     setDropPincode(value);
   };
 
-  // Derived visibility flags
-  // One Way (Local or Outstation): always show drop fields
-  const isOneWay = journeyType === 'oneWay';
-  // Round Trip: show drop fields only when returnToPickup is OFF
-  const isRoundTripWithCustomDrop = journeyType === 'roundTrip' && !returnToPickup;
-  const showDropFields = isOneWay || isRoundTripWithCustomDrop;
+  // ─── VISIBILITY FLAGS ────────────────────────────────────────────────────────
+  //
+  // A) Pickup manual fields:
+  //    Visible ONLY when locationMode === 'manual'.
+  //    NEVER depends on journeyType.
+  const showPickupManualFields = locationMode === 'manual';
+
+  // B) Drop fields:
+  //    oneWay          → always show
+  //    roundTrip + returnToPickup=true  → hide
+  //    roundTrip + returnToPickup=false → show
+  const showDropFields =
+    journeyType === 'oneWay' ||
+    (journeyType === 'roundTrip' && !returnToPickup);
+  // ─────────────────────────────────────────────────────────────────────────────
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -206,18 +215,7 @@ export default function RideRequestForm() {
     }
 
     // Drop location validation
-    if (isOneWay) {
-      // One Way: drop fields are always required
-      if (!dropPincode.trim() || !dropArea.trim()) {
-        toast.error('Please enter drop pincode and area for one-way trips');
-        return;
-      }
-      if (!/^\d{6}$/.test(dropPincode)) {
-        toast.error('Drop pincode must be exactly 6 digits');
-        return;
-      }
-    } else if (isRoundTripWithCustomDrop) {
-      // Round Trip with custom drop: validate drop fields
+    if (showDropFields) {
       if (!dropPincode.trim() || !dropArea.trim()) {
         toast.error('Please enter drop pincode and area');
         return;
@@ -265,7 +263,7 @@ export default function RideRequestForm() {
 
       // Determine dropoff location
       let dropoffLocation: { pincode: string; area: string; latitude?: number; longitude?: number } | null = null;
-      if (isOneWay) {
+      if (journeyType === 'oneWay') {
         dropoffLocation = {
           pincode: dropPincode,
           area: dropArea,
@@ -453,7 +451,7 @@ export default function RideRequestForm() {
           </div>
         )}
 
-        {/* Location Mode */}
+        {/* Pickup Location Mode */}
         <div className="space-y-3">
           <Label className="text-base font-semibold">Pickup Location Mode *</Label>
           <RadioGroup value={locationMode} onValueChange={handleLocationModeChange}>
@@ -467,7 +465,7 @@ export default function RideRequestForm() {
             </div>
           </RadioGroup>
 
-          {/* GPS permission denied error message */}
+          {/* GPS permission denied / error message */}
           {gpsError && (
             <Alert variant="destructive" className="mt-2">
               <AlertCircle className="h-4 w-4" />
@@ -476,7 +474,7 @@ export default function RideRequestForm() {
           )}
         </div>
 
-        {/* GPS Location - shown only when GPS mode is selected */}
+        {/* GPS Location button — shown ONLY when GPS mode is selected */}
         {locationMode === 'gps' && (
           <div className="space-y-3">
             <Button
@@ -486,22 +484,25 @@ export default function RideRequestForm() {
               className="w-full"
             >
               <Navigation className="mr-2 h-4 w-4" />
-              Get My Location
+              Capture GPS Location
             </Button>
-            {gpsAddress && (
-              <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
-                📍 {gpsAddress}
-              </p>
+            {gpsCoords && (
+              <div className="flex items-center gap-2 p-3 bg-muted rounded-md text-sm">
+                <MapPin className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-muted-foreground">{gpsAddress}</span>
+              </div>
             )}
           </div>
         )}
 
-        {/* Pickup Pincode & Area - Manual Entry Only */}
-        {locationMode === 'manual' && (
-          <>
+        {/* ── PICKUP MANUAL FIELDS ──────────────────────────────────────────────
+            Visible ONLY when locationMode === 'manual'.
+            NEVER depends on journeyType.
+        ──────────────────────────────────────────────────────────────────────── */}
+        {showPickupManualFields && (
+          <div className="space-y-4">
             <div className="space-y-3">
-              <Label htmlFor="pickupPincode" className="text-base font-semibold flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
+              <Label htmlFor="pickupPincode" className="text-base font-semibold">
                 Pickup Pincode *
               </Label>
               <Input
@@ -515,27 +516,25 @@ export default function RideRequestForm() {
                 required
               />
             </div>
-
             <div className="space-y-3">
-              <Label htmlFor="pickupArea" className="text-base font-semibold flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                Pickup Area Name *
+              <Label htmlFor="pickupArea" className="text-base font-semibold">
+                Pickup Area *
               </Label>
               <Input
                 id="pickupArea"
                 type="text"
-                placeholder="Enter area / locality name"
+                placeholder="Enter pickup area / locality"
                 value={pickupArea}
                 onChange={(e) => setPickupArea(e.target.value)}
                 required
               />
             </div>
-          </>
+          </div>
         )}
 
-        {/* Round Trip: Return to same pickup location toggle */}
+        {/* Round Trip — "Return to same pickup location" checkbox */}
         {journeyType === 'roundTrip' && (
-          <div className="flex items-center space-x-3 p-3 bg-muted rounded-md">
+          <div className="flex items-center space-x-2">
             <Checkbox
               id="returnToPickup"
               checked={returnToPickup}
@@ -547,12 +546,15 @@ export default function RideRequestForm() {
           </div>
         )}
 
-        {/* Drop Pincode & Area - shown for One Way or Round Trip with custom drop */}
+        {/* ── DROP FIELDS ───────────────────────────────────────────────────────
+            oneWay                              → visible + required
+            roundTrip + returnToPickup=true     → hidden
+            roundTrip + returnToPickup=false    → visible + required
+        ──────────────────────────────────────────────────────────────────────── */}
         {showDropFields && (
-          <>
+          <div className="space-y-4">
             <div className="space-y-3">
-              <Label htmlFor="dropPincode" className="text-base font-semibold flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
+              <Label htmlFor="dropPincode" className="text-base font-semibold">
                 Drop Pincode *
               </Label>
               <Input
@@ -566,40 +568,39 @@ export default function RideRequestForm() {
                 required
               />
             </div>
-
             <div className="space-y-3">
-              <Label htmlFor="dropArea" className="text-base font-semibold flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                Drop Area Name *
+              <Label htmlFor="dropArea" className="text-base font-semibold">
+                Drop Area *
               </Label>
               <Input
                 id="dropArea"
                 type="text"
-                placeholder="Enter area / locality name"
+                placeholder="Enter drop area / locality"
                 value={dropArea}
                 onChange={(e) => setDropArea(e.target.value)}
                 required
               />
             </div>
-          </>
+          </div>
         )}
 
-        {/* Phone Number */}
+        {/* Phone */}
         <div className="space-y-3">
-          <Label htmlFor="phone" className="text-base font-semibold flex items-center gap-2">
-            <Phone className="h-4 w-4" />
-            Phone Number *
-          </Label>
-          <Input
-            id="phone"
-            type="tel"
-            inputMode="numeric"
-            maxLength={10}
-            placeholder="Enter 10-digit mobile number"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-            required
-          />
+          <Label htmlFor="phone" className="text-base font-semibold">Phone Number *</Label>
+          <div className="relative">
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              id="phone"
+              type="tel"
+              inputMode="numeric"
+              maxLength={10}
+              placeholder="10-digit mobile number"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+              className="pl-9"
+              required
+            />
+          </div>
         </div>
 
         {/* Landmark (optional) */}
