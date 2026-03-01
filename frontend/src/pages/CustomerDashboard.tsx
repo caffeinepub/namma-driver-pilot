@@ -3,10 +3,9 @@ import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import RideRequestForm from '../components/RideRequestForm';
 import CustomerTripList from '../components/CustomerTripList';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import DataLoadErrorBanner from '../components/DataLoadErrorBanner';
-import { User, PlusCircle } from 'lucide-react';
+import { User } from 'lucide-react';
 
 export default function CustomerDashboard() {
   const { data: trips, isLoading, isError } = useGetMyTrips();
@@ -29,7 +28,7 @@ export default function CustomerDashboard() {
           </Badge>
         </div>
 
-        {/* Principal & Role info card */}
+        {/* Principal info card */}
         {principal && (
           <div className="mt-4 bg-muted/50 border border-border rounded-lg p-4 flex items-start gap-3">
             <User className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
@@ -39,15 +38,6 @@ export default function CustomerDashboard() {
             </div>
           </div>
         )}
-
-        {/* Create Booking placeholder button */}
-        <div className="mt-4">
-          <Button disabled className="gap-2" title="Booking functionality coming soon">
-            <PlusCircle className="h-4 w-4" />
-            Create Booking
-          </Button>
-          <p className="text-xs text-muted-foreground mt-1">Booking functionality coming soon</p>
-        </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">

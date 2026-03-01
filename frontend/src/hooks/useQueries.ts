@@ -1,27 +1,39 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
 import { useInternetIdentity } from './useInternetIdentity';
-import type { PricingConfig, UpdateConfigResult, TripRequest } from '../backend';
-import { AppRole as BackendAppRole } from '../backend';
+import type {
+  PricingConfig,
+  UpdateConfigResult,
+  TripRequest,
+  ProfileInput,
+  TransmissionType as BackendTransmissionType,
+  DriverProfile,
+} from '../backend';
+import { Role as BackendRole } from '../backend';
 import type { Trip, UserProfile, AppRole } from '../lib/types';
 import { withTimeout } from '../utils/withTimeout';
 import { DEFAULT_CONFIG } from '../lib/defaultConfig';
 import { toast } from 'sonner';
 
-const QUERY_TIMEOUT_MS = 10_000;
-const ROLE_TIMEOUT_MS = 5_000;
+const QUERY_TIMEOUT_MS = 30_000;
+const ROLE_TIMEOUT_MS = 30_000;
 
 /**
- * Converts a plain role string to the correct Candid variant object format.
- * The backend expects { customer: null }, { driver: null }, or { admin: null }
- * wrapped in an opt (array) for the role field.
+ * Input type for saving a caller's user profile.
  */
-export function convertRoleToVariant(role: 'customer' | 'driver'): { customer: null } | { driver: null } {
-  if (role === 'customer') return { customer: null };
-  return { driver: null };
+export interface SaveProfileInput {
+  fullName: string;
+  email: string;
+  serviceAreaName?: string;
+  servicePincode?: string;
+  vehicleExperience?: string[];
+  transmissionComfort?: string[];
+  languages?: string[];
+  isAvailable?: boolean;
 }
 
-// Get caller's user profile
+// ─── User Profile ─────────────────────────────────────────────────────────────
+
 export function useGetCallerUserProfile() {
   const { actor, isFetching: actorFetching } = useActor();
 
@@ -42,7 +54,8 @@ export function useGetCallerUserProfile() {
   };
 }
 
-// Get the caller's app role from the backend (admin | customer | driver | null)
+// ─── Role ─────────────────────────────────────────────────────────────────────
+
 export function useGetMyRole() {
   const { actor, isFetching: actorFetching } = useActor();
   const { identity } = useInternetIdentity();
@@ -53,10 +66,9 @@ export function useGetMyRole() {
       if (!actor) throw new Error('Actor not available');
       const result = await withTimeout(actor.getMyRole(), ROLE_TIMEOUT_MS);
       if (result === null || result === undefined) return null;
-      // Map backend AppRole enum to local AppRole string
-      if (result === BackendAppRole.admin) return 'admin';
-      if (result === BackendAppRole.customer) return 'customer';
-      if (result === BackendAppRole.driver) return 'driver';
+      if (result === BackendRole.admin) return 'admin';
+      if (result === BackendRole.customer) return 'customer';
+      if (result === BackendRole.driver) return 'driver';
       return null;
     },
     enabled: !!actor && !actorFetching && !!identity,
@@ -71,71 +83,79 @@ export function useGetMyRole() {
   };
 }
 
-// Set the caller's role (customer or driver)
-// Sends the correct Candid variant object format: { customer: null } or { driver: null }
-export function useSetMyRole() {
+export function useSetMyRoleCustomer() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
   const { identity } = useInternetIdentity();
 
   return useMutation({
-    mutationFn: async (role: 'customer' | 'driver') => {
+    mutationFn: async () => {
       if (!actor) throw new Error('Actor not available');
-      // Convert plain string to Candid variant object format required by the backend
-      const backendRole = convertRoleToVariant(role);
-      return withTimeout(actor.setMyRole(backendRole as any), ROLE_TIMEOUT_MS);
+      return withTimeout(actor.setMyRoleCustomer(), ROLE_TIMEOUT_MS);
     },
+    retry: 1,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myRole', identity?.getPrincipal().toString()] });
+      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+    },
+    onError: (err: unknown) => {
+      console.error('[useSetMyRoleCustomer] Failed:', err);
+      toast.error('Failed to set role. Please try again.');
     },
   });
 }
 
-// Check if the current caller is an admin
-export function useCheckIsAdmin() {
-  const { actor, isFetching: actorFetching } = useActor();
+export function useSetMyRoleDriver() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
   const { identity } = useInternetIdentity();
 
-  const query = useQuery<boolean>({
-    queryKey: ['isAdmin', identity?.getPrincipal().toString()],
-    queryFn: async () => {
-      if (!actor || !identity) return false;
-      try {
-        return await withTimeout(actor.isCallerAdmin(), QUERY_TIMEOUT_MS);
-      } catch (err) {
-        console.error('[useCheckIsAdmin] Failed:', err);
-        return false;
-      }
+  return useMutation({
+    mutationFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      return withTimeout(actor.setMyRoleDriver(), ROLE_TIMEOUT_MS);
     },
-    enabled: !!actor && !actorFetching && !!identity,
-    retry: false,
+    retry: 1,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myRole', identity?.getPrincipal().toString()] });
+      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+    },
+    onError: (err: unknown) => {
+      console.error('[useSetMyRoleDriver] Failed:', err);
+      toast.error('Failed to set role. Please try again.');
+    },
   });
+}
+
+// Legacy alias
+export function useSetMyRole() {
+  const setCustomer = useSetMyRoleCustomer();
+  const setDriver = useSetMyRoleDriver();
 
   return {
-    ...query,
-    isLoading: actorFetching || query.isLoading,
-    isFetched: !!actor && !!identity && query.isFetched,
-    isAdmin: query.data === true,
+    mutateAsync: async (role: 'customer' | 'driver') => {
+      if (role === 'customer') return setCustomer.mutateAsync();
+      return setDriver.mutateAsync();
+    },
+    isPending: setCustomer.isPending || setDriver.isPending,
+    isError: setCustomer.isError || setDriver.isError,
+    isSuccess: setCustomer.isSuccess || setDriver.isSuccess,
   };
 }
 
-// Save caller's user profile
-export function useSaveCallerUserProfile() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
+export function useCheckIsAdmin() {
+  const { role, isLoading, isFetched, isError, refetch } = useGetMyRole();
 
-  return useMutation({
-    mutationFn: async (profile: UserProfile) => {
-      if (!actor) throw new Error('Actor not available');
-      return (actor as any).saveCallerUserProfile(profile);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
-    },
-  });
+  return {
+    isAdmin: role === 'admin',
+    isLoading,
+    isFetched,
+    isError,
+    refetch,
+    data: role === 'admin',
+  };
 }
 
-// Update user role — delegates to useSetMyRole for correct Candid variant encoding
 export function useUpdateUserRole() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
@@ -145,21 +165,25 @@ export function useUpdateUserRole() {
     mutationFn: async (role: AppRole) => {
       if (!actor) throw new Error('Actor not available');
       if (role === 'admin') throw new Error('Cannot set admin role via this method');
-      // Convert plain string to Candid variant object format required by the backend
-      const backendRole = convertRoleToVariant(role as 'customer' | 'driver');
-      return withTimeout(actor.setMyRole(backendRole as any), ROLE_TIMEOUT_MS);
+      if (role === 'customer') {
+        return withTimeout(actor.setMyRoleCustomer(), ROLE_TIMEOUT_MS);
+      }
+      return withTimeout(actor.setMyRoleDriver(), ROLE_TIMEOUT_MS);
     },
+    retry: 1,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myRole', identity?.getPrincipal().toString()] });
       queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
     },
+    onError: (err: unknown) => {
+      console.error('[useUpdateUserRole] Failed:', err);
+      toast.error('Failed to update role. Please try again.');
+    },
   });
 }
 
-// Keep old name as alias for backward compatibility
 export const useUpdateUserRoleAndLock = useUpdateUserRole;
 
-// Upgrade current user to admin
 export function useUpgradeToAdmin() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
@@ -177,7 +201,101 @@ export function useUpgradeToAdmin() {
   });
 }
 
-// Create a new trip — calls actor.createTrip(tripData: TripRequest) with a single object argument
+// ─── Profile Save ─────────────────────────────────────────────────────────────
+
+export function useSaveCallerUserProfile() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: SaveProfileInput) => {
+      if (!actor) throw new Error('Actor not available');
+
+      const profileInput: ProfileInput = {
+        fullName: input.fullName.trim(),
+        email: input.email.trim(),
+      };
+
+      const savedProfile = await withTimeout(actor.setProfile(profileInput), QUERY_TIMEOUT_MS);
+
+      const hasDriverFields =
+        input.serviceAreaName !== undefined ||
+        input.servicePincode !== undefined ||
+        input.vehicleExperience !== undefined ||
+        input.transmissionComfort !== undefined ||
+        input.languages !== undefined ||
+        input.isAvailable !== undefined;
+
+      if (hasDriverFields) {
+        const vehicleExperience = (input.vehicleExperience ?? []) as any[];
+        const transmissionComfort = (input.transmissionComfort ?? []) as BackendTransmissionType[];
+
+        return withTimeout(
+          actor.updateProfile({
+            fullName: input.fullName.trim(),
+            email: input.email.trim(),
+            serviceAreaName: input.serviceAreaName ?? (savedProfile as any).serviceAreaName ?? '',
+            servicePincode: input.servicePincode ?? (savedProfile as any).servicePincode ?? '',
+            vehicleExperience,
+            transmissionComfort,
+            languages: input.languages,
+            isAvailable: input.isAvailable ?? (savedProfile as any).isAvailable ?? false,
+            totalEarnings: (savedProfile as any).totalEarnings ?? BigInt(0),
+          }),
+          QUERY_TIMEOUT_MS
+        );
+      }
+
+      return savedProfile;
+    },
+    retry: 1,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+    },
+    onError: (err: unknown) => {
+      console.error('[useSaveCallerUserProfile] Failed:', err);
+      toast.error('Failed to save profile. Please try again.');
+    },
+  });
+}
+
+// ─── Driver Profile ───────────────────────────────────────────────────────────
+
+export function useGetDriverProfile() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<DriverProfile | null>({
+    queryKey: ['driverProfile'],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      return withTimeout(actor.getDriverProfile(), QUERY_TIMEOUT_MS);
+    },
+    enabled: !!actor && !actorFetching,
+    retry: false,
+  });
+}
+
+export function useUpsertDriverProfile() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (profile: DriverProfile) => {
+      if (!actor) throw new Error('Actor not available');
+      return withTimeout(actor.upsertDriverProfile(profile), QUERY_TIMEOUT_MS);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['driverProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+    },
+    onError: (err: unknown) => {
+      console.error('[useUpsertDriverProfile] Failed:', err);
+    },
+  });
+}
+
+// ─── Trips ────────────────────────────────────────────────────────────────────
+
 export function useCreateTrip() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
@@ -198,7 +316,6 @@ export function useCreateTrip() {
   });
 }
 
-// Get caller's trips
 export function useGetMyTrips() {
   const { actor, isFetching: actorFetching } = useActor();
 
@@ -218,7 +335,6 @@ export function useGetMyTrips() {
   });
 }
 
-// Get requested trips (for drivers)
 export function useGetRequestedTrips() {
   const { actor, isFetching: actorFetching } = useActor();
 
@@ -238,7 +354,6 @@ export function useGetRequestedTrips() {
   });
 }
 
-// Accept a trip (driver)
 export function useAcceptTrip() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
@@ -255,7 +370,6 @@ export function useAcceptTrip() {
   });
 }
 
-// Complete a trip (driver)
 export function useCompleteTrip() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
@@ -272,7 +386,6 @@ export function useCompleteTrip() {
   });
 }
 
-// Update driver availability
 export function useUpdateAvailability() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
@@ -288,7 +401,8 @@ export function useUpdateAvailability() {
   });
 }
 
-// Get all users (admin)
+// ─── Admin ────────────────────────────────────────────────────────────────────
+
 export function useGetAllUsers() {
   const { actor, isFetching: actorFetching } = useActor();
 
@@ -308,7 +422,6 @@ export function useGetAllUsers() {
   });
 }
 
-// Get all trips (admin)
 export function useGetAllTrips() {
   const { actor, isFetching: actorFetching } = useActor();
 
@@ -328,7 +441,8 @@ export function useGetAllTrips() {
   });
 }
 
-// Get pricing config
+// ─── Pricing Config ───────────────────────────────────────────────────────────
+
 export function useGetPricingConfig() {
   const { actor, isFetching: actorFetching } = useActor();
 
@@ -345,7 +459,6 @@ export function useGetPricingConfig() {
   });
 }
 
-// Update pricing config (admin)
 export function useUpdatePricingConfig() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
@@ -355,8 +468,10 @@ export function useUpdatePricingConfig() {
       if (!actor) throw new Error('Actor not available');
       return withTimeout(actor.updatePricingConfig(config), QUERY_TIMEOUT_MS);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pricingConfig'] });
+    onSuccess: (result) => {
+      if (result.__kind__ === 'ok') {
+        queryClient.invalidateQueries({ queryKey: ['pricingConfig'] });
+      }
     },
   });
 }

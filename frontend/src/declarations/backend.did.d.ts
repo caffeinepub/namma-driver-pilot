@@ -10,10 +10,16 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
-export type AppRole = { 'admin' : null } |
-  { 'customer' : null } |
-  { 'driver' : null };
 export interface Commission { 'local' : number, 'outstation' : number }
+export interface DriverProfile {
+  'serviceAreaName' : string,
+  'updatedTime' : bigint,
+  'servicePincode' : string,
+  'vehicleExperience' : Array<VehicleType>,
+  'languages' : Array<string>,
+  'isAvailable' : boolean,
+  'transmissionComfort' : Array<TransmissionType>,
+}
 export type Duration = { 'hours' : bigint } |
   { 'days' : bigint };
 export type JourneyType = { 'roundTrip' : null } |
@@ -50,8 +56,26 @@ export interface PricingConfig {
   'vehicle_multiplier' : VehicleMultiplier,
   'outstation' : OutstationPricing,
 }
+export interface ProfileInput { 'fullName' : string, 'email' : string }
+export interface ProfileUpdate {
+  'serviceAreaName' : string,
+  'servicePincode' : string,
+  'vehicleExperience' : Array<VehicleExperience>,
+  'languages' : [] | [Array<string>],
+  'isAvailable' : boolean,
+  'fullName' : string,
+  'email' : string,
+  'totalEarnings' : bigint,
+  'transmissionComfort' : Array<TransmissionComfort>,
+}
+export type Role = { 'admin' : null } |
+  { 'customer' : null } |
+  { 'driver' : null };
 export type Time = bigint;
 export type TransmissionComfort = { 'ev' : null } |
+  { 'automatic' : null } |
+  { 'manual' : null };
+export type TransmissionType = { 'ev' : null } |
   { 'automatic' : null } |
   { 'manual' : null };
 export interface Trip {
@@ -106,7 +130,7 @@ export type UpdateConfigResult = { 'ok' : PricingConfig } |
 export interface UserProfile {
   'serviceAreaName' : string,
   'servicePincode' : string,
-  'role' : [] | [AppRole],
+  'role' : [] | [Role],
   'vehicleExperience' : Array<VehicleExperience>,
   'languages' : [] | [Array<string>],
   'isAvailable' : boolean,
@@ -140,20 +164,22 @@ export interface _SERVICE {
   'createTrip' : ActorMethod<[TripRequest], Trip>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
-  'getMyRole' : ActorMethod<[], [] | [AppRole]>,
+  'getDriverProfile' : ActorMethod<[], [] | [DriverProfile]>,
+  'getMyRole' : ActorMethod<[], [] | [Role]>,
   'getPricingConfig' : ActorMethod<[], PricingConfig>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
-  /**
-   * / Returns "ok" as a health check that the backend runs correctly.
-   */
   'health' : ActorMethod<[], string>,
+  'isAdmin' : ActorMethod<[], boolean>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'ping' : ActorMethod<[], string>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
-  'setMyRole' : ActorMethod<
-    [{ 'customer' : null } | { 'driver' : null }],
-    { 'ok' : null }
-  >,
+  'setMyRoleCustomer' : ActorMethod<[], undefined>,
+  'setMyRoleDriver' : ActorMethod<[], undefined>,
+  'setProfile' : ActorMethod<[ProfileInput], UserProfile>,
   'updatePricingConfig' : ActorMethod<[PricingConfig], UpdateConfigResult>,
+  'updateProfile' : ActorMethod<[ProfileUpdate], UserProfile>,
+  'updateProfileFields' : ActorMethod<[string, string], UserProfile>,
+  'upsertDriverProfile' : ActorMethod<[DriverProfile], boolean>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

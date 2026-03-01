@@ -1,30 +1,15 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-03-01T06:57:56.274Z",
-  "summary": "The diff implements the Candid opt variant encoding fix for role submission. A `convertRoleToVariant` helper is added in `useQueries.ts` that maps 'customer' to { customer: null } and 'driver' to { driver: null }, and this is applied in `useSetMyRole`. The `RoleSelectionWarningModal.tsx` is updated to use `useSetMyRole` which internally applies the conversion. However, the requirement specifies roles must be wrapped in an array to represent the Candid opt type (e.g., [{ customer: null }]), but the helper returns plain variant objects without the array wrapper. Additionally, no changes to `SelectRolePage.tsx` are present in the diff.",
-  "missing_requirements": [
-    {
-      "id": "REQ-1",
-      "requirement": "The role must be wrapped in an array to represent the Candid opt type (e.g., [{ customer: null }]), not just a plain variant object.",
-      "reason": "The `convertRoleToVariant` function returns { customer: null } or { driver: null } as plain objects without an array wrapper. The requirement and acceptance criteria explicitly state the role must be sent as [{ customer: null }] for correct Candid opt encoding.",
-      "evidence": [
-        "frontend/src/hooks/useQueries.ts"
-      ]
-    },
-    {
-      "id": "REQ-1",
-      "requirement": "The corrected encoding must also be applied in SelectRolePage.tsx.",
-      "reason": "The diff shows no changes to SelectRolePage.tsx. REQ-1 explicitly lists it as one of the files where the fix must be applied, and the acceptance criteria state that role selection from SelectRolePage must use the corrected encoding.",
-      "evidence": []
-    }
-  ],
+  "generatedAt": "2026-03-01T11:01:22.043Z",
+  "summary": "The diff implements both REQ-1 and REQ-2 largely as specified. CustomerDashboard.tsx now includes a 'My Trips' section using CustomerTripList, and DriverDashboard.tsx now shows two tabs ('Available Trips' and 'My Trips') using AvailableTripsSection and DriverTripList respectively, with no 'coming soon' placeholder. The file summaries confirm CustomerTripList filters by caller, DriverTripList segments driver trips, and AvailableTripsSection shows unassigned trips. The RideRequestForm uses query invalidation patterns (via useCreateTrip) that should trigger immediate list updates. All required fields (status, locations, vehicle type, fare, timestamps) are described as rendered in the trip list components.",
+  "missing_requirements": [],
   "hallucinated_features": [],
-  "confidence": 0.82,
+  "confidence": 0.87,
   "changed_files": [
     "frontend-file-summaries.txt",
-    "frontend/src/components/RoleSelectionWarningModal.tsx",
-    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/pages/CustomerDashboard.tsx",
+    "frontend/src/pages/DriverDashboard.tsx",
     "project_state.json"
   ]
 }

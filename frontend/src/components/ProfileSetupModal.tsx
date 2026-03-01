@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useSaveCallerUserProfile } from '../hooks/useQueries';
-import type { UserProfile } from '../lib/types';
+import { useActor } from '../hooks/useActor';
+import { useQueryClient } from '@tanstack/react-query';
+import type { ProfileInput } from '../backend';
 import {
   Dialog,
   DialogContent,
@@ -12,19 +13,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { withTimeout } from '../utils/withTimeout';
+
+const PROFILE_TIMEOUT_MS = 30_000;
 
 interface ProfileSetupModalProps {
   open: boolean;
   onComplete: () => void;
-  existingProfile?: UserProfile | null;
+  existingProfile?: { fullName?: string; email?: string } | null;
 }
 
 export default function ProfileSetupModal({ open, onComplete, existingProfile }: ProfileSetupModalProps) {
   const [fullName, setFullName] = useState(existingProfile?.fullName ?? '');
   const [email, setEmail] = useState(existingProfile?.email ?? '');
   const [error, setError] = useState('');
+  const [isPending, setIsPending] = useState(false);
 
-  const saveProfile = useSaveCallerUserProfile();
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,23 +46,26 @@ export default function ProfileSetupModal({ open, onComplete, existingProfile }:
       return;
     }
 
+    setIsPending(true);
     try {
-      await saveProfile.mutateAsync({
-        ...(existingProfile as UserProfile),
+      if (!actor) throw new Error('Actor not available');
+
+      // Use setProfile which ONLY takes fullName + email — never sends role
+      const profileInput: ProfileInput = {
         fullName: fullName.trim(),
         email: email.trim(),
-        role: [],
-        servicePincode: existingProfile?.servicePincode ?? '',
-        serviceAreaName: existingProfile?.serviceAreaName ?? '',
-        vehicleExperience: existingProfile?.vehicleExperience ?? [],
-        transmissionComfort: existingProfile?.transmissionComfort ?? [],
-        isAvailable: existingProfile?.isAvailable ?? false,
-        totalEarnings: existingProfile?.totalEarnings ?? BigInt(0),
-        languages: existingProfile?.languages ?? [],
-      } as unknown as UserProfile);
+      };
+
+      await withTimeout(actor.setProfile(profileInput), PROFILE_TIMEOUT_MS);
+      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
       onComplete();
-    } catch (err: any) {
-      setError(err?.message ?? 'Failed to save profile. Please try again.');
+    } catch (err: unknown) {
+      console.error('[ProfileSetupModal] setProfile failed:', err);
+      const message = err instanceof Error ? err.message : 'Failed to save profile. Please try again.';
+      setError(message);
+      toast.error('Failed to save profile. Please try again.');
+    } finally {
+      setIsPending(false);
     }
   };
 
@@ -76,7 +86,7 @@ export default function ProfileSetupModal({ open, onComplete, existingProfile }:
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Your full name"
-              disabled={saveProfile.isPending}
+              disabled={isPending}
             />
           </div>
           <div className="space-y-2">
@@ -87,14 +97,14 @@ export default function ProfileSetupModal({ open, onComplete, existingProfile }:
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="your@email.com"
-              disabled={saveProfile.isPending}
+              disabled={isPending}
             />
           </div>
           {error && (
             <p className="text-sm text-destructive">{error}</p>
           )}
-          <Button type="submit" className="w-full" disabled={saveProfile.isPending}>
-            {saveProfile.isPending ? (
+          <Button type="submit" className="w-full" disabled={isPending}>
+            {isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Saving…

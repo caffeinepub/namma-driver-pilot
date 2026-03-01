@@ -79,7 +79,7 @@ export const Trip = IDL.Record({
   'startDateTime' : IDL.Opt(Time),
   'pickupLocation' : Location,
 });
-export const AppRole = IDL.Variant({
+export const Role = IDL.Variant({
   'admin' : IDL.Null,
   'customer' : IDL.Null,
   'driver' : IDL.Null,
@@ -98,7 +98,7 @@ export const TransmissionComfort = IDL.Variant({
 export const UserProfile = IDL.Record({
   'serviceAreaName' : IDL.Text,
   'servicePincode' : IDL.Text,
-  'role' : IDL.Opt(AppRole),
+  'role' : IDL.Opt(Role),
   'vehicleExperience' : IDL.Vec(VehicleExperience),
   'languages' : IDL.Opt(IDL.Vec(IDL.Text)),
   'isAvailable' : IDL.Bool,
@@ -108,6 +108,20 @@ export const UserProfile = IDL.Record({
   'totalEarnings' : IDL.Nat64,
   'transmissionComfort' : IDL.Vec(TransmissionComfort),
   'principalId' : IDL.Principal,
+});
+export const TransmissionType = IDL.Variant({
+  'ev' : IDL.Null,
+  'automatic' : IDL.Null,
+  'manual' : IDL.Null,
+});
+export const DriverProfile = IDL.Record({
+  'serviceAreaName' : IDL.Text,
+  'updatedTime' : IDL.Nat64,
+  'servicePincode' : IDL.Text,
+  'vehicleExperience' : IDL.Vec(VehicleType),
+  'languages' : IDL.Vec(IDL.Text),
+  'isAvailable' : IDL.Bool,
+  'transmissionComfort' : IDL.Vec(TransmissionType),
 });
 export const Commission = IDL.Record({
   'local' : IDL.Float64,
@@ -145,12 +159,27 @@ export const PricingConfig = IDL.Record({
   'vehicle_multiplier' : VehicleMultiplier,
   'outstation' : OutstationPricing,
 });
+export const ProfileInput = IDL.Record({
+  'fullName' : IDL.Text,
+  'email' : IDL.Text,
+});
 export const UpdateConfigResult = IDL.Variant({
   'ok' : PricingConfig,
   'failedUpdate' : IDL.Text,
   'notAdmin' : IDL.Null,
   'invalidConfig' : IDL.Text,
   'noConfigFound' : IDL.Null,
+});
+export const ProfileUpdate = IDL.Record({
+  'serviceAreaName' : IDL.Text,
+  'servicePincode' : IDL.Text,
+  'vehicleExperience' : IDL.Vec(VehicleExperience),
+  'languages' : IDL.Opt(IDL.Vec(IDL.Text)),
+  'isAvailable' : IDL.Bool,
+  'fullName' : IDL.Text,
+  'email' : IDL.Text,
+  'totalEarnings' : IDL.Nat64,
+  'transmissionComfort' : IDL.Vec(TransmissionComfort),
 });
 
 export const idlService = IDL.Service({
@@ -159,7 +188,8 @@ export const idlService = IDL.Service({
   'createTrip' : IDL.Func([TripRequest], [Trip], []),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-  'getMyRole' : IDL.Func([], [IDL.Opt(AppRole)], ['query']),
+  'getDriverProfile' : IDL.Func([], [IDL.Opt(DriverProfile)], ['query']),
+  'getMyRole' : IDL.Func([], [IDL.Opt(Role)], ['query']),
   'getPricingConfig' : IDL.Func([], [PricingConfig], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
@@ -167,14 +197,17 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'health' : IDL.Func([], [IDL.Text], ['query']),
+  'isAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'ping' : IDL.Func([], [IDL.Text], ['query']),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
-  'setMyRole' : IDL.Func(
-      [IDL.Variant({ 'customer' : IDL.Null, 'driver' : IDL.Null })],
-      [IDL.Variant({ 'ok' : IDL.Null })],
-      [],
-    ),
+  'setMyRoleCustomer' : IDL.Func([], [], []),
+  'setMyRoleDriver' : IDL.Func([], [], []),
+  'setProfile' : IDL.Func([ProfileInput], [UserProfile], []),
   'updatePricingConfig' : IDL.Func([PricingConfig], [UpdateConfigResult], []),
+  'updateProfile' : IDL.Func([ProfileUpdate], [UserProfile], []),
+  'updateProfileFields' : IDL.Func([IDL.Text, IDL.Text], [UserProfile], []),
+  'upsertDriverProfile' : IDL.Func([DriverProfile], [IDL.Bool], []),
 });
 
 export const idlInitArgs = [];
@@ -248,7 +281,7 @@ export const idlFactory = ({ IDL }) => {
     'startDateTime' : IDL.Opt(Time),
     'pickupLocation' : Location,
   });
-  const AppRole = IDL.Variant({
+  const Role = IDL.Variant({
     'admin' : IDL.Null,
     'customer' : IDL.Null,
     'driver' : IDL.Null,
@@ -267,7 +300,7 @@ export const idlFactory = ({ IDL }) => {
   const UserProfile = IDL.Record({
     'serviceAreaName' : IDL.Text,
     'servicePincode' : IDL.Text,
-    'role' : IDL.Opt(AppRole),
+    'role' : IDL.Opt(Role),
     'vehicleExperience' : IDL.Vec(VehicleExperience),
     'languages' : IDL.Opt(IDL.Vec(IDL.Text)),
     'isAvailable' : IDL.Bool,
@@ -277,6 +310,20 @@ export const idlFactory = ({ IDL }) => {
     'totalEarnings' : IDL.Nat64,
     'transmissionComfort' : IDL.Vec(TransmissionComfort),
     'principalId' : IDL.Principal,
+  });
+  const TransmissionType = IDL.Variant({
+    'ev' : IDL.Null,
+    'automatic' : IDL.Null,
+    'manual' : IDL.Null,
+  });
+  const DriverProfile = IDL.Record({
+    'serviceAreaName' : IDL.Text,
+    'updatedTime' : IDL.Nat64,
+    'servicePincode' : IDL.Text,
+    'vehicleExperience' : IDL.Vec(VehicleType),
+    'languages' : IDL.Vec(IDL.Text),
+    'isAvailable' : IDL.Bool,
+    'transmissionComfort' : IDL.Vec(TransmissionType),
   });
   const Commission = IDL.Record({
     'local' : IDL.Float64,
@@ -314,12 +361,27 @@ export const idlFactory = ({ IDL }) => {
     'vehicle_multiplier' : VehicleMultiplier,
     'outstation' : OutstationPricing,
   });
+  const ProfileInput = IDL.Record({
+    'fullName' : IDL.Text,
+    'email' : IDL.Text,
+  });
   const UpdateConfigResult = IDL.Variant({
     'ok' : PricingConfig,
     'failedUpdate' : IDL.Text,
     'notAdmin' : IDL.Null,
     'invalidConfig' : IDL.Text,
     'noConfigFound' : IDL.Null,
+  });
+  const ProfileUpdate = IDL.Record({
+    'serviceAreaName' : IDL.Text,
+    'servicePincode' : IDL.Text,
+    'vehicleExperience' : IDL.Vec(VehicleExperience),
+    'languages' : IDL.Opt(IDL.Vec(IDL.Text)),
+    'isAvailable' : IDL.Bool,
+    'fullName' : IDL.Text,
+    'email' : IDL.Text,
+    'totalEarnings' : IDL.Nat64,
+    'transmissionComfort' : IDL.Vec(TransmissionComfort),
   });
   
   return IDL.Service({
@@ -328,7 +390,8 @@ export const idlFactory = ({ IDL }) => {
     'createTrip' : IDL.Func([TripRequest], [Trip], []),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-    'getMyRole' : IDL.Func([], [IDL.Opt(AppRole)], ['query']),
+    'getDriverProfile' : IDL.Func([], [IDL.Opt(DriverProfile)], ['query']),
+    'getMyRole' : IDL.Func([], [IDL.Opt(Role)], ['query']),
     'getPricingConfig' : IDL.Func([], [PricingConfig], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
@@ -336,14 +399,17 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'health' : IDL.Func([], [IDL.Text], ['query']),
+    'isAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'ping' : IDL.Func([], [IDL.Text], ['query']),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
-    'setMyRole' : IDL.Func(
-        [IDL.Variant({ 'customer' : IDL.Null, 'driver' : IDL.Null })],
-        [IDL.Variant({ 'ok' : IDL.Null })],
-        [],
-      ),
+    'setMyRoleCustomer' : IDL.Func([], [], []),
+    'setMyRoleDriver' : IDL.Func([], [], []),
+    'setProfile' : IDL.Func([ProfileInput], [UserProfile], []),
     'updatePricingConfig' : IDL.Func([PricingConfig], [UpdateConfigResult], []),
+    'updateProfile' : IDL.Func([ProfileUpdate], [UserProfile], []),
+    'updateProfileFields' : IDL.Func([IDL.Text, IDL.Text], [UserProfile], []),
+    'upsertDriverProfile' : IDL.Func([DriverProfile], [IDL.Bool], []),
   });
 };
 

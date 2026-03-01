@@ -1,23 +1,46 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "ICP-based app with user roles (admin, customer, driver). Frontend was sending role as plain string; fix converts role to correct Candid opt variant format.",
+  "summary": "Rideshare/taxi app with customer and driver dashboards, trip booking, admin panel, and driver profiles. Restoring trip history UI for both customer and driver dashboards.",
   "architectural_notes": [
-    "Candid opt variant encoding for roles: send role as [{ customer: null }], [{ driver: null }], or [{ admin: null }] — not as plain strings."
+    "Trip history UI reconnects to existing trip storage only — no backend schema changes allowed",
+    "Customer My Trips filters where trip.customerPrincipal == caller; Driver My Trips filters where trip.driverPrincipal == caller",
+    "Available Trips (driver) shows only trips with no driver assigned"
   ],
   "known_issues": [],
-  "isFixRequest": true,
+  "isFixRequest": false,
   "existing_features": [
     {
-      "id": "feature-in-the-frontend-role-submission-logic-convert-the-plain-string-role-value-to-the-correct-candid-opt-variant-format-before-sending-to-the-backend-specifically-map-customer-customer-null-driver-driver-null-and-admin-admin-null-this-conversion-must-be-applied-wherever-a-role-is-submitted-to-the-backend-e-g-usequeries-ts-updaterole-mutation-selectrolepage-tsx-roleselectionwarningmodal-tsx",
-      "title": "In the frontend role submission logic, convert the plain string role value to the correct Candid opt variant format before sending to the backend. Specifically: map \"customer\" → [{ customer: null }], \"driver\" → [{ driver: null }], and \"admin\" → [{ admin: null }]. This conversion must be applied wherever a role is submitted to the backend (e.g., useQueries.ts updateRole mutation, SelectRolePage.tsx, RoleSelectionWarningModal.tsx).",
+      "id": "feature-restore-the-my-trips-section-in-the-customer-dashboard-display-a-list-of-trips-where-trip-customerprincipal-caller-showing-status-pending-assigned-confirmed-completed-cancelled-pickup-dropoff-locations-vehicle-type-fare-and-timestamps-after-a-new-booking-is-submitted-the-trip-must-appear-in-the-list-immediately-without-a-hard-refresh",
+      "title": "Restore the 'My Trips' section in the Customer Dashboard. Display a list of trips where trip.customerPrincipal == caller, showing status (pending/assigned/confirmed/completed/cancelled), pickup/dropoff locations, vehicle type, fare, and timestamps. After a new booking is submitted, the trip must appear in the list immediately without a hard refresh.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-restore-the-my-trips-tab-in-the-driver-dashboard-alongside-the-existing-available-trips-tab-my-trips-shows-trips-where-trip-driverprincipal-caller-available-trips-shows-only-trips-with-no-driver-assigned-remove-the-coming-soon-placeholder-text",
+      "title": "Restore the 'My Trips' tab in the Driver Dashboard alongside the existing 'Available Trips' tab. 'My Trips' shows trips where trip.driverPrincipal == caller. 'Available Trips' shows only trips with no driver assigned. Remove the 'coming soon' placeholder text.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "version": 1
     }
   ],
-  "new_feature_requests": [],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Restore Customer Dashboard 'My Trips' section showing trips by caller with live updates after booking",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Restore Driver Dashboard 'My Trips' tab and fix 'Available Trips' to show only unassigned trips, remove coming soon placeholder",
+      "reqIds": [],
+      "status": "pending"
+    }
+  ],
   "gameProjectType": "none",
   "projectName": "Namma Driver Pilot",
   "clarification_mode": "instant",

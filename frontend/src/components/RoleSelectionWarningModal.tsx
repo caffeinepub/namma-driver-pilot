@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useSetMyRole, useCheckIsAdmin } from '../hooks/useQueries';
-import type { AppRole } from '../lib/types';
+import { useSetMyRoleCustomer, useSetMyRoleDriver, useGetMyRole } from '../hooks/useQueries';
 import {
   Dialog,
   DialogContent,
@@ -12,6 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2, Car, User } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface RoleSelectionWarningModalProps {
   open: boolean;
@@ -20,8 +20,12 @@ interface RoleSelectionWarningModalProps {
 
 export default function RoleSelectionWarningModal({ open, onClose }: RoleSelectionWarningModalProps) {
   const navigate = useNavigate();
-  const setMyRole = useSetMyRole();
-  const { isAdmin } = useCheckIsAdmin();
+  const { role } = useGetMyRole();
+  const setCustomer = useSetMyRoleCustomer();
+  const setDriver = useSetMyRoleDriver();
+
+  const isAdmin = role === 'admin';
+  const isSetting = setCustomer.isPending || setDriver.isPending;
 
   useEffect(() => {
     if (isAdmin) {
@@ -31,18 +35,25 @@ export default function RoleSelectionWarningModal({ open, onClose }: RoleSelecti
 
   if (isAdmin) return null;
 
-  const handleSelectRole = async (role: AppRole) => {
-    if (role === 'admin') return;
+  const handleSelectCustomer = async () => {
     try {
-      await setMyRole.mutateAsync(role as 'customer' | 'driver');
-      if (role === 'customer') {
-        navigate({ to: '/customer/dashboard' });
-      } else if (role === 'driver') {
-        navigate({ to: '/driver/dashboard' });
-      }
+      await setCustomer.mutateAsync();
+      navigate({ to: '/customer/dashboard' });
       onClose();
     } catch (err) {
-      // error handled silently; user can retry
+      console.error('[RoleSelectionWarningModal] setMyRoleCustomer failed:', err);
+      toast.error('Failed to set role. Please try again.');
+    }
+  };
+
+  const handleSelectDriver = async () => {
+    try {
+      await setDriver.mutateAsync();
+      navigate({ to: '/driver/dashboard' });
+      onClose();
+    } catch (err) {
+      console.error('[RoleSelectionWarningModal] setMyRoleDriver failed:', err);
+      toast.error('Failed to set role. Please try again.');
     }
   };
 
@@ -57,8 +68,8 @@ export default function RoleSelectionWarningModal({ open, onClose }: RoleSelecti
         </DialogHeader>
         <div className="grid grid-cols-2 gap-4 my-4">
           <button
-            onClick={() => handleSelectRole('customer')}
-            disabled={setMyRole.isPending}
+            onClick={handleSelectCustomer}
+            disabled={isSetting}
             className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all disabled:opacity-50"
           >
             <User className="h-8 w-8 text-primary" />
@@ -66,8 +77,8 @@ export default function RoleSelectionWarningModal({ open, onClose }: RoleSelecti
             <span className="text-xs text-muted-foreground text-center">Book rides and manage trips</span>
           </button>
           <button
-            onClick={() => handleSelectRole('driver')}
-            disabled={setMyRole.isPending}
+            onClick={handleSelectDriver}
+            disabled={isSetting}
             className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all disabled:opacity-50"
           >
             <Car className="h-8 w-8 text-primary" />
@@ -75,14 +86,14 @@ export default function RoleSelectionWarningModal({ open, onClose }: RoleSelecti
             <span className="text-xs text-muted-foreground text-center">Accept trips and earn</span>
           </button>
         </div>
-        {setMyRole.isPending && (
+        {isSetting && (
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             Setting up your account…
           </div>
         )}
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose} disabled={setMyRole.isPending}>
+          <Button variant="ghost" onClick={onClose} disabled={isSetting}>
             Cancel
           </Button>
         </DialogFooter>

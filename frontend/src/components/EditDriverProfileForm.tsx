@@ -1,238 +1,252 @@
-import { useState } from 'react';
-import type { UserProfile } from '../lib/types';
-import { useSaveCallerUserProfile, useUpdateAvailability } from '../hooks/useQueries';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Lock } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, X, Plus } from 'lucide-react';
+import { toast } from 'sonner';
+import { useUpsertDriverProfile } from '../hooks/useQueries';
+import type { DriverProfile, VehicleType, TransmissionType } from '../backend';
+import type { NormalizedDriverProfile } from '../utils/normalizeProfile';
+
+const VEHICLE_OPTIONS: VehicleType[] = ['hatchback', 'sedan', 'suv', 'luxury'] as VehicleType[];
+const TRANSMISSION_OPTIONS: TransmissionType[] = ['manual', 'automatic', 'ev'] as TransmissionType[];
+
+const VEHICLE_LABELS: Record<string, string> = {
+  hatchback: 'Hatchback',
+  sedan: 'Sedan',
+  suv: 'SUV',
+  luxury: 'Luxury',
+};
+
+const TRANSMISSION_LABELS: Record<string, string> = {
+  manual: 'Manual',
+  automatic: 'Automatic',
+  ev: 'EV',
+};
 
 interface EditDriverProfileFormProps {
-  profile: UserProfile;
+  profile: NormalizedDriverProfile | null;
   onClose: () => void;
-  hasAcceptedTrip?: boolean;
 }
 
-type VehicleKey = '#hatchback' | '#sedan' | '#suv' | '#luxury';
-type TransmissionKey = '#manual' | '#automatic' | '#ev';
+export default function EditDriverProfileForm({ profile, onClose }: EditDriverProfileFormProps) {
+  const [serviceAreaName, setServiceAreaName] = useState('');
+  const [servicePincode, setServicePincode] = useState('');
+  const [vehicleExperience, setVehicleExperience] = useState<string[]>([]);
+  const [transmissionComfort, setTransmissionComfort] = useState<string[]>([]);
+  const [isAvailable, setIsAvailable] = useState(false);
+  const [languages, setLanguages] = useState<string[]>([]);
+  const [newLanguage, setNewLanguage] = useState('');
 
-const VEHICLE_OPTIONS: { key: VehicleKey; label: string }[] = [
-  { key: '#hatchback', label: 'Hatchback' },
-  { key: '#sedan', label: 'Sedan' },
-  { key: '#suv', label: 'SUV' },
-  { key: '#luxury', label: 'Luxury' },
-];
+  const upsertMutation = useUpsertDriverProfile();
 
-const TRANSMISSION_OPTIONS: { key: TransmissionKey; label: string }[] = [
-  { key: '#manual', label: 'Manual' },
-  { key: '#automatic', label: 'Automatic' },
-  { key: '#ev', label: 'EV' },
-];
+  // Populate form from profile when it changes
+  useEffect(() => {
+    if (profile) {
+      setServiceAreaName(profile.serviceAreaName ?? '');
+      setServicePincode(profile.servicePincode ?? '');
+      setVehicleExperience(profile.vehicleExperience ?? []);
+      setTransmissionComfort(profile.transmissionComfort ?? []);
+      setIsAvailable(profile.isAvailable ?? false);
+      setLanguages(profile.languages ?? []);
+    }
+  }, [profile]);
 
-const LANGUAGE_OPTIONS = ['English', 'Hindi', 'Tamil', 'Telugu', 'Kannada', 'Malayalam'];
+  function toggleVehicle(v: string) {
+    setVehicleExperience((prev) =>
+      prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]
+    );
+  }
 
-export default function EditDriverProfileForm({
-  profile,
-  onClose,
-  hasAcceptedTrip,
-}: EditDriverProfileFormProps) {
-  const saveProfile = useSaveCallerUserProfile();
-  const updateAvailability = useUpdateAvailability();
+  function toggleTransmission(t: string) {
+    setTransmissionComfort((prev) =>
+      prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
+    );
+  }
 
-  const [servicePincode, setServicePincode] = useState(profile.servicePincode);
-  const [serviceAreaName, setServiceAreaName] = useState(profile.serviceAreaName);
-  const [isAvailable, setIsAvailable] = useState(profile.isAvailable);
+  function addLanguage() {
+    const lang = newLanguage.trim();
+    if (lang && !languages.includes(lang)) {
+      setLanguages((prev) => [...prev, lang]);
+    }
+    setNewLanguage('');
+  }
 
-  const currentVehicles = new Set(
-    profile.vehicleExperience.map((v) => Object.keys(v)[0] as VehicleKey)
-  );
-  const [selectedVehicles, setSelectedVehicles] = useState<Set<VehicleKey>>(currentVehicles);
+  function removeLanguage(lang: string) {
+    setLanguages((prev) => prev.filter((l) => l !== lang));
+  }
 
-  const currentTransmissions = new Set(
-    profile.transmissionComfort.map((t) => Object.keys(t)[0] as TransmissionKey)
-  );
-  const [selectedTransmissions, setSelectedTransmissions] = useState<Set<TransmissionKey>>(currentTransmissions);
-
-  const currentLanguages = new Set(
-    profile.languages && profile.languages.length > 0 ? profile.languages[0] ?? [] : []
-  );
-  const [selectedLanguages, setSelectedLanguages] = useState<Set<string>>(currentLanguages);
-
-  const [error, setError] = useState('');
-
-  const toggleVehicle = (key: VehicleKey) => {
-    setSelectedVehicles((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
-  };
-
-  const toggleTransmission = (key: TransmissionKey) => {
-    setSelectedTransmissions((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
-  };
-
-  const toggleLanguage = (lang: string) => {
-    setSelectedLanguages((prev) => {
-      const next = new Set(prev);
-      if (next.has(lang)) next.delete(lang); else next.add(lang);
-      return next;
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  async function handleSave() {
+    const driverProfile: DriverProfile = {
+      serviceAreaName,
+      servicePincode,
+      vehicleExperience: vehicleExperience as VehicleType[],
+      transmissionComfort: transmissionComfort as TransmissionType[],
+      languages,
+      isAvailable,
+      updatedTime: BigInt(Date.now()),
+    };
 
     try {
-      const vehicleExperience = Array.from(selectedVehicles).map((k) => ({ [k]: null } as any));
-      const transmissionComfort = Array.from(selectedTransmissions).map((k) => ({ [k]: null } as any));
-      const languages: [string[]] = [Array.from(selectedLanguages)];
-
-      await saveProfile.mutateAsync({
-        ...profile,
-        servicePincode,
-        serviceAreaName,
-        vehicleExperience,
-        transmissionComfort,
-        languages,
-      } as unknown as UserProfile);
-
-      if (isAvailable !== profile.isAvailable && !hasAcceptedTrip) {
-        await updateAvailability.mutateAsync(isAvailable);
-      }
-
+      await upsertMutation.mutateAsync(driverProfile);
+      toast.success('Profile saved');
       onClose();
-    } catch (err: any) {
-      setError(err?.message ?? 'Failed to save. Please try again.');
+    } catch (err) {
+      console.error(err);
+      toast.error('Save failed');
     }
-  };
+  }
 
-  const isSaving = saveProfile.isPending || updateAvailability.isPending;
+  const isSaving = upsertMutation.isPending;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 mt-2">
-      <div className="space-y-2">
-        <Label htmlFor="serviceAreaName">Service Area Name</Label>
-        <Input
-          id="serviceAreaName"
-          value={serviceAreaName}
-          onChange={(e) => setServiceAreaName(e.target.value)}
-          placeholder="e.g. Bangalore South"
+    <div className="space-y-6 py-2">
+      {/* Service Area */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="serviceAreaName">Service Area Name</Label>
+          <Input
+            id="serviceAreaName"
+            value={serviceAreaName}
+            onChange={(e) => setServiceAreaName(e.target.value)}
+            placeholder="e.g. Bangalore North"
+            disabled={isSaving}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="servicePincode">Service Pincode</Label>
+          <Input
+            id="servicePincode"
+            value={servicePincode}
+            onChange={(e) => setServicePincode(e.target.value)}
+            placeholder="e.g. 560001"
+            disabled={isSaving}
+          />
+        </div>
+      </div>
+
+      {/* Availability Toggle */}
+      <div className="flex items-center justify-between rounded-lg border border-border p-4">
+        <div>
+          <p className="font-medium text-sm">Availability</p>
+          <p className="text-xs text-muted-foreground">
+            {isAvailable ? 'You are On-Duty and visible to customers' : 'You are Off-Duty'}
+          </p>
+        </div>
+        <Switch
+          checked={isAvailable}
+          onCheckedChange={setIsAvailable}
           disabled={isSaving}
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="servicePincode">Service Pincode</Label>
-        <Input
-          id="servicePincode"
-          value={servicePincode}
-          onChange={(e) => setServicePincode(e.target.value)}
-          placeholder="e.g. 560001"
-          disabled={isSaving}
-        />
-      </div>
-
+      {/* Vehicle Experience */}
       <div className="space-y-2">
         <Label>Vehicle Experience</Label>
-        <div className="grid grid-cols-2 gap-2">
-          {VEHICLE_OPTIONS.map(({ key, label }) => (
-            <div key={key} className="flex items-center gap-2">
-              <Checkbox
-                id={`vehicle-${key}`}
-                checked={selectedVehicles.has(key)}
-                onCheckedChange={() => toggleVehicle(key)}
-                disabled={isSaving}
-              />
-              <Label htmlFor={`vehicle-${key}`} className="font-normal cursor-pointer">
-                {label}
-              </Label>
-            </div>
+        <div className="flex flex-wrap gap-2">
+          {VEHICLE_OPTIONS.map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => toggleVehicle(v)}
+              disabled={isSaving}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                vehicleExperience.includes(v)
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-background text-foreground border-border hover:bg-muted'
+              }`}
+            >
+              {VEHICLE_LABELS[v]}
+            </button>
           ))}
         </div>
       </div>
 
+      {/* Transmission Comfort */}
       <div className="space-y-2">
         <Label>Transmission Comfort</Label>
-        <div className="grid grid-cols-2 gap-2">
-          {TRANSMISSION_OPTIONS.map(({ key, label }) => (
-            <div key={key} className="flex items-center gap-2">
-              <Checkbox
-                id={`trans-${key}`}
-                checked={selectedTransmissions.has(key)}
-                onCheckedChange={() => toggleTransmission(key)}
-                disabled={isSaving}
-              />
-              <Label htmlFor={`trans-${key}`} className="font-normal cursor-pointer">
-                {label}
-              </Label>
-            </div>
+        <div className="flex flex-wrap gap-2">
+          {TRANSMISSION_OPTIONS.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => toggleTransmission(t)}
+              disabled={isSaving}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                transmissionComfort.includes(t)
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-background text-foreground border-border hover:bg-muted'
+              }`}
+            >
+              {TRANSMISSION_LABELS[t]}
+            </button>
           ))}
         </div>
       </div>
 
+      {/* Languages */}
       <div className="space-y-2">
-        <Label>Languages</Label>
-        <div className="grid grid-cols-2 gap-2">
-          {LANGUAGE_OPTIONS.map((lang) => (
-            <div key={lang} className="flex items-center gap-2">
-              <Checkbox
-                id={`lang-${lang}`}
-                checked={selectedLanguages.has(lang)}
-                onCheckedChange={() => toggleLanguage(lang)}
-                disabled={isSaving}
-              />
-              <Label htmlFor={`lang-${lang}`} className="font-normal cursor-pointer">
-                {lang}
-              </Label>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Duty Status</Label>
-        <div className="flex items-center gap-3">
-          <Switch
-            checked={isAvailable}
-            onCheckedChange={setIsAvailable}
-            disabled={isSaving || hasAcceptedTrip}
+        <Label>Languages Spoken</Label>
+        <div className="flex gap-2">
+          <Input
+            value={newLanguage}
+            onChange={(e) => setNewLanguage(e.target.value)}
+            placeholder="e.g. Kannada"
+            disabled={isSaving}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addLanguage();
+              }
+            }}
           />
-          <span className="text-sm font-medium">
-            {isAvailable ? 'On-Duty' : 'Off-Duty'}
-          </span>
-          {hasAcceptedTrip && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Lock className="h-3 w-3" />
-              Locked during active trip
-            </span>
-          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={addLanguage}
+            disabled={isSaving || !newLanguage.trim()}
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
         </div>
+        {languages.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {languages.map((lang) => (
+              <Badge key={lang} variant="secondary" className="gap-1 pr-1">
+                {lang}
+                <button
+                  type="button"
+                  onClick={() => removeLanguage(lang)}
+                  disabled={isSaving}
+                  className="ml-0.5 hover:text-destructive transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
-
-      <div className="flex gap-3 pt-2">
-        <Button type="submit" disabled={isSaving} className="flex-1">
+      {/* Actions */}
+      <div className="flex justify-end gap-3 pt-2">
+        <Button variant="outline" onClick={onClose} disabled={isSaving}>
+          Cancel
+        </Button>
+        <Button onClick={handleSave} disabled={isSaving}>
           {isSaving ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Saving…
             </>
           ) : (
             'Save Changes'
           )}
         </Button>
-        <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
-          Cancel
-        </Button>
       </div>
-    </form>
+    </div>
   );
 }

@@ -1,35 +1,66 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix Candid opt variant encoding for role submission",
+  "title": "Restore Customer and Driver trip history UI",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Convert plain string role values to correct Candid opt variant format ([{ customer: null }], [{ driver: null }], [{ admin: null }]) in all frontend role submission calls",
+      "summary": "Restore the 'My Trips' section in the Customer Dashboard showing trips where trip.customerPrincipal == caller, with immediate refresh after booking",
       "acceptanceCriteria": [
-        "Submitting role 'customer' sends [{ customer: null }] to the backend, not the string \"customer\"",
-        "Submitting role 'driver' sends [{ driver: null }] to the backend",
-        "Submitting role 'admin' sends [{ admin: null }] to the backend",
-        "The role is wrapped in an array to represent the Candid opt type (e.g., [{ customer: null }])",
-        "No changes are made to auth logic, route guards, admin logic, booking, pricing, GPS, or UI design",
-        "Role selection from SelectRolePage and RoleSelectionWarningModal both use the corrected encoding",
-        "The backend no longer returns a Candid variant encoding error when a role is saved"
+        "Customer Dashboard displays a 'My Trips' section",
+        "Only trips where customerPrincipal matches the caller are shown",
+        "Each trip shows status, pickup/dropoff locations, vehicle type, fare, and timestamps",
+        "After booking a trip, it appears in My Trips immediately without a hard refresh",
+        "Status badge reflects current trip status (pending/assigned/confirmed/completed/cancelled)"
       ],
       "file_operations": [
         {
+          "path": "frontend/src/pages/CustomerDashboard.tsx",
+          "operation": "modify",
+          "description": "Uncomment or restore the CustomerTripList component import and JSX usage. Ensure the 'My Trips' section is visible below the RideRequestForm. The component already filters trips where customerPrincipal matches the caller via useGetMyTrips hook."
+        },
+        {
+          "path": "frontend/src/components/CustomerTripList.tsx",
+          "operation": "modify",
+          "description": "Verify that the component correctly displays all trip fields: status badge, pickup/dropoff locations (using Location.area and Location.pincode), vehicle type, fare (totalFare), and timestamps (createdTime, startDateTime, endDateTime). Ensure status badges map to pending/assigned/confirmed/completed/cancelled and use appropriate styling. The component already fetches trips via useGetMyTrips."
+        },
+        {
           "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Add a helper function convertRoleToVariant that maps plain role strings ('customer', 'driver', 'admin') to the Candid opt variant format ([{ customer: null }], [{ driver: null }], [{ admin: null }]). Apply this conversion in the updateRole mutation before calling actor.setMyRole, ensuring the role parameter is correctly wrapped as a Candid opt variant."
+          "description": "Ensure the useCreateTrip mutation includes an onSuccess callback that invalidates the 'myTrips' query key, triggering an immediate refetch of the customer's trip list without requiring a hard refresh. Verify that useGetMyTrips uses the correct query key and enabled flag."
+        }
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "summary": "Restore the 'My Trips' tab in the Driver Dashboard alongside 'Available Trips', showing trips where trip.driverPrincipal == caller and removing placeholder text",
+      "acceptanceCriteria": [
+        "Driver Dashboard shows two tabs: 'Available Trips' and 'My Trips'",
+        "'My Trips' tab displays trips where driverPrincipal matches the caller",
+        "'Available Trips' tab displays only trips with no driver assigned",
+        "No 'coming soon' placeholder text is visible in the Driver Dashboard",
+        "Both tabs render trip details (locations, status, fare, timestamps)"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/DriverDashboard.tsx",
+          "operation": "modify",
+          "description": "Restore the 'My Trips' tab alongside the existing 'Available Trips' tab. Remove any 'coming soon' placeholder text. Ensure both tabs are visible and functional. The 'Available Trips' tab should render AvailableTripsSection (trips with no driver assigned). The 'My Trips' tab should render DriverTripList (trips where driverPrincipal matches caller). Use a tabbed UI pattern (e.g., shadcn/ui Tabs component or custom tab buttons) to switch between the two views."
         },
         {
-          "path": "frontend/src/pages/SelectRolePage.tsx",
+          "path": "frontend/src/components/DriverTripList.tsx",
           "operation": "modify",
-          "description": "Update the role selection handler to use the convertRoleToVariant helper from useQueries.ts before calling the updateRole mutation, ensuring that the selected role ('customer' or 'driver') is converted to the correct Candid opt variant format before submission."
+          "description": "Verify that the component correctly filters and displays trips where driverPrincipal matches the caller. Ensure all trip details are rendered: pickup/dropoff locations (using Location.area and Location.pincode), status badge, vehicle type, fare (totalFare), and timestamps (createdTime, startDateTime, endDateTime). Confirm the 'Complete Trip' button appears only for trips with status 'accepted'. The component already uses useGetMyTrips and useCompleteTrip hooks."
         },
         {
-          "path": "frontend/src/components/RoleSelectionWarningModal.tsx",
+          "path": "frontend/src/components/AvailableTripsSection.tsx",
           "operation": "modify",
-          "description": "Update the role selection handler in the modal to use the convertRoleToVariant helper from useQueries.ts before calling the updateRole mutation, ensuring that the selected role ('customer' or 'driver') is converted to the correct Candid opt variant format before submission."
+          "description": "Verify that the component correctly fetches and displays only trips with no driver assigned (status 'requested'). Ensure trip details (pickup/dropoff locations, vehicle type, fare) are visible and the 'Accept Trip' button triggers the useAcceptTrip mutation. Confirm that accepting a trip invalidates relevant queries to update both 'Available Trips' and 'My Trips' views immediately."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Ensure useAcceptTrip and useCompleteTrip mutations include onSuccess callbacks that invalidate both 'availableTrips' and 'myTrips' query keys, triggering immediate refetch of driver trip lists without hard refresh. Verify that useGetMyTrips correctly filters trips by caller's principal and that useGetAvailableTrips (or equivalent) fetches only unassigned trips."
         }
       ]
     }

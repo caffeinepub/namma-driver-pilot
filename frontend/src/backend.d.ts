@@ -47,6 +47,17 @@ export interface Trip {
     pickupLocation: Location;
 }
 export type Time = bigint;
+export interface ProfileUpdate {
+    serviceAreaName: string;
+    servicePincode: string;
+    vehicleExperience: Array<VehicleExperience>;
+    languages?: Array<string>;
+    isAvailable: boolean;
+    fullName: string;
+    email: string;
+    totalEarnings: bigint;
+    transmissionComfort: Array<TransmissionComfort>;
+}
 export interface TripRequest {
     driverId?: Principal;
     vehicleType: VehicleType;
@@ -72,6 +83,15 @@ export type Duration = {
     __kind__: "days";
     days: bigint;
 };
+export interface DriverProfile {
+    serviceAreaName: string;
+    updatedTime: bigint;
+    servicePincode: string;
+    vehicleExperience: Array<VehicleType>;
+    languages: Array<string>;
+    isAvailable: boolean;
+    transmissionComfort: Array<TransmissionType>;
+}
 export interface Commission {
     local: number;
     outstation: number;
@@ -98,10 +118,14 @@ export interface PricingConfig {
     vehicle_multiplier: VehicleMultiplier;
     outstation: OutstationPricing;
 }
+export interface ProfileInput {
+    fullName: string;
+    email: string;
+}
 export interface UserProfile {
     serviceAreaName: string;
     servicePincode: string;
-    role?: AppRole;
+    role?: Role;
     vehicleExperience: Array<VehicleExperience>;
     languages?: Array<string>;
     isAvailable: boolean;
@@ -125,16 +149,16 @@ export interface OutstationPricing {
     driver_bata_per_day: number;
     extra_driver_comp_per_100km_over_400: number;
 }
-export enum AppRole {
-    admin = "admin",
-    customer = "customer",
-    driver = "driver"
-}
 export enum JourneyType {
     roundTrip = "roundTrip",
     oneWay = "oneWay"
 }
-export enum TransmissionComfort {
+export enum Role {
+    admin = "admin",
+    customer = "customer",
+    driver = "driver"
+}
+export enum TransmissionType {
     ev = "ev",
     automatic = "automatic",
     manual = "manual"
@@ -154,14 +178,7 @@ export enum UserRole {
     user = "user",
     guest = "guest"
 }
-export enum Variant_customer_driver {
-    customer = "customer",
-    driver = "driver"
-}
-export enum Variant_ok {
-    ok = "ok"
-}
-export enum VehicleExperience {
+export enum VehicleType {
     suv = "suv",
     sedan = "sedan",
     luxury = "luxury",
@@ -172,15 +189,20 @@ export interface backendInterface {
     createTrip(tripData: TripRequest): Promise<Trip>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
-    getMyRole(): Promise<AppRole | null>;
+    getDriverProfile(): Promise<DriverProfile | null>;
+    getMyRole(): Promise<Role | null>;
     getPricingConfig(): Promise<PricingConfig>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
-    /**
-     * / Returns "ok" as a health check that the backend runs correctly.
-     */
     health(): Promise<string>;
+    isAdmin(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
+    ping(): Promise<string>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    setMyRole(role: Variant_customer_driver): Promise<Variant_ok>;
+    setMyRoleCustomer(): Promise<void>;
+    setMyRoleDriver(): Promise<void>;
+    setProfile(input: ProfileInput): Promise<UserProfile>;
     updatePricingConfig(newConfig: PricingConfig): Promise<UpdateConfigResult>;
+    updateProfile(update: ProfileUpdate): Promise<UserProfile>;
+    updateProfileFields(fullName: string, email: string): Promise<UserProfile>;
+    upsertDriverProfile(profile: DriverProfile): Promise<boolean>;
 }

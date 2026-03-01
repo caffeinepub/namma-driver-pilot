@@ -6,6 +6,7 @@ import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import NotAuthorizedPage from '../pages/NotAuthorizedPage';
 import type { AppRole } from '../lib/types';
+import { toast } from 'sonner';
 
 interface RoleGuardProps {
   requiredRole: AppRole;
@@ -16,12 +17,12 @@ interface RoleGuardProps {
 
 /**
  * RoleGuard checks the user's role after authentication.
- * - If not authenticated: redirects to /login (AuthGate handles this first, but guard is defensive)
+ * - If not authenticated: redirects to /login
  * - While loading: shows a spinner
  * - On error: shows a retry UI (no infinite loading)
  * - If role matches: renders children
  * - If role mismatches:
- *   - For admin routes (showNotAuthorized=true): shows NotAuthorizedPage
+ *   - For admin routes (showNotAuthorized=true): shows NotAuthorizedPage + toast "Admin only"
  *   - For customer/driver routes: redirects to /select-role
  */
 export default function RoleGuard({ requiredRole, children, showNotAuthorized = false }: RoleGuardProps) {
@@ -42,7 +43,13 @@ export default function RoleGuard({ requiredRole, children, showNotAuthorized = 
     if (role === requiredRole) return; // authorized — do nothing
 
     if (showNotAuthorized) {
-      // For admin routes: NotAuthorizedPage is rendered below, no redirect needed
+      // For admin routes: show toast and render NotAuthorizedPage below
+      if (requiredRole === 'admin') {
+        toast.error('Admin only', {
+          description: 'You do not have permission to access this area.',
+          id: 'admin-only-toast', // prevent duplicate toasts
+        });
+      }
       return;
     }
     // For customer/driver routes: redirect to /select-role

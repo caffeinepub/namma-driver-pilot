@@ -1,461 +1,360 @@
-import { useState, useEffect } from 'react';
-import { useGetPricingConfig, useUpdatePricingConfig, useCheckIsAdmin } from '../hooks/useQueries';
-import type { PricingConfig } from '../backend';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShieldOff, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useGetMyRole, useGetPricingConfig, useUpdatePricingConfig } from '../hooks/useQueries';
+import type { PricingConfig } from '../backend';
 
-// Helper to build a flat form state from PricingConfig
-type FlatConfig = {
-  // Local
-  local_base_first_hour: string;
-  local_min_hours: string;
-  local_per_min_after_first_hour: string;
-  local_free_wait_mins: string;
-  local_wait_per_min: string;
-  // Outstation
-  out_min_days: string;
-  out_driver_bata_per_day: string;
-  out_commission_rate: string;
-  out_km_slab_1_limit: string;
-  out_km_slab_2_limit: string;
-  out_km_slab_3_limit: string;
-  out_per_km_slab_1: string;
-  out_per_km_slab_2: string;
-  out_per_km_slab_3: string;
-  out_per_km_slab_4: string;
-  out_extra_driver_comp: string;
-  // Vehicle multipliers
-  vm_hatchback: string;
-  vm_sedan: string;
-  vm_suv: string;
-  vm_luxury: string;
-  // Commission
-  comm_local: string;
-  comm_outstation: string;
-};
+// ─── Field helpers ────────────────────────────────────────────────────────────
 
-function configToFlat(config: PricingConfig): FlatConfig {
-  return {
-    local_base_first_hour: String(config.local.base_first_hour),
-    local_min_hours: String(config.local.min_hours),
-    local_per_min_after_first_hour: String(config.local.per_min_after_first_hour),
-    local_free_wait_mins: String(config.local.free_wait_mins),
-    local_wait_per_min: String(config.local.wait_per_min),
-    out_min_days: String(config.outstation.min_days),
-    out_driver_bata_per_day: String(config.outstation.driver_bata_per_day),
-    out_commission_rate: String(config.outstation.commission_rate),
-    out_km_slab_1_limit: String(config.outstation.km_slab_1_limit),
-    out_km_slab_2_limit: String(config.outstation.km_slab_2_limit),
-    out_km_slab_3_limit: String(config.outstation.km_slab_3_limit),
-    out_per_km_slab_1: String(config.outstation.per_km_slab_1),
-    out_per_km_slab_2: String(config.outstation.per_km_slab_2),
-    out_per_km_slab_3: String(config.outstation.per_km_slab_3),
-    out_per_km_slab_4: String(config.outstation.per_km_slab_4),
-    out_extra_driver_comp: String(config.outstation.extra_driver_comp_per_100km_over_400),
-    vm_hatchback: String(config.vehicle_multiplier.hatchback),
-    vm_sedan: String(config.vehicle_multiplier.sedan),
-    vm_suv: String(config.vehicle_multiplier.suv),
-    vm_luxury: String(config.vehicle_multiplier.luxury),
-    comm_local: String(config.commission.local),
-    comm_outstation: String(config.commission.outstation),
-  };
-}
-
-function flatToConfig(flat: FlatConfig): PricingConfig {
-  return {
-    local: {
-      base_first_hour: parseFloat(flat.local_base_first_hour) || 0,
-      min_hours: parseFloat(flat.local_min_hours) || 0,
-      per_min_after_first_hour: parseFloat(flat.local_per_min_after_first_hour) || 0,
-      free_wait_mins: parseFloat(flat.local_free_wait_mins) || 0,
-      wait_per_min: parseFloat(flat.local_wait_per_min) || 0,
-    },
-    outstation: {
-      min_days: parseFloat(flat.out_min_days) || 0,
-      driver_bata_per_day: parseFloat(flat.out_driver_bata_per_day) || 0,
-      commission_rate: parseFloat(flat.out_commission_rate) || 0,
-      km_slab_1_limit: parseFloat(flat.out_km_slab_1_limit) || 0,
-      km_slab_2_limit: parseFloat(flat.out_km_slab_2_limit) || 0,
-      km_slab_3_limit: parseFloat(flat.out_km_slab_3_limit) || 0,
-      per_km_slab_1: parseFloat(flat.out_per_km_slab_1) || 0,
-      per_km_slab_2: parseFloat(flat.out_per_km_slab_2) || 0,
-      per_km_slab_3: parseFloat(flat.out_per_km_slab_3) || 0,
-      per_km_slab_4: parseFloat(flat.out_per_km_slab_4) || 0,
-      extra_driver_comp_per_100km_over_400: parseFloat(flat.out_extra_driver_comp) || 0,
-    },
-    vehicle_multiplier: {
-      hatchback: parseFloat(flat.vm_hatchback) || 0,
-      sedan: parseFloat(flat.vm_sedan) || 0,
-      suv: parseFloat(flat.vm_suv) || 0,
-      luxury: parseFloat(flat.vm_luxury) || 0,
-    },
-    commission: {
-      local: parseFloat(flat.comm_local) || 0,
-      outstation: parseFloat(flat.comm_outstation) || 0,
-    },
-  };
-}
-
-interface FieldRowProps {
+function NumericField({
+  label,
+  value,
+  onChange,
+  disabled,
+  min = 0,
+}: {
   label: string;
-  hint?: string;
-  id: string;
-  value: string;
-  onChange: (val: string) => void;
+  value: number;
+  onChange: (v: number) => void;
   disabled?: boolean;
-}
-
-function FieldRow({ label, hint, id, value, onChange, disabled }: FieldRowProps) {
+  min?: number;
+}) {
   return (
-    <div className="grid grid-cols-2 gap-3 items-center">
-      <div>
-        <Label htmlFor={id} className="text-sm font-medium">
-          {label}
-        </Label>
-        {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
-      </div>
+    <div className="space-y-1.5">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
       <Input
-        id={id}
         type="number"
-        step="any"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        min={min}
+        step="any"
+        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
         disabled={disabled}
-        className="text-right"
+        className="h-8 text-sm"
       />
     </div>
   );
 }
 
+// ─── Default config (used while loading) ─────────────────────────────────────
+
+const EMPTY_CONFIG: PricingConfig = {
+  local: {
+    base_first_hour: 200,
+    min_hours: 1,
+    per_min_after_first_hour: 3.5,
+    free_wait_mins: 10,
+    wait_per_min: 1.5,
+  },
+  outstation: {
+    min_days: 1,
+    driver_bata_per_day: 500,
+    commission_rate: 0.15,
+    km_slab_1_limit: 400,
+    km_slab_2_limit: 600,
+    km_slab_3_limit: 900,
+    per_km_slab_1: 8,
+    per_km_slab_2: 9,
+    per_km_slab_3: 10,
+    per_km_slab_4: 11,
+    extra_driver_comp_per_100km_over_400: 1000,
+  },
+  vehicle_multiplier: {
+    hatchback: 1.0,
+    sedan: 1.0,
+    suv: 1.0,
+    luxury: 2.0,
+  },
+  commission: {
+    local: 0.20,
+    outstation: 0.15,
+  },
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export default function PricingTab() {
-  const { isAdmin, isLoading: adminLoading } = useCheckIsAdmin();
-  const { data: config, isLoading: configLoading } = useGetPricingConfig();
+  const { data: role } = useGetMyRole();
+  const isAdmin = role === 'admin';
+
+  const {
+    data: pricingConfig,
+    isLoading: configLoading,
+    isError: configError,
+    refetch,
+  } = useGetPricingConfig();
+
   const updateMutation = useUpdatePricingConfig();
 
-  const [form, setForm] = useState<FlatConfig | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  // Local form state
+  const [local, setLocal] = useState(EMPTY_CONFIG.local);
+  const [outstation, setOutstation] = useState(EMPTY_CONFIG.outstation);
+  const [vehicleMultiplier, setVehicleMultiplier] = useState(EMPTY_CONFIG.vehicle_multiplier);
+  const [commission, setCommission] = useState(EMPTY_CONFIG.commission);
 
   // Populate form when config loads
   useEffect(() => {
-    if (config && !form) {
-      setForm(configToFlat(config));
+    if (pricingConfig) {
+      setLocal(pricingConfig.local);
+      setOutstation(pricingConfig.outstation);
+      setVehicleMultiplier(pricingConfig.vehicle_multiplier);
+      setCommission(pricingConfig.commission);
     }
-  }, [config, form]);
+  }, [pricingConfig]);
 
-  const setField = (key: keyof FlatConfig) => (val: string) => {
-    setForm((prev) => (prev ? { ...prev, [key]: val } : prev));
-    setSaveError(null);
-  };
+  async function handleSave() {
+    const config: PricingConfig = {
+      local,
+      outstation,
+      vehicle_multiplier: vehicleMultiplier,
+      commission,
+    };
 
-  const handleSave = async () => {
-    if (!form) return;
-    setSaveError(null);
-    const newConfig = flatToConfig(form);
-    const result = await updateMutation.mutateAsync(newConfig).catch((err: Error) => {
-      setSaveError(err.message ?? 'Unexpected error');
-      return null;
-    });
-    if (!result) return;
-
-    if (result.__kind__ === 'ok') {
-      toast.success('Pricing updated');
-      // Sync form with saved values
-      setForm(configToFlat(result.ok));
-    } else if (result.__kind__ === 'notAdmin') {
-      setSaveError('Unauthorized: only admins can update pricing.');
-    } else if (result.__kind__ === 'invalidConfig') {
-      setSaveError(`Invalid config: ${result.invalidConfig}`);
-    } else if (result.__kind__ === 'failedUpdate') {
-      setSaveError(`Update failed: ${result.failedUpdate}`);
-    } else {
-      setSaveError('An unexpected error occurred.');
+    try {
+      const result = await updateMutation.mutateAsync(config);
+      if (result.__kind__ === 'ok') {
+        toast.success('Pricing saved');
+      } else if (result.__kind__ === 'notAdmin') {
+        toast.error('Not authorized to update pricing');
+      } else if (result.__kind__ === 'invalidConfig') {
+        toast.error(`Invalid config: ${result.invalidConfig}`);
+      } else {
+        toast.error('Failed to save pricing');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to save pricing');
     }
-  };
-
-  if (adminLoading || configLoading) {
-    return (
-      <div className="space-y-4 py-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-64 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
-
-  if (!isAdmin) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-        <ShieldOff className="h-12 w-12 text-destructive opacity-60" />
-        <h2 className="text-xl font-semibold">Unauthorized</h2>
-        <p className="text-muted-foreground max-w-sm">
-          You do not have permission to view or edit pricing configuration.
-        </p>
-      </div>
-    );
-  }
-
-  if (!form) {
-    return (
-      <div className="flex items-center justify-center py-16 text-muted-foreground">
-        <Loader2 className="h-6 w-6 animate-spin mr-2" />
-        Loading pricing config…
-      </div>
-    );
   }
 
   const isSaving = updateMutation.isPending;
 
+  if (!isAdmin) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center text-muted-foreground">
+          <AlertCircle className="w-8 h-8 mx-auto mb-3 opacity-50" />
+          <p>Admin access required to view pricing configuration.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (configLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-48 w-full rounded-xl" />
+        <Skeleton className="h-48 w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  if (configError) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center">
+          <AlertCircle className="w-8 h-8 mx-auto mb-3 text-destructive opacity-70" />
+          <p className="text-muted-foreground mb-4">Failed to load pricing configuration.</p>
+          <Button variant="outline" onClick={() => refetch()}>
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Section A: Local Pricing */}
+      {/* Local Pricing */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">A — Local Pricing</CardTitle>
-          <CardDescription>Rates applied to local (hourly) trips</CardDescription>
+        <CardHeader>
+          <CardTitle className="text-base">Local Pricing</CardTitle>
+          <CardDescription>Rates for local trips within the city</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <FieldRow
-            id="local_base_first_hour"
-            label="Base fare (first hour)"
-            hint="₹ flat for the first hour"
-            value={form.local_base_first_hour}
-            onChange={setField('local_base_first_hour')}
+        <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <NumericField
+            label="Base First Hour (₹)"
+            value={local.base_first_hour}
+            onChange={(v) => setLocal((p) => ({ ...p, base_first_hour: v }))}
             disabled={isSaving}
           />
-          <FieldRow
-            id="local_min_hours"
-            label="Minimum hours"
-            hint="Minimum billable hours (≥ 1)"
-            value={form.local_min_hours}
-            onChange={setField('local_min_hours')}
+          <NumericField
+            label="Min Hours"
+            value={local.min_hours}
+            onChange={(v) => setLocal((p) => ({ ...p, min_hours: v }))}
+            disabled={isSaving}
+            min={1}
+          />
+          <NumericField
+            label="Per Min After 1st Hour (₹)"
+            value={local.per_min_after_first_hour}
+            onChange={(v) => setLocal((p) => ({ ...p, per_min_after_first_hour: v }))}
             disabled={isSaving}
           />
-          <FieldRow
-            id="local_per_min_after_first_hour"
-            label="Per-minute rate (after 1st hr)"
-            hint="₹ per minute beyond the first hour"
-            value={form.local_per_min_after_first_hour}
-            onChange={setField('local_per_min_after_first_hour')}
+          <NumericField
+            label="Free Wait Mins"
+            value={local.free_wait_mins}
+            onChange={(v) => setLocal((p) => ({ ...p, free_wait_mins: v }))}
             disabled={isSaving}
           />
-          <FieldRow
-            id="local_free_wait_mins"
-            label="Free waiting time"
-            hint="Minutes of free waiting included"
-            value={form.local_free_wait_mins}
-            onChange={setField('local_free_wait_mins')}
-            disabled={isSaving}
-          />
-          <FieldRow
-            id="local_wait_per_min"
-            label="Waiting charge per minute"
-            hint="₹ per minute after free wait"
-            value={form.local_wait_per_min}
-            onChange={setField('local_wait_per_min')}
+          <NumericField
+            label="Wait Per Min (₹)"
+            value={local.wait_per_min}
+            onChange={(v) => setLocal((p) => ({ ...p, wait_per_min: v }))}
             disabled={isSaving}
           />
         </CardContent>
       </Card>
 
-      {/* Section B: Outstation Pricing */}
+      {/* Outstation Pricing */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">B — Outstation Pricing &amp; KM Slabs</CardTitle>
-          <CardDescription>Rates applied to outstation (multi-day / long-distance) trips</CardDescription>
+        <CardHeader>
+          <CardTitle className="text-base">Outstation Pricing</CardTitle>
+          <CardDescription>Rates for outstation trips</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <FieldRow
-            id="out_min_days"
-            label="Minimum days"
-            hint="Minimum billable days (≥ 1)"
-            value={form.out_min_days}
-            onChange={setField('out_min_days')}
+        <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <NumericField
+            label="Min Days"
+            value={outstation.min_days}
+            onChange={(v) => setOutstation((p) => ({ ...p, min_days: v }))}
+            disabled={isSaving}
+            min={1}
+          />
+          <NumericField
+            label="Driver Bata/Day (₹)"
+            value={outstation.driver_bata_per_day}
+            onChange={(v) => setOutstation((p) => ({ ...p, driver_bata_per_day: v }))}
             disabled={isSaving}
           />
-          <FieldRow
-            id="out_driver_bata_per_day"
-            label="Driver bata per day"
-            hint="₹ daily allowance for driver"
-            value={form.out_driver_bata_per_day}
-            onChange={setField('out_driver_bata_per_day')}
+          <NumericField
+            label="Commission Rate"
+            value={outstation.commission_rate}
+            onChange={(v) => setOutstation((p) => ({ ...p, commission_rate: v }))}
             disabled={isSaving}
           />
-          <FieldRow
-            id="out_commission_rate"
-            label="Commission rate"
-            hint="Fraction (e.g. 0.15 = 15%)"
-            value={form.out_commission_rate}
-            onChange={setField('out_commission_rate')}
+          <NumericField
+            label="KM Slab 1 Limit"
+            value={outstation.km_slab_1_limit}
+            onChange={(v) => setOutstation((p) => ({ ...p, km_slab_1_limit: v }))}
             disabled={isSaving}
           />
-
-          <div className="pt-2 pb-1">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">KM Slab Limits</p>
-          </div>
-          <FieldRow
-            id="out_km_slab_1_limit"
-            label="Slab 1 upper limit (km)"
-            hint="e.g. 400 km"
-            value={form.out_km_slab_1_limit}
-            onChange={setField('out_km_slab_1_limit')}
+          <NumericField
+            label="KM Slab 2 Limit"
+            value={outstation.km_slab_2_limit}
+            onChange={(v) => setOutstation((p) => ({ ...p, km_slab_2_limit: v }))}
             disabled={isSaving}
           />
-          <FieldRow
-            id="out_km_slab_2_limit"
-            label="Slab 2 upper limit (km)"
-            hint="e.g. 600 km (must be > slab 1)"
-            value={form.out_km_slab_2_limit}
-            onChange={setField('out_km_slab_2_limit')}
+          <NumericField
+            label="KM Slab 3 Limit"
+            value={outstation.km_slab_3_limit}
+            onChange={(v) => setOutstation((p) => ({ ...p, km_slab_3_limit: v }))}
             disabled={isSaving}
           />
-          <FieldRow
-            id="out_km_slab_3_limit"
-            label="Slab 3 upper limit (km)"
-            hint="e.g. 900 km (must be > slab 2)"
-            value={form.out_km_slab_3_limit}
-            onChange={setField('out_km_slab_3_limit')}
+          <NumericField
+            label="Per KM Slab 1 (₹)"
+            value={outstation.per_km_slab_1}
+            onChange={(v) => setOutstation((p) => ({ ...p, per_km_slab_1: v }))}
             disabled={isSaving}
           />
-
-          <div className="pt-2 pb-1">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Per-KM Rates</p>
-          </div>
-          <FieldRow
-            id="out_per_km_slab_1"
-            label="Rate — Slab 1 (0 – limit 1)"
-            hint="₹ per km"
-            value={form.out_per_km_slab_1}
-            onChange={setField('out_per_km_slab_1')}
+          <NumericField
+            label="Per KM Slab 2 (₹)"
+            value={outstation.per_km_slab_2}
+            onChange={(v) => setOutstation((p) => ({ ...p, per_km_slab_2: v }))}
             disabled={isSaving}
           />
-          <FieldRow
-            id="out_per_km_slab_2"
-            label="Rate — Slab 2 (limit 1 – limit 2)"
-            hint="₹ per km"
-            value={form.out_per_km_slab_2}
-            onChange={setField('out_per_km_slab_2')}
+          <NumericField
+            label="Per KM Slab 3 (₹)"
+            value={outstation.per_km_slab_3}
+            onChange={(v) => setOutstation((p) => ({ ...p, per_km_slab_3: v }))}
             disabled={isSaving}
           />
-          <FieldRow
-            id="out_per_km_slab_3"
-            label="Rate — Slab 3 (limit 2 – limit 3)"
-            hint="₹ per km"
-            value={form.out_per_km_slab_3}
-            onChange={setField('out_per_km_slab_3')}
+          <NumericField
+            label="Per KM Slab 4 (₹)"
+            value={outstation.per_km_slab_4}
+            onChange={(v) => setOutstation((p) => ({ ...p, per_km_slab_4: v }))}
             disabled={isSaving}
           />
-          <FieldRow
-            id="out_per_km_slab_4"
-            label="Rate — Slab 4 (> limit 3)"
-            hint="₹ per km"
-            value={form.out_per_km_slab_4}
-            onChange={setField('out_per_km_slab_4')}
-            disabled={isSaving}
-          />
-          <FieldRow
-            id="out_extra_driver_comp"
-            label="Extra driver comp / 100 km over 400"
-            hint="₹ safety compensation per 100 km beyond 400"
-            value={form.out_extra_driver_comp}
-            onChange={setField('out_extra_driver_comp')}
+          <NumericField
+            label="Extra Driver Comp/100km (₹)"
+            value={outstation.extra_driver_comp_per_100km_over_400}
+            onChange={(v) =>
+              setOutstation((p) => ({ ...p, extra_driver_comp_per_100km_over_400: v }))
+            }
             disabled={isSaving}
           />
         </CardContent>
       </Card>
 
-      {/* Section C: Vehicle Multipliers */}
+      {/* Vehicle Multipliers */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">C — Vehicle Multipliers</CardTitle>
-          <CardDescription>Fare multiplier applied per vehicle category (1.0 = no change)</CardDescription>
+        <CardHeader>
+          <CardTitle className="text-base">Vehicle Multipliers</CardTitle>
+          <CardDescription>Fare multiplier per vehicle type</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <FieldRow
-            id="vm_hatchback"
+        <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <NumericField
             label="Hatchback"
-            value={form.vm_hatchback}
-            onChange={setField('vm_hatchback')}
+            value={vehicleMultiplier.hatchback}
+            onChange={(v) => setVehicleMultiplier((p) => ({ ...p, hatchback: v }))}
             disabled={isSaving}
           />
-          <FieldRow
-            id="vm_sedan"
+          <NumericField
             label="Sedan"
-            value={form.vm_sedan}
-            onChange={setField('vm_sedan')}
+            value={vehicleMultiplier.sedan}
+            onChange={(v) => setVehicleMultiplier((p) => ({ ...p, sedan: v }))}
             disabled={isSaving}
           />
-          <FieldRow
-            id="vm_suv"
+          <NumericField
             label="SUV"
-            value={form.vm_suv}
-            onChange={setField('vm_suv')}
+            value={vehicleMultiplier.suv}
+            onChange={(v) => setVehicleMultiplier((p) => ({ ...p, suv: v }))}
             disabled={isSaving}
           />
-          <FieldRow
-            id="vm_luxury"
+          <NumericField
             label="Luxury"
-            value={form.vm_luxury}
-            onChange={setField('vm_luxury')}
+            value={vehicleMultiplier.luxury}
+            onChange={(v) => setVehicleMultiplier((p) => ({ ...p, luxury: v }))}
             disabled={isSaving}
           />
         </CardContent>
       </Card>
 
-      {/* Section D: Commission */}
+      {/* Commission */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">D — Commission</CardTitle>
-          <CardDescription>Platform commission rates (fraction, e.g. 0.20 = 20%)</CardDescription>
+        <CardHeader>
+          <CardTitle className="text-base">Commission Rates</CardTitle>
+          <CardDescription>Platform commission (0–1 range, e.g. 0.20 = 20%)</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <FieldRow
-            id="comm_local"
-            label="Local commission"
-            hint="Fraction of local fare"
-            value={form.comm_local}
-            onChange={setField('comm_local')}
+        <CardContent className="grid grid-cols-2 gap-4">
+          <NumericField
+            label="Local Commission"
+            value={commission.local}
+            onChange={(v) => setCommission((p) => ({ ...p, local: v }))}
             disabled={isSaving}
           />
-          <FieldRow
-            id="comm_outstation"
-            label="Outstation commission"
-            hint="Fraction of outstation fare"
-            value={form.comm_outstation}
-            onChange={setField('comm_outstation')}
+          <NumericField
+            label="Outstation Commission"
+            value={commission.outstation}
+            onChange={(v) => setCommission((p) => ({ ...p, outstation: v }))}
             disabled={isSaving}
           />
         </CardContent>
       </Card>
 
-      {/* Save button + error */}
-      <div className="flex flex-col gap-3 pb-4">
-        {saveError && (
-          <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-            <span>{saveError}</span>
-          </div>
-        )}
-        <Button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="w-full sm:w-auto"
-          size="lg"
-        >
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <Button onClick={handleSave} disabled={isSaving} className="min-w-32">
           {isSaving ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Saving…
             </>
           ) : (
-            <>
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              Save Pricing
-            </>
+            'Save Pricing'
           )}
         </Button>
       </div>

@@ -1,49 +1,67 @@
 {
   "kind": "build_request",
-  "title": "Fix Candid opt variant encoding for role submission",
+  "title": "Restore Customer and Driver trip history UI",
   "projectName": "Namma Driver Pilot",
-  "priority": "high",
+  "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "In the frontend role submission logic, convert the plain string role value to the correct Candid opt variant format before sending to the backend. Specifically: map \"customer\" → [{ customer: null }], \"driver\" → [{ driver: null }], and \"admin\" → [{ admin: null }]. This conversion must be applied wherever a role is submitted to the backend (e.g., useQueries.ts updateRole mutation, SelectRolePage.tsx, RoleSelectionWarningModal.tsx).",
+      "text": "Restore the 'My Trips' section in the Customer Dashboard. Display a list of trips where trip.customerPrincipal == caller, showing status (pending/assigned/confirmed/completed/cancelled), pickup/dropoff locations, vehicle type, fare, and timestamps. After a new booking is submitted, the trip must appear in the list immediately without a hard refresh.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6"
+          "msg-4"
         ],
         "quotes": [
-          "Currently frontend is sending a string like: role: \"customer\"",
-          "If role is \"customer\" send: role: { customer: null }",
-          "Wrap it correctly inside opt: role: [{ customer: null }]"
+          "Add back 'My Trips' section.",
+          "Show list of trips created by caller (filter where trip.customerPrincipal == caller).",
+          "After booking, trip must appear immediately in My Trips without hard refresh."
         ]
       },
       "acceptanceCriteria": [
-        "Submitting role 'customer' sends [{ customer: null }] to the backend, not the string \"customer\"",
-        "Submitting role 'driver' sends [{ driver: null }] to the backend",
-        "Submitting role 'admin' sends [{ admin: null }] to the backend",
-        "The role is wrapped in an array to represent the Candid opt type (e.g., [{ customer: null }])",
-        "No changes are made to auth logic, route guards, admin logic, booking, pricing, GPS, or UI design",
-        "Role selection from SelectRolePage and RoleSelectionWarningModal both use the corrected encoding",
-        "The backend no longer returns a Candid variant encoding error when a role is saved"
+        "Customer Dashboard displays a 'My Trips' section",
+        "Only trips where customerPrincipal matches the caller are shown",
+        "Each trip shows status, pickup/dropoff locations, vehicle type, fare, and timestamps",
+        "After booking a trip, it appears in My Trips immediately without a hard refresh",
+        "Status badge reflects current trip status (pending/assigned/confirmed/completed/cancelled)"
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "text": "Restore the 'My Trips' tab in the Driver Dashboard alongside the existing 'Available Trips' tab. 'My Trips' shows trips where trip.driverPrincipal == caller. 'Available Trips' shows only trips with no driver assigned. Remove the 'coming soon' placeholder text.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "Add back 'My Trips' tab next to 'Available Trips'.",
+          "Driver My Trips shows trips where trip.driverPrincipal == caller.",
+          "Available Trips shows only trips with no driver assigned.",
+          "Remove placeholder 'coming soon'."
+        ]
+      },
+      "acceptanceCriteria": [
+        "Driver Dashboard shows two tabs: 'Available Trips' and 'My Trips'",
+        "'My Trips' tab displays trips where driverPrincipal matches the caller",
+        "'Available Trips' tab displays only trips with no driver assigned",
+        "No 'coming soon' placeholder text is visible in the Driver Dashboard",
+        "Both tabs render trip details (locations, status, fare, timestamps)"
       ]
     }
   ],
   "constraints": [
-    "Do not modify auth logic or Internet Identity hooks",
-    "Do not modify route guards (AuthGate, ProtectedRoute, RoleGuard)",
-    "Do not modify admin logic or AdminUpgradePage",
-    "Do not modify booking or trip-related logic",
-    "Do not modify pricing configuration logic",
-    "Do not modify GPS or location logic",
-    "Do not modify any UI design, layout, or styling",
-    "Only fix the role variant encoding mismatch in role submission calls"
+    "Do not modify the backend schema or any Motoko data types",
+    "Do not change pricing logic or pricing configuration",
+    "Do not change driver profile persistence or the EditDriverProfileForm/EditDriverProfileModal components",
+    "Do not modify the Admin Trips page (AdminTripsTab.tsx)",
+    "Only reconnect the frontend UI to existing backend trip storage — no new backend methods"
   ],
   "nonGoals": [
-    "Changing backend Motoko types or schema",
-    "Modifying how roles are read or displayed (getRoleString helper)",
-    "Any new features or UI changes",
-    "Fixing unrelated bugs"
+    "Adding new backend endpoints or modifying existing ones",
+    "Changing admin dashboard functionality",
+    "Modifying pricing configuration UI",
+    "Altering driver profile edit or save behavior"
   ],
   "imageRequirements": {
     "required": [],

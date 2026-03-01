@@ -1,99 +1,166 @@
-import type { UserProfile } from '../lib/types';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Car, DollarSign, Lock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { User, MapPin, Car, Settings, Edit, Languages, Radio } from 'lucide-react';
+import type { DriverProfile } from '../backend';
+import type { UserProfile } from '../lib/types';
+import { type NormalizedDriverProfile } from '../utils/normalizeProfile';
 
 interface DriverProfileSectionProps {
-  profile: UserProfile;
-  hasAcceptedTrip?: boolean;
+  profile: NormalizedDriverProfile | null;
+  driverProfile?: DriverProfile | null;
+  userProfile?: UserProfile | null;
+  onEditClick: () => void;
 }
 
-function getVehicleLabels(profile: UserProfile): string[] {
-  return profile.vehicleExperience.map((v) => {
-    if ('#hatchback' in v) return 'Hatchback';
-    if ('#sedan' in v) return 'Sedan';
-    if ('#suv' in v) return 'SUV';
-    if ('#luxury' in v) return 'Luxury';
-    return 'Unknown';
-  });
+function getVehicleLabel(v: string): string {
+  const map: Record<string, string> = {
+    hatchback: 'Hatchback',
+    sedan: 'Sedan',
+    suv: 'SUV',
+    luxury: 'Luxury',
+  };
+  return map[v] ?? v;
 }
 
-function getTransmissionLabels(profile: UserProfile): string[] {
-  return profile.transmissionComfort.map((t) => {
-    if ('#manual' in t) return 'Manual';
-    if ('#automatic' in t) return 'Automatic';
-    if ('#ev' in t) return 'EV';
-    return 'Unknown';
-  });
+function getTransmissionLabel(t: string): string {
+  const map: Record<string, string> = {
+    manual: 'Manual',
+    automatic: 'Automatic',
+    ev: 'EV',
+  };
+  return map[t] ?? t;
 }
 
-export default function DriverProfileSection({ profile, hasAcceptedTrip }: DriverProfileSectionProps) {
-  const vehicleLabels = getVehicleLabels(profile);
-  const transmissionLabels = getTransmissionLabels(profile);
+export default function DriverProfileSection({
+  profile,
+  driverProfile,
+  userProfile,
+  onEditClick,
+}: DriverProfileSectionProps) {
+  // Prefer driverProfile for duty status and languages (most up-to-date)
+  const isAvailable = driverProfile?.isAvailable ?? profile?.isAvailable ?? false;
+  const languages: string[] = driverProfile?.languages ?? profile?.languages ?? [];
+  const serviceAreaName =
+    driverProfile?.serviceAreaName ||
+    profile?.serviceAreaName ||
+    userProfile?.serviceAreaName ||
+    'Not set';
+  const servicePincode =
+    driverProfile?.servicePincode ||
+    profile?.servicePincode ||
+    userProfile?.servicePincode ||
+    '—';
+
+  const vehicleExperience: string[] = driverProfile
+    ? (driverProfile.vehicleExperience as string[])
+    : (profile?.vehicleExperience ?? []);
+
+  const transmissionComfort: string[] = driverProfile
+    ? (driverProfile.transmissionComfort as string[])
+    : (profile?.transmissionComfort ?? []);
+
+  const displayName = userProfile?.fullName || 'Driver';
+  const displayEmail = userProfile?.email || '';
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>Driver Profile</span>
-          <div className="flex items-center gap-2">
-            {hasAcceptedTrip && (
-              <Badge variant="outline" className="text-xs gap-1">
-                <Lock className="h-3 w-3" />
-                Locked
-              </Badge>
+    <Card className="border-border shadow-sm">
+      <CardHeader className="flex flex-row items-start justify-between pb-2">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <User className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <CardTitle className="text-lg font-semibold">{displayName}</CardTitle>
+            {displayEmail && (
+              <p className="text-sm text-muted-foreground">{displayEmail}</p>
             )}
-            <Badge variant={profile.isAvailable ? 'default' : 'secondary'}>
-              {profile.isAvailable ? 'On-Duty' : 'Off-Duty'}
-            </Badge>
           </div>
-        </CardTitle>
+        </div>
+        <Button variant="outline" size="sm" onClick={onEditClick} className="gap-1">
+          <Edit className="w-3.5 h-3.5" />
+          Edit Profile
+        </Button>
       </CardHeader>
+
       <CardContent className="space-y-4">
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-              <MapPin className="h-3 w-3" /> Service Area
-            </p>
-            <p className="font-medium">
-              {profile.serviceAreaName || '—'}
-              {profile.servicePincode ? ` (${profile.servicePincode})` : ''}
-            </p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-              <DollarSign className="h-3 w-3" /> Total Earnings
-            </p>
-            <p className="font-medium">₹{Number(profile.totalEarnings)}</p>
-          </div>
+        {/* Duty Status */}
+        <div className="flex items-center gap-2">
+          <Radio className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-muted-foreground">Status:</span>
+          {isAvailable ? (
+            <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800">
+              On-Duty
+            </Badge>
+          ) : (
+            <Badge variant="secondary">Off-Duty</Badge>
+          )}
         </div>
 
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-            <Car className="h-3 w-3" /> Vehicle Experience
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {vehicleLabels.length > 0
-              ? vehicleLabels.map((v) => <Badge key={v} variant="outline">{v}</Badge>)
-              : <span className="text-sm text-muted-foreground">None specified</span>}
-          </div>
+        {/* Service Area */}
+        <div className="flex items-center gap-2">
+          <MapPin className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-muted-foreground">Service Area:</span>
+          <span className="text-sm">{serviceAreaName}</span>
+          {servicePincode && servicePincode !== '—' && servicePincode !== '000000' && (
+            <span className="text-xs text-muted-foreground">({servicePincode})</span>
+          )}
         </div>
 
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Transmission</p>
-          <div className="flex flex-wrap gap-2">
-            {transmissionLabels.length > 0
-              ? transmissionLabels.map((t) => <Badge key={t} variant="secondary">{t}</Badge>)
-              : <span className="text-sm text-muted-foreground">None specified</span>}
+        {/* Vehicle Experience */}
+        {vehicleExperience.length > 0 && (
+          <div className="flex items-start gap-2">
+            <Car className="w-4 h-4 text-muted-foreground mt-0.5" />
+            <span className="text-sm font-medium text-muted-foreground">Vehicles:</span>
+            <div className="flex flex-wrap gap-1">
+              {vehicleExperience.map((v) => (
+                <Badge key={v} variant="outline" className="text-xs">
+                  {getVehicleLabel(v)}
+                </Badge>
+              ))}
+            </div>
           </div>
-        </div>
-
-        {hasAcceptedTrip && (
-          <p className="text-xs text-muted-foreground flex items-center gap-1 border rounded-md px-3 py-2 bg-muted/50">
-            <Lock className="h-3 w-3 shrink-0" />
-            Duty status is locked while you have an active trip.
-          </p>
         )}
+
+        {/* Transmission Comfort */}
+        {transmissionComfort.length > 0 && (
+          <div className="flex items-start gap-2">
+            <Settings className="w-4 h-4 text-muted-foreground mt-0.5" />
+            <span className="text-sm font-medium text-muted-foreground">Transmission:</span>
+            <div className="flex flex-wrap gap-1">
+              {transmissionComfort.map((t) => (
+                <Badge key={t} variant="outline" className="text-xs">
+                  {getTransmissionLabel(t)}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Languages */}
+        {languages.length > 0 && (
+          <div className="flex items-start gap-2">
+            <Languages className="w-4 h-4 text-muted-foreground mt-0.5" />
+            <span className="text-sm font-medium text-muted-foreground">Languages:</span>
+            <div className="flex flex-wrap gap-1">
+              {languages.map((lang) => (
+                <Badge key={lang} variant="secondary" className="text-xs">
+                  {lang}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {vehicleExperience.length === 0 &&
+          transmissionComfort.length === 0 &&
+          languages.length === 0 && (
+            <p className="text-sm text-muted-foreground italic">
+              No profile details yet. Click "Edit Profile" to get started.
+            </p>
+          )}
       </CardContent>
     </Card>
   );
