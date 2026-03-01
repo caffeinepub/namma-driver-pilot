@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useGetAllUsers } from '../hooks/useQueries';
 import type { UserProfile } from '../lib/types';
+import { getRoleString } from '../lib/types';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,21 +16,18 @@ import {
 import { Search } from 'lucide-react';
 
 function getRoleLabel(profile: UserProfile): string {
-  if (!profile.role || profile.role.length === 0) return 'No role';
-  const roleVariant = profile.role[0];
-  if (!roleVariant) return 'No role';
-  if ('#customer' in roleVariant) return 'Customer';
-  if ('#driver' in roleVariant) return 'Driver';
-  if ('#admin' in roleVariant) return 'Admin';
-  return 'Unknown';
+  const role = getRoleString(profile.role);
+  if (role === 'admin') return 'Admin';
+  if (role === 'driver') return 'Driver';
+  if (role === 'customer') return 'Customer';
+  return 'No role';
 }
 
 function getRoleBadgeVariant(profile: UserProfile): 'default' | 'secondary' | 'outline' | 'destructive' {
-  if (!profile.role || profile.role.length === 0) return 'outline';
-  const roleVariant = profile.role[0];
-  if (!roleVariant) return 'outline';
-  if ('#admin' in roleVariant) return 'default';
-  if ('#driver' in roleVariant) return 'secondary';
+  const role = getRoleString(profile.role);
+  if (role === 'admin') return 'default';
+  if (role === 'driver') return 'secondary';
+  if (role === 'customer') return 'outline';
   return 'outline';
 }
 

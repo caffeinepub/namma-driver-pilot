@@ -8,11 +8,12 @@ import type {
   ProfileInput,
   TransmissionType as BackendTransmissionType,
   DriverProfile,
+  Trip as BackendTrip,
 } from '../backend';
-import { Role as BackendRole } from '../backend';
 import type { Trip, UserProfile, AppRole } from '../lib/types';
 import { withTimeout } from '../utils/withTimeout';
 import { DEFAULT_CONFIG } from '../lib/defaultConfig';
+import { normalizeRole } from '../utils/normalizeRole';
 import { toast } from 'sonner';
 
 const QUERY_TIMEOUT_MS = 30_000;
@@ -66,9 +67,12 @@ export function useGetMyRole() {
       if (!actor) throw new Error('Actor not available');
       const result = await withTimeout(actor.getMyRole(), ROLE_TIMEOUT_MS);
       if (result === null || result === undefined) return null;
-      if (result === BackendRole.admin) return 'admin';
-      if (result === BackendRole.customer) return 'customer';
-      if (result === BackendRole.driver) return 'driver';
+      // Use normalizeRole to safely handle both string and object variant formats
+      // e.g. "admin" or { admin: null } both normalize to "admin"
+      const normalized = normalizeRole(result);
+      if (normalized === 'admin') return 'admin';
+      if (normalized === 'customer') return 'customer';
+      if (normalized === 'driver') return 'driver';
       return null;
     },
     enabled: !!actor && !actorFetching && !!identity,
@@ -296,23 +300,64 @@ export function useUpsertDriverProfile() {
 
 // ─── Trips ────────────────────────────────────────────────────────────────────
 
+/**
+ * Create a trip and return the newly created Trip object from the backend.
+ * The returned trip can be used for optimistic UI updates.
+ */
 export function useCreateTrip() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (tripRequest: TripRequest) => {
+  return useMutation<BackendTrip, Error, TripRequest>({
+    mutationFn: async (tripRequest: TripRequest): Promise<BackendTrip> => {
       if (!actor) throw new Error('Actor not available');
       return withTimeout(actor.createTrip(tripRequest), QUERY_TIMEOUT_MS);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['myTrips'] });
+      queryClient.invalidateQueries({ queryKey: ['customerTrips'] });
+      queryClient.invalidateQueries({ queryKey: ['requestedTrips'] });
       toast.success('Ride requested successfully');
     },
     onError: (err: unknown) => {
       console.error('Booking error:', err);
       toast.error('Booking failed. Please try again.');
     },
+  });
+}
+
+/**
+ * Fetch all trips from the backend and filter client-side by the caller's principal.
+ * Falls back to an empty array if the backend method is unavailable.
+ */
+export function useGetCustomerTrips(callerPrincipal: string | undefined) {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<Trip[]>({
+    queryKey: ['customerTrips', callerPrincipal],
+    queryFn: async () => {
+      if (!actor || !callerPrincipal) return [];
+      try {
+        const allTrips: Trip[] = await withTimeout(
+          (actor as any).getAllTrips(),
+          QUERY_TIMEOUT_MS
+        );
+        if (!Array.isArray(allTrips)) return [];
+        // Filter to only trips belonging to this customer
+        return allTrips.filter((trip) => {
+          const cid = trip.customerId;
+          if (!cid) return false;
+          const cidStr = typeof cid === 'object' && 'toString' in cid
+            ? cid.toString()
+            : String(cid);
+          return cidStr === callerPrincipal;
+        });
+      } catch (err) {
+        console.error('[useGetCustomerTrips] Failed to fetch trips:', err);
+        return [];
+      }
+    },
+    enabled: !!actor && !actorFetching && !!callerPrincipal,
+    placeholderData: [],
   });
 }
 

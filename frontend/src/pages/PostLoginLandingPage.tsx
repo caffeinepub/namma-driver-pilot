@@ -14,14 +14,18 @@ export default function PostLoginLandingPage() {
   useEffect(() => {
     if (!isFetched || isLoading || isError) return;
 
-    if (role === 'admin') {
+    // role is already a normalized AppRole string ('admin' | 'customer' | 'driver' | null)
+    // derived via normalizeRole() in useGetMyRole — safe to compare directly
+    const roleKey = role ?? null;
+
+    if (roleKey === 'admin') {
       navigate({ to: '/admin/dashboard' });
-    } else if (role === 'customer') {
-      navigate({ to: '/customer/dashboard' });
-    } else if (role === 'driver') {
+    } else if (roleKey === 'driver') {
       navigate({ to: '/driver/dashboard' });
+    } else if (roleKey === 'customer') {
+      navigate({ to: '/customer/dashboard' });
     } else {
-      // role === null — no role assigned yet
+      // No role assigned yet
       navigate({ to: '/select-role' });
     }
   }, [role, isLoading, isError, isFetched, navigate]);

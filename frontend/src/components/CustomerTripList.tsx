@@ -1,10 +1,14 @@
-import { useGetMyTrips } from '../hooks/useQueries';
 import type { Trip } from '../lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MapPin, Clock, Car } from 'lucide-react';
+
+interface CustomerTripListProps {
+  trips?: Trip[];
+  isLoading?: boolean;
+}
 
 function getStatusLabel(trip: Trip): string {
   const s = trip.status;
@@ -54,9 +58,7 @@ function getVehicleLabel(trip: Trip): string {
   return 'Vehicle';
 }
 
-export default function CustomerTripList() {
-  const { data: trips, isLoading } = useGetMyTrips();
-
+export default function CustomerTripList({ trips, isLoading }: CustomerTripListProps) {
   if (isLoading) {
     return (
       <div className="space-y-3">

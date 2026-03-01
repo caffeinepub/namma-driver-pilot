@@ -6,15 +6,115 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, MapPin, Navigation } from 'lucide-react';
 import { toast } from 'sonner';
-import type { TripRequest } from '../backend';
+import type { TripRequest, Trip as BackendTrip } from '../backend';
 import { TripType, JourneyType } from '../backend';
+import type { Trip } from '../lib/types';
 
 type TripTypeKey = 'local' | 'outstation';
 type JourneyTypeKey = 'oneWay' | 'roundTrip';
 type VehicleTypeKey = 'hatchback' | 'sedan' | 'suv' | 'luxury';
 type LocationMode = 'manual' | 'gps';
 
-export default function RideRequestForm() {
+interface RideRequestFormProps {
+  /** Called with the newly created trip after a successful booking */
+  onTripCreated?: (trip: Trip) => void;
+}
+
+/**
+ * Convert a BackendTrip (from backend.d.ts) to the local Trip type used in the UI.
+ * The backend returns enums as strings; the local Trip type uses variant-object pattern.
+ */
+function backendTripToLocalTrip(bt: BackendTrip): Trip {
+  // Status
+  const statusStr = bt.status as unknown as string;
+  let status: Trip['status'];
+  if (statusStr === 'requested') status = { '#requested': null };
+  else if (statusStr === 'accepted') status = { '#accepted': null };
+  else if (statusStr === 'completed') status = { '#completed': null };
+  else status = { '#cancelled': null };
+
+  // VehicleType
+  const vtStr = bt.vehicleType as unknown as string;
+  let vehicleType: Trip['vehicleType'];
+  if (vtStr === 'hatchback') vehicleType = { '#hatchback': null };
+  else if (vtStr === 'sedan') vehicleType = { '#sedan': null };
+  else if (vtStr === 'suv') vehicleType = { '#suv': null };
+  else vehicleType = { '#luxury': null };
+
+  // TripType
+  const ttStr = bt.tripType as unknown as string;
+  const tripType: Trip['tripType'] = ttStr === 'outstation'
+    ? { '#outstation': null }
+    : { '#local': null };
+
+  // JourneyType
+  const jtStr = bt.journeyType as unknown as string;
+  const journeyType: Trip['journeyType'] = jtStr === 'roundTrip'
+    ? { '#roundTrip': null }
+    : { '#oneWay': null };
+
+  // Duration
+  const dur = bt.duration as any;
+  let duration: Trip['duration'];
+  if (dur && dur.__kind__ === 'days') {
+    duration = { '#days': BigInt(dur.days ?? 1) };
+  } else {
+    duration = { '#hours': BigInt(dur?.hours ?? 1) };
+  }
+
+  // Location helpers
+  const toLocalLocation = (loc: any): Trip['pickupLocation'] => ({
+    pincode: loc?.pincode ?? '',
+    area: loc?.area ?? '',
+    latitude: loc?.latitude !== undefined && loc?.latitude !== null ? [loc.latitude] : [],
+    longitude: loc?.longitude !== undefined && loc?.longitude !== null ? [loc.longitude] : [],
+  });
+
+  const dropoff = bt.dropoffLocation;
+  const dropoffLocal: Trip['dropoffLocation'] =
+    dropoff !== undefined && dropoff !== null
+      ? [toLocalLocation(dropoff)]
+      : [];
+
+  const driverId = bt.driverId !== undefined && bt.driverId !== null
+    ? [bt.driverId]
+    : [];
+
+  const startDateTime = bt.startDateTime !== undefined && bt.startDateTime !== null
+    ? [BigInt(bt.startDateTime as any)]
+    : [];
+
+  const endDateTime = bt.endDateTime !== undefined && bt.endDateTime !== null
+    ? [BigInt(bt.endDateTime as any)]
+    : [];
+
+  const landmark = bt.landmark !== undefined && bt.landmark !== null
+    ? [bt.landmark as string]
+    : [];
+
+  return {
+    tripId: bt.tripId,
+    customerId: bt.customerId,
+    driverId: driverId as any,
+    tripType,
+    journeyType,
+    vehicleType,
+    duration,
+    startDateTime: startDateTime as any,
+    endDateTime: endDateTime as any,
+    pickupLocation: toLocalLocation(bt.pickupLocation),
+    dropoffLocation: dropoffLocal,
+    phone: bt.phone,
+    landmark: landmark as any,
+    status,
+    createdTime: BigInt(bt.createdTime as any),
+    totalFare: BigInt(bt.totalFare as any),
+    ratePerHour: BigInt(bt.ratePerHour as any),
+    billableHours: BigInt(bt.billableHours as any),
+  };
+}
+
+export default function RideRequestForm({ onTripCreated }: RideRequestFormProps) {
   const createTrip = useCreateTrip();
 
   const [tripType, setTripType] = useState<TripTypeKey>('local');
@@ -139,7 +239,16 @@ export default function RideRequestForm() {
     };
 
     try {
-      await createTrip.mutateAsync(tripRequest);
+      const newBackendTrip = await createTrip.mutateAsync(tripRequest);
+      // Convert backend trip to local Trip type and notify parent for optimistic update
+      if (onTripCreated && newBackendTrip) {
+        try {
+          const localTrip = backendTripToLocalTrip(newBackendTrip);
+          onTripCreated(localTrip);
+        } catch (convErr) {
+          console.error('[RideRequestForm] Trip conversion error:', convErr);
+        }
+      }
       // Reset form on success
       setPickupPincode('');
       setPickupArea('');

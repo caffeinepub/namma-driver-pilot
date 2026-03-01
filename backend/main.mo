@@ -10,12 +10,13 @@ import Runtime "mo:core/Runtime";
 import List "mo:core/List";
 import Nat64 "mo:core/Nat64";
 import Array "mo:core/Array";
+import Migration "migration";
 
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
 
+(with migration = Migration.run)
 actor {
-  let OWNER_ADMIN_PRINCIPAL = "6ngnc-ph7ou-g23nw-z2zbr-czprs-ohpe6-2wolp-eeo7o-c32lo-deiso-yqe";
   type StableAdminSet = Set.Set<Text>;
 
   public type UserRole = AccessControl.UserRole;
@@ -30,7 +31,7 @@ actor {
     principalId : Principal;
     fullName : Text;
     email : Text;
-    role : ?Role;
+    role : Role;
     createdTime : Time.Time;
     servicePincode : Text;
     serviceAreaName : Text;
@@ -212,37 +213,42 @@ actor {
     };
   };
 
-  // Persistent admin set containing all admin principal texts.
-  // Admin access is determined solely by membership in this persistent set — never by profile role fields.
-  var adminPrincipalSet : StableAdminSet = Set.fromArray([OWNER_ADMIN_PRINCIPAL]);
+  // Stable variable so it persists across upgrades
+  stable var adminPrincipalSet : StableAdminSet = Set.fromArray([
+    "6ngnc-ph7ou-g23nw-z2zbr-czprs-ohpe6-2wolp-eeo7o-c32lo-deiso-yqe",
+    "g3c77-j7yp6-ydsrd-2zp2q-vajyd-4ymec-tydvo-kcxwl-s7reg-37yws-eae",
+  ]);
 
-  // Pricing configuration with default values
   var pricingConfig : ?PricingConfig = null;
-
   let userProfiles = Map.empty<Principal, UserProfile>();
-  // New persistent storage for driver profiles
   let driverProfiles = Map.empty<Principal, DriverProfile>();
   let trips = Map.empty<Text, Trip>();
-
-  // Persistent roles storage keyed by principal
   let userRoles = Map.empty<Principal, { #customer; #driver }>();
 
-  // Initialize the user system state
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
-  // Internal synchronous admin check: returns true if and only if the principal
-  // is present in the persistent admin set. Admin access is determined solely by
-  // principal identity, not by any saved role field in the user profile.
-  private func isPersistentAdmin(user : Principal) : Bool {
-    adminPrincipalSet.contains(user.toText());
+  // isAdmin checks the stable admin principals set
+  private func isAdmin(caller : Principal) : Bool {
+    adminPrincipalSet.contains(caller.toText());
   };
 
   private func isAnonymous(caller : Principal) : Bool {
     caller.isAnonymous();
   };
 
-  // Default pricing configuration
+  private func requireAuthenticated(caller : Principal) {
+    if (isAnonymous(caller)) {
+      Runtime.trap("Unauthorized: Anonymous callers are not allowed");
+    };
+  };
+
+  private func requireAdminCaller(caller : Principal) {
+    if (not isAdmin(caller)) {
+      Runtime.trap("Unauthorized: Only admins can perform this action");
+    };
+  };
+
   let defaultPricingConfig : PricingConfig = {
     local = {
       base_first_hour = 200;
@@ -284,21 +290,16 @@ actor {
     #failedUpdate : Text;
   };
 
-  public query ({ caller }) func getPricingConfig() : async PricingConfig {
+  public query func getPricingConfig() : async PricingConfig {
     switch (pricingConfig) {
       case (?config) { config };
-      case (null) {
-        pricingConfig := ?defaultPricingConfig;
-        defaultPricingConfig;
-      };
+      case (null) { defaultPricingConfig };
     };
   };
 
-  // Admin-only: update pricing configuration
   public shared ({ caller }) func updatePricingConfig(newConfig : PricingConfig) : async UpdateConfigResult {
-    if (not isPersistentAdmin(caller)) { return (#notAdmin) };
+    if (not isAdmin(caller)) { return (#notAdmin) };
 
-    // Validate that all rates and multipliers are non-negative and logically consistent.
     if (newConfig.local.base_first_hour < 0
       or newConfig.local.min_hours < 1
       or newConfig.local.per_min_after_first_hour < 0
@@ -329,30 +330,22 @@ actor {
     #ok(newConfig);
   };
 
-  func resolveRole(caller : Principal, storedRole : ?Role) : ?Role {
-    if (isPersistentAdmin(caller)) { return ?#admin };
-    storedRole;
+  // getMyRole: returns #admin if caller is in admin set, otherwise returns stored role
+  public query ({ caller }) func getMyRole() : async Role {
+    requireAuthenticated(caller);
+    if (isAdmin(caller)) {
+      return #admin;
+    };
+    switch (userProfiles.get(caller)) {
+      case (?profile) { profile.role };
+      case (null) { #customer };
+    };
   };
 
-  public query ({ caller }) func getMyRole() : async ?Role {
-    let storedRole = switch (userProfiles.get(caller)) {
-      case (?profile) { profile.role };
-      case (null) { null };
-    };
-    resolveRole(caller, storedRole);
-  };
-
-  public query ({ caller }) func isAdmin() : async Bool {
-    let storedRole = switch (userProfiles.get(caller)) {
-      case (?profile) { profile.role };
-      case (null) { null };
-    };
-    switch (resolveRole(caller, storedRole)) {
-      case (?#admin) { true };
-      case (?#customer) { false };
-      case (?#driver) { false };
-      case (null) { false };
-    };
+  // isAdminCheck: public query to check if caller is admin
+  public query ({ caller }) func isAdminCheck() : async Bool {
+    requireAuthenticated(caller);
+    isAdmin(caller);
   };
 
   public type ProfileInput = {
@@ -361,21 +354,19 @@ actor {
   };
 
   public shared ({ caller }) func setProfile(input : ProfileInput) : async UserProfile {
-    if (isAnonymous(caller)) {
-      Runtime.trap("Unauthorized: Anonymous callers cannot create profile");
-    };
+    requireAuthenticated(caller);
 
     let currentTime = Time.now();
 
-    let role : ?Role = switch (userProfiles.get(caller)) {
+    let role : Role = switch (userProfiles.get(caller)) {
       case (?existingProfile) {
         existingProfile.role;
       };
       case (null) {
-        if (isPersistentAdmin(caller)) {
-          ?#admin;
+        if (isAdmin(caller)) {
+          #admin;
         } else {
-          ?#customer;
+          #customer;
         };
       };
     };
@@ -400,9 +391,7 @@ actor {
   };
 
   public shared ({ caller }) func updateProfileFields(fullName : Text, email : Text) : async UserProfile {
-    if (isAnonymous(caller)) {
-      Runtime.trap("Unauthorized: Anonymous callers cannot update profile");
-    };
+    requireAuthenticated(caller);
     switch (userProfiles.get(caller)) {
       case (?existingProfile) {
         let updatedProfile : UserProfile = {
@@ -432,9 +421,7 @@ actor {
   };
 
   public shared ({ caller }) func updateProfile(update : ProfileUpdate) : async UserProfile {
-    if (isAnonymous(caller)) {
-      Runtime.trap("Unauthorized: Anonymous callers cannot update profile");
-    };
+    requireAuthenticated(caller);
     switch (userProfiles.get(caller)) {
       case (?existingProfile) {
         let updatedUserProfile : UserProfile = {
@@ -459,23 +446,17 @@ actor {
   };
 
   public shared ({ caller }) func setMyRoleCustomer() : async () {
-    if (isAnonymous(caller)) {
-      Runtime.trap("Unauthorized: Anonymous callers cannot change role");
-    };
-    updateCurrentRoleSecure(caller, ?#customer);
+    requireAuthenticated(caller);
+    updateCurrentRoleSecure(caller, #customer);
   };
 
   public shared ({ caller }) func setMyRoleDriver() : async () {
-    if (isAnonymous(caller)) {
-      Runtime.trap("Unauthorized: Anonymous callers cannot change role");
-    };
-    updateCurrentRoleSecure(caller, ?#driver);
+    requireAuthenticated(caller);
+    updateCurrentRoleSecure(caller, #driver);
   };
 
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (isAnonymous(caller)) {
-      Runtime.trap("Unauthorized: Anonymous callers cannot access profiles");
-    };
+    requireAuthenticated(caller);
     switch (userProfiles.get(caller)) {
       case (null) { null };
       case (?profile) { ?profile };
@@ -483,24 +464,9 @@ actor {
   };
 
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
-    if (isAnonymous(caller)) {
-      Runtime.trap("Unauthorized: Anonymous callers cannot access profiles");
-    };
-    if (caller != user and not isPersistentAdmin(caller)) {
-      let callerIsAdmin = switch (userProfiles.get(caller)) {
-        case (?profile) {
-          switch (profile.role) {
-            case (?#admin) { true };
-            case (?#customer) { false };
-            case (?#driver) { false };
-            case (null) { false };
-          };
-        };
-        case (null) { false };
-      };
-      if (not callerIsAdmin) {
-        Runtime.trap("Unauthorized: Can only view your own profile");
-      };
+    requireAuthenticated(caller);
+    if (caller != user and not isAdmin(caller)) {
+      Runtime.trap("Unauthorized: Can only view your own profile");
     };
     switch (userProfiles.get(user)) {
       case (null) { null };
@@ -509,13 +475,11 @@ actor {
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (isAnonymous(caller)) {
-      Runtime.trap("Unauthorized: Anonymous callers cannot save profiles");
-    };
-    let preservedRole : ?Role = switch (userProfiles.get(caller)) {
+    requireAuthenticated(caller);
+    let preservedRole : Role = switch (userProfiles.get(caller)) {
       case (?existingProfile) { existingProfile.role };
       case (null) {
-        if (isPersistentAdmin(caller)) { ?#admin } else { ?#customer };
+        if (isAdmin(caller)) { #admin } else { #customer };
       };
     };
     let safeProfile : UserProfile = {
@@ -531,12 +495,7 @@ actor {
   };
 
   public shared ({ caller }) func createTrip(tripData : TripRequest) : async Trip {
-    if (isAnonymous(caller)) {
-      Runtime.trap("Unauthorized: Anonymous callers cannot create trips");
-    };
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only registered users can create trips");
-    };
+    requireAuthenticated(caller);
 
     let newTrip : Trip = {
       tripId = tripData.tripId;
@@ -559,13 +518,55 @@ actor {
       billableHours = tripData.billableHours;
     };
 
-    // Save the trip in the persistent map
     trips.add(newTrip.tripId, newTrip);
-
     newTrip;
   };
 
-  func updateCurrentRoleSecure(caller : Principal, newRole : ?Role) {
+  public type AcceptTripResult = {
+    #ok : Trip;
+    #tripNotFound;
+    #alreadyAccepted;
+    #offDuty;
+    #unauthorized;
+  };
+
+  public shared ({ caller }) func acceptTrip(tripId : Text) : async AcceptTripResult {
+    requireAuthenticated(caller);
+
+    switch (driverProfiles.get(caller)) {
+      case (null) {
+        return #offDuty;
+      };
+      case (?profile) {
+        if (not profile.isAvailable) {
+          return #offDuty;
+        };
+        switch (trips.get(tripId)) {
+          case (null) {
+            return #tripNotFound;
+          };
+          case (?trip) {
+            switch (trip.status) {
+              case (#requested) {
+                let updatedTrip : Trip = {
+                  trip with
+                  driverId = ?caller;
+                  status = #accepted;
+                };
+                trips.add(tripId, updatedTrip);
+                return #ok(updatedTrip);
+              };
+              case (_) {
+                return #alreadyAccepted;
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+
+  func updateCurrentRoleSecure(caller : Principal, newRole : Role) {
     switch (userProfiles.get(caller)) {
       case (?profile) {
         let updatedProfile : UserProfile = { profile with role = newRole };
@@ -577,26 +578,62 @@ actor {
     };
   };
 
-  // Returns the driver profile for the calling user.
-  // Requires a registered (non-anonymous, non-guest) user.
   public query ({ caller }) func getDriverProfile() : async ?DriverProfile {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only registered users can access driver profiles");
-    };
+    requireAuthenticated(caller);
     driverProfiles.get(caller);
   };
 
-  // Creates or updates the driver profile for the calling user.
-  // Requires a registered (non-anonymous, non-guest) user.
   public shared ({ caller }) func upsertDriverProfile(profile : DriverProfile) : async Bool {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only registered users can create or update driver profiles");
-    };
+    requireAuthenticated(caller);
     driverProfiles.add(caller, profile);
     true;
   };
 
-  public query ({ caller }) func ping() : async Text { "ok" };
+  // Admin-only: list all admins
+  public query ({ caller }) func listAdmins() : async [Principal] {
+    requireAuthenticated(caller);
+    requireAdminCaller(caller);
+    adminPrincipalSet.toArray().map<Text, Principal>(func(p) { Principal.fromText(p) : Principal });
+  };
 
-  public query ({ caller }) func health() : async Text { "ok" };
+  public query ({ caller }) func persistentAdminCheck() : async Bool {
+    requireAuthenticated(caller);
+    isAdmin(caller);
+  };
+
+  // makeMeAdmin is disabled: the admin set is pre-seeded and stable.
+  // Only returns false to avoid breaking existing callers.
+  public shared ({ caller }) func makeMeAdmin() : async Bool {
+    requireAuthenticated(caller);
+    false;
+  };
+
+  public shared ({ caller }) func createUserProfile(profile : ProfileInput) : async UserProfile {
+    requireAuthenticated(caller);
+
+    // Role is determined by admin set membership; never auto-grant admin via this function
+    let role : Role = if (isAdmin(caller)) { #admin } else { #customer };
+
+    let newUser : UserProfile = {
+      principalId = caller;
+      fullName = profile.fullName;
+      email = profile.email;
+      role;
+      createdTime = Time.now();
+      servicePincode = "000000";
+      serviceAreaName = "Unknown";
+      vehicleExperience = [];
+      transmissionComfort = [];
+      isAvailable = false;
+      totalEarnings = 0;
+      languages = null;
+    };
+
+    userProfiles.add(caller, newUser);
+    newUser;
+  };
+
+  public query func ping() : async Text { "ok" };
+
+  public query func health() : async Text { "ok" };
 };

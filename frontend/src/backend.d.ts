@@ -118,6 +118,22 @@ export interface PricingConfig {
     vehicle_multiplier: VehicleMultiplier;
     outstation: OutstationPricing;
 }
+export type AcceptTripResult = {
+    __kind__: "ok";
+    ok: Trip;
+} | {
+    __kind__: "offDuty";
+    offDuty: null;
+} | {
+    __kind__: "tripNotFound";
+    tripNotFound: null;
+} | {
+    __kind__: "unauthorized";
+    unauthorized: null;
+} | {
+    __kind__: "alreadyAccepted";
+    alreadyAccepted: null;
+};
 export interface ProfileInput {
     fullName: string;
     email: string;
@@ -125,7 +141,7 @@ export interface ProfileInput {
 export interface UserProfile {
     serviceAreaName: string;
     servicePincode: string;
-    role?: Role;
+    role: Role;
     vehicleExperience: Array<VehicleExperience>;
     languages?: Array<string>;
     isAvailable: boolean;
@@ -185,17 +201,22 @@ export enum VehicleType {
     hatchback = "hatchback"
 }
 export interface backendInterface {
+    acceptTrip(tripId: string): Promise<AcceptTripResult>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     createTrip(tripData: TripRequest): Promise<Trip>;
+    createUserProfile(profile: ProfileInput): Promise<UserProfile>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getDriverProfile(): Promise<DriverProfile | null>;
-    getMyRole(): Promise<Role | null>;
+    getMyRole(): Promise<Role>;
     getPricingConfig(): Promise<PricingConfig>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     health(): Promise<string>;
-    isAdmin(): Promise<boolean>;
+    isAdminCheck(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
+    listAdmins(): Promise<Array<Principal>>;
+    makeMeAdmin(): Promise<boolean>;
+    persistentAdminCheck(): Promise<boolean>;
     ping(): Promise<string>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     setMyRoleCustomer(): Promise<void>;

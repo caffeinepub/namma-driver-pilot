@@ -1,4 +1,5 @@
-import { useGetRequestedTrips, useAcceptTrip } from '../hooks/useQueries';
+import { useGetAllTrips, useAcceptTrip, useGetDriverProfile } from '../hooks/useQueries';
+import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import type { Trip } from '../lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -45,9 +46,24 @@ function formatDate(timestamp: bigint): string {
   }
 }
 
+function isPending(trip: Trip): boolean {
+  return '#requested' in trip.status;
+}
+
+function hasNoDriver(trip: Trip): boolean {
+  const d = trip.driverId;
+  if (!d) return true;
+  if (Array.isArray(d)) return d.length === 0;
+  return false;
+}
+
 export default function AvailableTripsSection() {
-  const { data: trips, isLoading } = useGetRequestedTrips();
+  const { data: allTrips, isLoading: tripsLoading } = useGetAllTrips();
+  const { data: driverProfile, isLoading: profileLoading } = useGetDriverProfile();
   const acceptTrip = useAcceptTrip();
+  const { identity } = useInternetIdentity();
+
+  const isLoading = tripsLoading || profileLoading;
 
   if (isLoading) {
     return (
@@ -59,7 +75,25 @@ export default function AvailableTripsSection() {
     );
   }
 
-  if (!trips || trips.length === 0) {
+  // If driver is off-duty, show no trips
+  const isOnDuty = driverProfile?.isAvailable === true;
+
+  if (!isOnDuty) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        <Car className="h-10 w-10 mx-auto mb-3 opacity-40" />
+        <p>You are currently Off-Duty.</p>
+        <p className="text-sm mt-1">Go On-Duty to see available trips.</p>
+      </div>
+    );
+  }
+
+  // Filter: pending status AND no driver assigned
+  const availableTrips = (allTrips ?? []).filter(
+    (trip) => isPending(trip) && hasNoDriver(trip)
+  );
+
+  if (availableTrips.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
         <Car className="h-10 w-10 mx-auto mb-3 opacity-40" />
@@ -72,7 +106,7 @@ export default function AvailableTripsSection() {
   return (
     <ScrollArea className="h-[500px]">
       <div className="space-y-3 pr-3">
-        {trips.map((trip) => (
+        {availableTrips.map((trip) => (
           <Card key={trip.tripId} className="border">
             <CardContent className="pt-4 pb-4">
               <div className="flex items-start justify-between gap-4">

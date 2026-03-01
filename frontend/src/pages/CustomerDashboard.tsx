@@ -1,4 +1,5 @@
-import { useGetMyTrips } from '../hooks/useQueries';
+import { useState, useEffect } from 'react';
+import { useGetCustomerTrips } from '../hooks/useQueries';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import RideRequestForm from '../components/RideRequestForm';
 import CustomerTripList from '../components/CustomerTripList';
@@ -6,11 +7,44 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import DataLoadErrorBanner from '../components/DataLoadErrorBanner';
 import { User } from 'lucide-react';
+import type { Trip } from '../lib/types';
 
 export default function CustomerDashboard() {
-  const { data: trips, isLoading, isError } = useGetMyTrips();
   const { identity } = useInternetIdentity();
   const principal = identity?.getPrincipal().toString();
+
+  // Fetch trips from backend filtered by caller's principal
+  const { data: fetchedTrips, isLoading, isError } = useGetCustomerTrips(principal);
+
+  // Local state for optimistic updates — starts with fetched trips
+  const [localTrips, setLocalTrips] = useState<Trip[]>([]);
+
+  // Sync fetched trips into local state whenever the query resolves
+  useEffect(() => {
+    if (fetchedTrips && fetchedTrips.length > 0) {
+      setLocalTrips((prev) => {
+        // Merge: keep optimistic trips not yet in fetched list, then add fetched
+        const fetchedIds = new Set(fetchedTrips.map((t) => t.tripId));
+        const optimisticOnly = prev.filter((t) => !fetchedIds.has(t.tripId));
+        return [...fetchedTrips, ...optimisticOnly];
+      });
+    }
+  }, [fetchedTrips]);
+
+  /**
+   * Called by RideRequestForm after a successful booking.
+   * Immediately prepends the new trip to the local list (optimistic update).
+   */
+  const handleTripCreated = (newTrip: Trip) => {
+    setLocalTrips((prev) => {
+      // Avoid duplicates if the query already returned this trip
+      if (prev.some((t) => t.tripId === newTrip.tripId)) return prev;
+      return [newTrip, ...prev];
+    });
+  };
+
+  // Display trips: prefer local state (includes optimistic), fall back to fetched
+  const displayTrips = localTrips.length > 0 ? localTrips : (fetchedTrips ?? []);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -48,7 +82,7 @@ export default function CustomerDashboard() {
             <CardDescription>Enter your pickup and dropoff locations</CardDescription>
           </CardHeader>
           <CardContent>
-            <RideRequestForm />
+            <RideRequestForm onTripCreated={handleTripCreated} />
           </CardContent>
         </Card>
 
@@ -57,11 +91,13 @@ export default function CustomerDashboard() {
           <CardHeader>
             <CardTitle>My Trips</CardTitle>
             <CardDescription>
-              {isLoading ? 'Loading...' : `${trips?.length || 0} trip${trips?.length !== 1 ? 's' : ''}`}
+              {isLoading
+                ? 'Loading...'
+                : `${displayTrips.length} trip${displayTrips.length !== 1 ? 's' : ''}`}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <CustomerTripList />
+            <CustomerTripList trips={displayTrips} isLoading={isLoading} />
           </CardContent>
         </Card>
       </div>

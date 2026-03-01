@@ -1,67 +1,72 @@
 {
   "kind": "build_request",
-  "title": "Restore Customer and Driver trip history UI",
+  "title": "Backend-only admin role recovery with seeded stable principals",
   "projectName": "Namma Driver Pilot",
-  "priority": "normal",
+  "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Restore the 'My Trips' section in the Customer Dashboard. Display a list of trips where trip.customerPrincipal == caller, showing status (pending/assigned/confirmed/completed/cancelled), pickup/dropoff locations, vehicle type, fare, and timestamps. After a new booking is submitted, the trip must appear in the list immediately without a hard refresh.",
-      "target": "frontend",
+      "text": "Replace the current admin principals set in backend/main.mo with a stable set seeded with BOTH of the following principals: '6ngnc-ph7ou-g23nw-z2zbr-czprs-ohpe6-2wolp-eeo7o-c32lo-deiso-yqe' and 'g3c77-j7yp6-ydsrd-2zp2q-vajyd-4ymec-tydvo-kcxwl-s7reg-37yws-eae'. The set must be declared as a stable variable so it persists across upgrades.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-admin-recovery"
         ],
         "quotes": [
-          "Add back 'My Trips' section.",
-          "Show list of trips created by caller (filter where trip.customerPrincipal == caller).",
-          "After booking, trip must appear immediately in My Trips without hard refresh."
+          "Replace the current admin principals set with a stable set seeded with BOTH: 6ngnc-ph7ou-g23nw-z2zbr-czprs-ohpe6-2wolp-eeo7o-c32lo-deiso-yqe and g3c77-j7yp6-ydsrd-2zp2q-vajyd-4ymec-tydvo-kcxwl-s7reg-37yws-eae"
         ]
       },
       "acceptanceCriteria": [
-        "Customer Dashboard displays a 'My Trips' section",
-        "Only trips where customerPrincipal matches the caller are shown",
-        "Each trip shows status, pickup/dropoff locations, vehicle type, fare, and timestamps",
-        "After booking a trip, it appears in My Trips immediately without a hard refresh",
-        "Status badge reflects current trip status (pending/assigned/confirmed/completed/cancelled)"
+        "The stable admin principals set contains exactly the two specified principals after deployment.",
+        "The set persists across canister upgrades."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Restore the 'My Trips' tab in the Driver Dashboard alongside the existing 'Available Trips' tab. 'My Trips' shows trips where trip.driverPrincipal == caller. 'Available Trips' shows only trips with no driver assigned. Remove the 'coming soon' placeholder text.",
-      "target": "frontend",
+      "text": "Update the isAdmin(caller) function in backend/main.mo to return true if and only if the caller's principal is present in the stable admin principals set.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-admin-recovery"
         ],
         "quotes": [
-          "Add back 'My Trips' tab next to 'Available Trips'.",
-          "Driver My Trips shows trips where trip.driverPrincipal == caller.",
-          "Available Trips shows only trips with no driver assigned.",
-          "Remove placeholder 'coming soon'."
+          "isAdmin(caller) must return true if caller is in that set."
         ]
       },
       "acceptanceCriteria": [
-        "Driver Dashboard shows two tabs: 'Available Trips' and 'My Trips'",
-        "'My Trips' tab displays trips where driverPrincipal matches the caller",
-        "'Available Trips' tab displays only trips with no driver assigned",
-        "No 'coming soon' placeholder text is visible in the Driver Dashboard",
-        "Both tabs render trip details (locations, status, fare, timestamps)"
+        "Calling isAdmin() with either seeded principal returns true.",
+        "Calling isAdmin() with any other principal returns false."
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "Update the getMyRole() function in backend/main.mo so that if isAdmin(caller) is true, it returns #admin regardless of the stored user role. Otherwise, it returns the stored user role as before.",
+      "target": "backend",
+      "source": {
+        "messageIds": [
+          "msg-admin-recovery"
+        ],
+        "quotes": [
+          "getMyRole() must: return #admin if isAdmin(caller) == true, otherwise return stored user role"
+        ]
+      },
+      "acceptanceCriteria": [
+        "When called by either seeded admin principal, getMyRole() returns #admin.",
+        "When called by a non-admin principal, getMyRole() returns the principal's stored role.",
+        "No changes are made to trip schema, pricing, driver logic, customer logic, or any frontend files."
       ]
     }
   ],
   "constraints": [
-    "Do not modify the backend schema or any Motoko data types",
-    "Do not change pricing logic or pricing configuration",
-    "Do not change driver profile persistence or the EditDriverProfileForm/EditDriverProfileModal components",
-    "Do not modify the Admin Trips page (AdminTripsTab.tsx)",
-    "Only reconnect the frontend UI to existing backend trip storage — no new backend methods"
+    "Do NOT modify the trip schema.",
+    "Do NOT modify pricing logic.",
+    "Do NOT modify driver logic.",
+    "Do NOT modify customer logic.",
+    "Do NOT modify any frontend files or dashboard UI."
   ],
   "nonGoals": [
-    "Adding new backend endpoints or modifying existing ones",
-    "Changing admin dashboard functionality",
-    "Modifying pricing configuration UI",
-    "Altering driver profile edit or save behavior"
+    "Adding or removing any other admin principals beyond the two specified.",
+    "Changes to trip management, pricing configuration, driver/customer flows, or any UI components."
   ],
   "imageRequirements": {
     "required": [],

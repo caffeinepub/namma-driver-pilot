@@ -1,4 +1,5 @@
-import { useGetMyTrips, useCompleteTrip } from '../hooks/useQueries';
+import { useGetAllTrips, useCompleteTrip } from '../hooks/useQueries';
+import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import type { Trip } from '../lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -124,7 +125,10 @@ function TripCard({ trip, showComplete }: TripCardProps) {
 }
 
 export default function DriverTripList() {
-  const { data: trips, isLoading } = useGetMyTrips();
+  const { data: allTrips, isLoading } = useGetAllTrips();
+  const { identity } = useInternetIdentity();
+
+  const callerPrincipal = identity?.getPrincipal().toString();
 
   if (isLoading) {
     return (
@@ -136,7 +140,19 @@ export default function DriverTripList() {
     );
   }
 
-  if (!trips || trips.length === 0) {
+  // Filter trips where driverId matches the current driver's principal.
+  // driverId is typed as [] | [Principal] (Candid optional array).
+  const myTrips = (allTrips ?? []).filter((trip) => {
+    if (!callerPrincipal) return false;
+    const d = trip.driverId;
+    // d is always [] | [Principal] — handle only the array form
+    if (!Array.isArray(d) || d.length === 0) return false;
+    const driverPrincipal = d[0];
+    if (!driverPrincipal) return false;
+    return driverPrincipal.toString() === callerPrincipal;
+  });
+
+  if (myTrips.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
         <p>No trips yet.</p>
@@ -145,11 +161,11 @@ export default function DriverTripList() {
     );
   }
 
-  const currentTrips = trips.filter(isAccepted);
-  const completedTrips = trips.filter(isCompleted).sort((a, b) =>
-    Number(b.createdTime) - Number(a.createdTime)
-  );
-  const otherTrips = trips.filter(isCancelledOrOther);
+  const currentTrips = myTrips.filter(isAccepted);
+  const completedTrips = myTrips
+    .filter(isCompleted)
+    .sort((a, b) => Number(b.createdTime) - Number(a.createdTime));
+  const otherTrips = myTrips.filter(isCancelledOrOther);
 
   return (
     <ScrollArea className="h-[500px]">

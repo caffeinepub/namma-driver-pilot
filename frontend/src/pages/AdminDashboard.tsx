@@ -4,11 +4,10 @@ import { Badge } from '@/components/ui/badge';
 import AdminUsersTab from '../components/AdminUsersTab';
 import AdminTripsTab from '../components/AdminTripsTab';
 import PricingTab from '../components/PricingTab';
-import { useGetAllUsers, useGetAllTrips } from '../hooks/useQueries';
+import { useGetAllUsers, useGetAllTrips, useGetMyRole } from '../hooks/useQueries';
 import { useGetCallerUserProfile } from '../hooks/useGetCallerUserProfile';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { ShieldCheck, User, Hash, Settings2 } from 'lucide-react';
-import { getRoleString } from '../lib/types';
 import DataLoadErrorBanner from '../components/DataLoadErrorBanner';
 
 export default function AdminDashboard() {
@@ -16,9 +15,14 @@ export default function AdminDashboard() {
   const { data: trips, isLoading: loadingTrips, isError: tripsError } = useGetAllTrips();
   const { data: userProfile, isError: profileError } = useGetCallerUserProfile();
   const { identity } = useInternetIdentity();
+  const { role: myRole } = useGetMyRole();
 
   const principalId = identity?.getPrincipal().toString() ?? '—';
-  const roleLabel = userProfile ? (getRoleString(userProfile.role) ?? '—') : '—';
+
+  // Derive role label from getMyRole() result, not from userProfile.role
+  const roleLabel = myRole
+    ? myRole.charAt(0).toUpperCase() + myRole.slice(1)
+    : '—';
 
   const hasDataError = usersError || tripsError || profileError;
 

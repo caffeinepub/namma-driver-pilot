@@ -1,51 +1,48 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-03-01T11:01:22.047Z",
+  "generatedAt": "2026-03-01T16:00:42.541Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 2,
-    "implemented": 2,
+    "total": 3,
+    "implemented": 0,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Restore the 'My Trips' section in the Customer Dashboard. Display a list of trips where trip.customerPrincipal == caller, showing status (pending/assigned/confirmed/completed/cancelled), pickup/dropoff locations, vehicle type, fare, and timestamps. After a new booking is submitted, the trip must appear in the list immediately without a hard refresh.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/pages/CustomerDashboard.tsx",
-          "frontend/src/components/CustomerTripList.tsx",
-          "frontend/src/hooks/useQueries.ts"
-        ],
-        "matchedFiles": [
-          "frontend/src/pages/CustomerDashboard.tsx"
-        ]
+        "summary": "Replace the current admin principals set in backend/main.mo with a stable set seeded with BOTH of the following principals: '6ngnc-ph7ou-g23nw-z2zbr-czprs-ohpe6-2wolp-eeo7o-c32lo-deiso-yqe' and 'g3c77-j7yp6-ydsrd-2zp2q-vajyd-4ymec-tydvo-kcxwl-s7reg-37yws-eae'. The set must be declared as a stable variable so it persists across upgrades.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
       },
       {
         "id": "REQ-2",
-        "summary": "Restore the 'My Trips' tab in the Driver Dashboard alongside the existing 'Available Trips' tab. 'My Trips' shows trips where trip.driverPrincipal == caller. 'Available Trips' shows only trips with no driver assigned. Remove the 'coming soon' placeholder text.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/pages/DriverDashboard.tsx",
-          "frontend/src/components/DriverTripList.tsx",
-          "frontend/src/components/AvailableTripsSection.tsx",
-          "frontend/src/hooks/useQueries.ts"
-        ],
-        "matchedFiles": [
-          "frontend/src/pages/DriverDashboard.tsx"
-        ]
+        "summary": "Update the isAdmin(caller) function in backend/main.mo to return true if and only if the caller's principal is present in the stable admin principals set.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-3",
+        "summary": "Update the getMyRole() function in backend/main.mo so that if isAdmin(caller) is true, it returns #admin regardless of the stored user role. Otherwise, it returns the stored user role as before.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
       }
     ]
   },
   "changedFiles": [
+    "backend/main.mo",
+    "backend/migration.mo",
     "build-request.json",
     "feature_evidence.json",
-    "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/pages/CustomerDashboard.tsx",
-    "frontend/src/pages/DriverDashboard.tsx",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

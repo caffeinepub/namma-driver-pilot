@@ -10,6 +10,11 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export type AcceptTripResult = { 'ok' : Trip } |
+  { 'offDuty' : null } |
+  { 'tripNotFound' : null } |
+  { 'unauthorized' : null } |
+  { 'alreadyAccepted' : null };
 export interface Commission { 'local' : number, 'outstation' : number }
 export interface DriverProfile {
   'serviceAreaName' : string,
@@ -130,7 +135,7 @@ export type UpdateConfigResult = { 'ok' : PricingConfig } |
 export interface UserProfile {
   'serviceAreaName' : string,
   'servicePincode' : string,
-  'role' : [] | [Role],
+  'role' : Role,
   'vehicleExperience' : Array<VehicleExperience>,
   'languages' : [] | [Array<string>],
   'isAvailable' : boolean,
@@ -160,17 +165,22 @@ export type VehicleType = { 'suv' : null } |
   { 'hatchback' : null };
 export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
+  'acceptTrip' : ActorMethod<[string], AcceptTripResult>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'createTrip' : ActorMethod<[TripRequest], Trip>,
+  'createUserProfile' : ActorMethod<[ProfileInput], UserProfile>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getDriverProfile' : ActorMethod<[], [] | [DriverProfile]>,
-  'getMyRole' : ActorMethod<[], [] | [Role]>,
+  'getMyRole' : ActorMethod<[], Role>,
   'getPricingConfig' : ActorMethod<[], PricingConfig>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'health' : ActorMethod<[], string>,
-  'isAdmin' : ActorMethod<[], boolean>,
+  'isAdminCheck' : ActorMethod<[], boolean>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'listAdmins' : ActorMethod<[], Array<Principal>>,
+  'makeMeAdmin' : ActorMethod<[], boolean>,
+  'persistentAdminCheck' : ActorMethod<[], boolean>,
   'ping' : ActorMethod<[], string>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'setMyRoleCustomer' : ActorMethod<[], undefined>,

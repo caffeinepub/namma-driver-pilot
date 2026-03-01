@@ -5,13 +5,24 @@ import { useGetMyRole } from '../hooks/useQueries';
 import { useBackendHealth } from '../hooks/useBackendHealth';
 import { Car, LogOut, LayoutDashboard, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+
+/**
+ * Returns a display label for the role string.
+ * role is already normalized to 'admin' | 'driver' | 'customer' | null by useGetMyRole.
+ */
+function getRoleLabel(role: string | null): string | null {
+  if (!role) return null;
+  // Capitalize first letter for display
+  return role.charAt(0).toUpperCase() + role.slice(1);
+}
 
 export default function Navigation() {
   const { identity, clear } = useInternetIdentity();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const isAuthenticated = !!identity;
-  const { role } = useGetMyRole();
+  const { role, isFetched: roleFetched } = useGetMyRole();
   const { isHealthy, isChecking } = useBackendHealth();
 
   const handleLogout = async () => {
@@ -28,6 +39,8 @@ export default function Navigation() {
   };
 
   const dashboardLink = getDashboardLink();
+  // Only show role label when authenticated, role is fetched, and role is a non-empty string
+  const roleLabel = isAuthenticated && roleFetched && role ? getRoleLabel(role) : null;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -60,6 +73,16 @@ export default function Navigation() {
               />
               {isChecking ? 'Backend: Checking…' : isHealthy ? 'Backend: Connected' : 'Backend: Disconnected'}
             </span>
+          )}
+
+          {/* Role label badge — only shown when authenticated and role is a non-empty string */}
+          {isAuthenticated && roleLabel && (
+            <Badge
+              variant={role === 'admin' ? 'default' : 'secondary'}
+              className="hidden sm:inline-flex capitalize text-xs"
+            >
+              {roleLabel}
+            </Badge>
           )}
 
           {isAuthenticated && dashboardLink && (

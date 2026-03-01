@@ -1,43 +1,4 @@
 {
   "kind": "feature_evidence_report",
-  "features": [
-    {
-      "featureId": "feature-restore-the-my-trips-section-in-the-customer-dashboard-display-a-list-of-trips-where-trip-customerprincipal-caller-showing-status-pending-assigned-confirmed-completed-cancelled-pickup-dropoff-locations-vehicle-type-fare-and-timestamps-after-a-new-booking-is-submitted-the-trip-must-appear-in-the-list-immediately-without-a-hard-refresh",
-      "featureTitle": "Restore the 'My Trips' section in the Customer Dashboard. Display a list of trips where trip.customerPrincipal == caller, showing status (pending/assigned/confirmed/completed/cancelled), pickup/dropoff locations, vehicle type, fare, and timestamps. After a new booking is submitted, the trip must appear in the list immediately without a hard refresh.",
-      "files": [
-        "frontend/src/pages/CustomerDashboard.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-1"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-restore-the-my-trips-tab-in-the-driver-dashboard-alongside-the-existing-available-trips-tab-my-trips-shows-trips-where-trip-driverprincipal-caller-available-trips-shows-only-trips-with-no-driver-assigned-remove-the-coming-soon-placeholder-text",
-      "featureTitle": "Restore the 'My Trips' tab in the Driver Dashboard alongside the existing 'Available Trips' tab. 'My Trips' shows trips where trip.driverPrincipal == caller. 'Available Trips' shows only trips with no driver assigned. Remove the 'coming soon' placeholder text.",
-      "files": [
-        "frontend/src/pages/DriverDashboard.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-2"
-      ],
-      "confidence": "high"
-    }
-  ]
+  "features": []
 }
