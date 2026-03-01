@@ -1,46 +1,27 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-25T01:25:15.578Z",
+  "generatedAt": "2026-03-01T06:57:56.277Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 3,
-    "implemented": 3,
+    "total": 1,
+    "implemented": 1,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "In RideRequestForm.tsx, fix pickup manual field visibility so that Pickup Pincode and Pickup Area Name inputs are shown if and only if pickupLocationMode === 'manual', and hidden if pickupLocationMode === 'gps'. This visibility rule must be completely independent of journeyType — do not gate these fields on trip type or journey type in any way.",
+        "summary": "In the frontend role submission logic, convert the plain string role value to the correct Candid opt variant format before sending to the backend. Specifically: map \"customer\" → [{ customer: null }], \"driver\" → [{ driver: null }], and \"admin\" → [{ admin: null }]. This conversion must be applied wherever a role is submitted to the backend (e.g., useQueries.ts updateRole mutation, SelectRolePage.tsx, RoleSelectionWarningModal.tsx).",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/RideRequestForm.tsx"
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/pages/SelectRolePage.tsx",
+          "frontend/src/components/RoleSelectionWarningModal.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/components/RideRequestForm.tsx"
-        ]
-      },
-      {
-        "id": "REQ-2",
-        "summary": "In RideRequestForm.tsx, fix drop field visibility so that: (a) when journeyType === 'oneway', Drop Pincode and Drop Area Name inputs are always shown as required; (b) when journeyType === 'roundtrip', a checkbox/toggle labeled 'Return to same pickup location' is shown (default checked/true). If returnToSamePickup is true, hide Drop Pincode and Drop Area Name and set their UI state values equal to the current pickup values (no backend schema change). If returnToSamePickup is false, show Drop Pincode and Drop Area Name as required. Drop field visibility must never depend on pickupLocationMode.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/components/RideRequestForm.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/components/RideRequestForm.tsx"
-        ]
-      },
-      {
-        "id": "REQ-3",
-        "summary": "In RideRequestForm.tsx, in the existing GPS capture error/failure handler (do not rebuild GPS logic), ensure that when geolocation permission is denied or the geolocation API call fails, pickupLocationMode is set to 'manual'. This causes the pickup manual fields to re-appear automatically via the rule in REQ-1.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/components/RideRequestForm.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/components/RideRequestForm.tsx"
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/components/RoleSelectionWarningModal.tsx"
         ]
       }
     ]
@@ -50,7 +31,8 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/components/RideRequestForm.tsx",
+    "frontend/src/components/RoleSelectionWarningModal.tsx",
+    "frontend/src/hooks/useQueries.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

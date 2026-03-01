@@ -1,151 +1,91 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useUpdateUserRole } from '../hooks/useQueries';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { useSetMyRole, useCheckIsAdmin } from '../hooks/useQueries';
+import type { AppRole } from '../lib/types';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { AlertCircle, Users, Car, ShieldCheck, ArrowLeft } from 'lucide-react';
-import { toast } from 'sonner';
-import { AppRole } from '../backend';
+import { Loader2, Car, User } from 'lucide-react';
 
-const ADMIN_SETUP_CODE = 'NAMMA5600';
+interface RoleSelectionWarningModalProps {
+  open: boolean;
+  onClose: () => void;
+}
 
-export default function RoleSelectionWarningModal() {
-  const [showAdminInput, setShowAdminInput] = useState(false);
-  const [adminCode, setAdminCode] = useState('');
-  const [adminCodeError, setAdminCodeError] = useState('');
-  const updateRoleMutation = useUpdateUserRole();
+export default function RoleSelectionWarningModal({ open, onClose }: RoleSelectionWarningModalProps) {
   const navigate = useNavigate();
+  const setMyRole = useSetMyRole();
+  const { isAdmin } = useCheckIsAdmin();
+
+  useEffect(() => {
+    if (isAdmin) {
+      navigate({ to: '/admin/dashboard' });
+    }
+  }, [isAdmin, navigate]);
+
+  if (isAdmin) return null;
 
   const handleSelectRole = async (role: AppRole) => {
+    if (role === 'admin') return;
     try {
-      await updateRoleMutation.mutateAsync(role);
-      toast.success(`Role set to ${role} successfully!`);
-      if (role === AppRole.customer) {
+      await setMyRole.mutateAsync(role as 'customer' | 'driver');
+      if (role === 'customer') {
         navigate({ to: '/customer/dashboard' });
-      } else if (role === AppRole.driver) {
+      } else if (role === 'driver') {
         navigate({ to: '/driver/dashboard' });
-      } else if (role === AppRole.admin) {
-        navigate({ to: '/admin/dashboard' });
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to set role');
+      onClose();
+    } catch (err) {
+      // error handled silently; user can retry
     }
   };
-
-  const handleAdminSubmit = async () => {
-    setAdminCodeError('');
-    if (adminCode !== ADMIN_SETUP_CODE) {
-      setAdminCodeError('Invalid admin setup code');
-      return;
-    }
-    await handleSelectRole(AppRole.admin);
-  };
-
-  const isPending = updateRoleMutation.isPending;
 
   return (
-    <Dialog open={true}>
-      <DialogContent
-        className="sm:max-w-md"
-        onInteractOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
-      >
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="flex items-center gap-2 text-destructive mb-2">
-            <AlertCircle className="h-5 w-5" />
-            <DialogTitle>Choose Your Role</DialogTitle>
-          </div>
-          <DialogDescription className="text-base">
-            {showAdminInput
-              ? 'Enter the admin setup code to continue as Admin.'
-              : 'Select your role carefully — it cannot be changed later.'}
+          <DialogTitle>Choose Your Role</DialogTitle>
+          <DialogDescription>
+            Select how you want to use the platform. This cannot be changed later.
           </DialogDescription>
         </DialogHeader>
-
-        {!showAdminInput ? (
-          <DialogFooter className="flex-col sm:flex-col gap-3 pt-4">
-            <Button
-              onClick={() => handleSelectRole(AppRole.customer)}
-              disabled={isPending}
-              className="w-full"
-              size="lg"
-            >
-              <Users className="mr-2 h-4 w-4" />
-              {isPending && updateRoleMutation.variables === AppRole.customer
-                ? 'Setting up...'
-                : 'Continue as Customer'}
-            </Button>
-            <Button
-              onClick={() => handleSelectRole(AppRole.driver)}
-              disabled={isPending}
-              variant="outline"
-              className="w-full"
-              size="lg"
-            >
-              <Car className="mr-2 h-4 w-4" />
-              {isPending && updateRoleMutation.variables === AppRole.driver
-                ? 'Setting up...'
-                : 'Continue as Driver'}
-            </Button>
-            <Button
-              onClick={() => setShowAdminInput(true)}
-              disabled={isPending}
-              variant="ghost"
-              className="w-full text-muted-foreground"
-              size="lg"
-            >
-              <ShieldCheck className="mr-2 h-4 w-4" />
-              Setup Admin
-            </Button>
-          </DialogFooter>
-        ) : (
-          <div className="space-y-4 pt-2">
-            <div className="space-y-2">
-              <Label htmlFor="adminCode">Admin Setup Code</Label>
-              <Input
-                id="adminCode"
-                type="password"
-                placeholder="Enter setup code"
-                value={adminCode}
-                onChange={(e) => {
-                  setAdminCode(e.target.value);
-                  setAdminCodeError('');
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleAdminSubmit();
-                }}
-                autoFocus
-              />
-              {adminCodeError && (
-                <p className="text-sm text-destructive">{adminCodeError}</p>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setShowAdminInput(false);
-                  setAdminCode('');
-                  setAdminCodeError('');
-                }}
-                disabled={isPending}
-                className="flex-1"
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
-              <Button
-                onClick={handleAdminSubmit}
-                disabled={isPending || !adminCode}
-                className="flex-1"
-              >
-                {isPending ? 'Setting up...' : 'Confirm Admin'}
-              </Button>
-            </div>
+        <div className="grid grid-cols-2 gap-4 my-4">
+          <button
+            onClick={() => handleSelectRole('customer')}
+            disabled={setMyRole.isPending}
+            className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all disabled:opacity-50"
+          >
+            <User className="h-8 w-8 text-primary" />
+            <span className="font-semibold">Customer</span>
+            <span className="text-xs text-muted-foreground text-center">Book rides and manage trips</span>
+          </button>
+          <button
+            onClick={() => handleSelectRole('driver')}
+            disabled={setMyRole.isPending}
+            className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all disabled:opacity-50"
+          >
+            <Car className="h-8 w-8 text-primary" />
+            <span className="font-semibold">Driver</span>
+            <span className="text-xs text-muted-foreground text-center">Accept trips and earn</span>
+          </button>
+        </div>
+        {setMyRole.isPending && (
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Setting up your account…
           </div>
         )}
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={setMyRole.isPending}>
+            Cancel
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

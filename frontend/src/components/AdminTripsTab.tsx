@@ -1,78 +1,99 @@
-import { useGetAllTrips, useGetAllUsers } from '../hooks/useQueries';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useState } from 'react';
+import { useGetAllTrips } from '../hooks/useQueries';
+import type { Trip } from '../lib/types';
 import { Input } from '@/components/ui/input';
-import { useState, useMemo } from 'react';
-import { TripStatus } from '../backend';
-import type { Location } from '../backend';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Search } from 'lucide-react';
 
-const statusColors: Record<TripStatus, string> = {
-  requested: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
-  accepted: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
-  completed: 'bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-500/20',
-  cancelled: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20',
-};
+function getStatusLabel(trip: Trip): string {
+  const s = trip.status;
+  if ('#requested' in s) return 'Requested';
+  if ('#accepted' in s) return 'Accepted';
+  if ('#completed' in s) return 'Completed';
+  if ('#cancelled' in s) return 'Cancelled';
+  return 'Unknown';
+}
 
-const statusLabels: Record<TripStatus, string> = {
-  requested: 'Pending',
-  accepted: 'Accepted',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-};
+function getStatusVariant(trip: Trip): 'default' | 'secondary' | 'outline' | 'destructive' {
+  const s = trip.status;
+  if ('#completed' in s) return 'default';
+  if ('#accepted' in s) return 'secondary';
+  if ('#cancelled' in s) return 'destructive';
+  return 'outline';
+}
 
-function formatLocation(location: Location | undefined): string {
-  if (!location) return 'N/A';
-  return `${location.area}, ${location.pincode}`;
+function formatLocation(loc: Trip['pickupLocation']): string {
+  const parts = [loc.area, loc.pincode].filter(Boolean);
+  return parts.join(', ') || '—';
+}
+
+function formatDropoff(loc: Trip['dropoffLocation']): string {
+  if (!loc || loc.length === 0) return '—';
+  const l = loc[0];
+  if (!l) return '—';
+  const parts = [l.area, l.pincode].filter(Boolean);
+  return parts.join(', ') || '—';
+}
+
+function formatDate(timestamp: bigint): string {
+  try {
+    const ms = Number(timestamp) / 1_000_000;
+    return new Date(ms).toLocaleString();
+  } catch {
+    return '—';
+  }
+}
+
+function formatFare(fare: bigint): string {
+  const n = Number(fare);
+  if (n === 0) return '—';
+  return `₹${n}`;
 }
 
 export default function AdminTripsTab() {
-  const { data: trips, isLoading: loadingTrips } = useGetAllTrips();
-  const { data: users } = useGetAllUsers();
-  const [searchTerm, setSearchTerm] = useState('');
+  const { data: trips, isLoading } = useGetAllTrips();
+  const [search, setSearch] = useState('');
 
-  // Create a map of principal to user for quick lookup
-  const userMap = useMemo(() => {
-    const map = new Map<string, { email: string; fullName: string }>();
-    users?.forEach((user) => {
-      map.set(user.principalId.toString(), { email: user.email, fullName: user.fullName });
-    });
-    return map;
-  }, [users]);
-
-  const filteredTrips = trips?.filter(
-    (trip) =>
-      trip.pickupLocation.area.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trip.pickupLocation.pincode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (trip.dropoffLocation && trip.dropoffLocation.area.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (trip.dropoffLocation && trip.dropoffLocation.pincode.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      trip.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      statusLabels[trip.status].toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  if (loadingTrips) {
+  const filtered = (trips ?? []).filter((t) => {
+    const q = search.toLowerCase();
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      t.tripId.toLowerCase().includes(q) ||
+      t.pickupLocation.area.toLowerCase().includes(q) ||
+      (t.dropoffLocation.length > 0 && t.dropoffLocation[0]?.area.toLowerCase().includes(q))
+    );
+  });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-12 w-full" />
+        ))}
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search by location or status..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
+          placeholder="Search by trip ID or location…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
         />
-        <p className="text-sm text-muted-foreground">
-          Total: {filteredTrips?.length || 0} trip{filteredTrips?.length !== 1 ? 's' : ''}
-        </p>
       </div>
-
-      <ScrollArea className="h-[500px] rounded-md border">
+      <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -82,52 +103,44 @@ export default function AdminTripsTab() {
               <TableHead>Dropoff</TableHead>
               <TableHead>Time</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Fare (₹)</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredTrips && filteredTrips.length > 0 ? (
-              filteredTrips.map((trip) => {
-                const customer = userMap.get(trip.customerId.toString());
-                const driver = trip.driverId ? userMap.get(trip.driverId.toString()) : null;
-
-                return (
-                  <TableRow key={trip.tripId}>
-                    <TableCell className="font-medium">
-                      {customer?.email || 'Unknown'}
-                    </TableCell>
-                    <TableCell>
-                      {driver
-                        ? driver.email
-                        : <span className="text-muted-foreground text-xs">Not assigned</span>
-                      }
-                    </TableCell>
-                    <TableCell className="max-w-[140px] truncate">
-                      {formatLocation(trip.pickupLocation)}
-                    </TableCell>
-                    <TableCell className="max-w-[140px] truncate">
-                      {formatLocation(trip.dropoffLocation)}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground whitespace-nowrap">
-                      {new Date(Number(trip.createdTime) / 1000000).toLocaleString()}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={statusColors[trip.status]}>
-                        {statusLabels[trip.status]}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            ) : (
+            {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
-                  No trips found
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  {search ? 'No trips match your search.' : 'No trips found.'}
                 </TableCell>
               </TableRow>
+            ) : (
+              filtered.map((trip) => (
+                <TableRow key={trip.tripId}>
+                  <TableCell className="font-mono text-xs">
+                    {trip.customerId.toString().slice(0, 8)}…
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {trip.driverId.length > 0 && trip.driverId[0]
+                      ? `${trip.driverId[0].toString().slice(0, 8)}…`
+                      : '—'}
+                  </TableCell>
+                  <TableCell>{formatLocation(trip.pickupLocation)}</TableCell>
+                  <TableCell>{formatDropoff(trip.dropoffLocation)}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatDate(trip.createdTime)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={getStatusVariant(trip)}>
+                      {getStatusLabel(trip)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{formatFare(trip.totalFare)}</TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

@@ -3,21 +3,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import AdminUsersTab from '../components/AdminUsersTab';
 import AdminTripsTab from '../components/AdminTripsTab';
+import PricingTab from '../components/PricingTab';
 import { useGetAllUsers, useGetAllTrips } from '../hooks/useQueries';
 import { useGetCallerUserProfile } from '../hooks/useGetCallerUserProfile';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { ShieldCheck, User, Hash } from 'lucide-react';
+import { ShieldCheck, User, Hash, Settings2 } from 'lucide-react';
+import { getRoleString } from '../lib/types';
+import DataLoadErrorBanner from '../components/DataLoadErrorBanner';
 
 export default function AdminDashboard() {
-  const { data: users, isLoading: loadingUsers } = useGetAllUsers();
-  const { data: trips, isLoading: loadingTrips } = useGetAllTrips();
-  const { data: userProfile } = useGetCallerUserProfile();
+  const { data: users, isLoading: loadingUsers, isError: usersError } = useGetAllUsers();
+  const { data: trips, isLoading: loadingTrips, isError: tripsError } = useGetAllTrips();
+  const { data: userProfile, isError: profileError } = useGetCallerUserProfile();
   const { identity } = useInternetIdentity();
 
   const principalId = identity?.getPrincipal().toString() ?? '—';
+  const roleLabel = userProfile ? (getRoleString(userProfile.role) ?? '—') : '—';
+
+  const hasDataError = usersError || tripsError || profileError;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
+      {/* Data load error banner */}
+      {hasDataError && <DataLoadErrorBanner />}
+
       {/* Header */}
       <div className="mb-8 flex items-start gap-4">
         <div className="flex items-center justify-center w-12 h-12 bg-primary/10 rounded-lg shrink-0">
@@ -50,7 +59,7 @@ export default function AdminDashboard() {
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Role</p>
               <Badge variant="outline" className="capitalize">
-                {userProfile?.role ?? '—'}
+                {roleLabel}
               </Badge>
             </div>
             <div className="space-y-1">
@@ -81,12 +90,16 @@ export default function AdminDashboard() {
 
       {/* Tabs */}
       <Tabs defaultValue="trips" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-lg grid-cols-3">
           <TabsTrigger value="trips">
             Trips {!loadingTrips && `(${trips?.length || 0})`}
           </TabsTrigger>
           <TabsTrigger value="users">
             Users {!loadingUsers && `(${users?.length || 0})`}
+          </TabsTrigger>
+          <TabsTrigger value="pricing" className="flex items-center gap-1.5">
+            <Settings2 className="h-3.5 w-3.5" />
+            Pricing
           </TabsTrigger>
         </TabsList>
 
@@ -110,6 +123,23 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <AdminUsersTab />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pricing" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings2 className="h-5 w-5" />
+                Pricing Configuration
+              </CardTitle>
+              <CardDescription>
+                View and edit platform pricing parameters. Changes take effect immediately after saving.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PricingTab />
             </CardContent>
           </Card>
         </TabsContent>

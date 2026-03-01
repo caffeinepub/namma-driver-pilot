@@ -1,19 +1,57 @@
 import { useGetMyTrips } from '../hooks/useQueries';
+import type { Trip } from '../lib/types';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MapPin, Calendar } from 'lucide-react';
-import type { TripStatus, Location } from '../backend';
+import { MapPin, Clock, Car } from 'lucide-react';
 
-const statusColors: Record<TripStatus, string> = {
-  requested: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
-  accepted: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
-  completed: 'bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-500/20',
-  cancelled: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20',
-};
+function getStatusLabel(trip: Trip): string {
+  const s = trip.status;
+  if ('#requested' in s) return 'Pending';
+  if ('#accepted' in s) return 'Accepted';
+  if ('#completed' in s) return 'Completed';
+  if ('#cancelled' in s) return 'Cancelled';
+  return 'Unknown';
+}
 
-function formatLocation(location: Location | undefined): string {
-  if (!location) return 'N/A';
-  return `${location.area}, ${location.pincode}`;
+function getStatusVariant(trip: Trip): 'default' | 'secondary' | 'outline' | 'destructive' {
+  const s = trip.status;
+  if ('#completed' in s) return 'default';
+  if ('#accepted' in s) return 'secondary';
+  if ('#cancelled' in s) return 'destructive';
+  return 'outline';
+}
+
+function formatLocation(loc: Trip['pickupLocation']): string {
+  const parts = [loc.area, loc.pincode].filter(Boolean);
+  return parts.join(', ') || '—';
+}
+
+function formatDropoff(loc: Trip['dropoffLocation']): string {
+  if (!loc || loc.length === 0) return '—';
+  const l = loc[0];
+  if (!l) return '—';
+  const parts = [l.area, l.pincode].filter(Boolean);
+  return parts.join(', ') || '—';
+}
+
+function formatDate(timestamp: bigint): string {
+  try {
+    const ms = Number(timestamp) / 1_000_000;
+    return new Date(ms).toLocaleString();
+  } catch {
+    return '—';
+  }
+}
+
+function getVehicleLabel(trip: Trip): string {
+  const v = trip.vehicleType;
+  if ('#hatchback' in v) return 'Hatchback';
+  if ('#sedan' in v) return 'Sedan';
+  if ('#suv' in v) return 'SUV';
+  if ('#luxury' in v) return 'Luxury';
+  return 'Vehicle';
 }
 
 export default function CustomerTripList() {
@@ -21,51 +59,68 @@ export default function CustomerTripList() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="space-y-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-28 w-full" />
+        ))}
       </div>
     );
   }
 
   if (!trips || trips.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        <p>No trips yet. Request your first ride!</p>
+      <div className="text-center py-12 text-muted-foreground">
+        <Car className="h-10 w-10 mx-auto mb-3 opacity-40" />
+        <p>No trips yet.</p>
+        <p className="text-sm mt-1">Book your first ride to get started.</p>
       </div>
     );
   }
 
   return (
-    <ScrollArea className="h-[400px] pr-4">
-      <div className="space-y-4">
+    <ScrollArea className="h-[500px]">
+      <div className="space-y-3 pr-3">
         {trips.map((trip) => (
-          <div key={trip.tripId} className="border border-border rounded-lg p-4 space-y-3 bg-card">
-            <div className="flex items-start justify-between">
-              <div className="space-y-1 flex-1">
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium">Pickup</p>
-                    <p className="text-sm text-muted-foreground">{formatLocation(trip.pickupLocation)}</p>
+          <Card key={trip.tripId} className="border">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant={getStatusVariant(trip)}>
+                      {getStatusLabel(trip)}
+                    </Badge>
+                    <Badge variant="outline">{getVehicleLabel(trip)}</Badge>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-start gap-2 text-sm">
+                      <MapPin className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                      <div>
+                        <span className="text-muted-foreground text-xs">Pickup: </span>
+                        {formatLocation(trip.pickupLocation)}
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2 text-sm">
+                      <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div>
+                        <span className="text-muted-foreground text-xs">Drop: </span>
+                        {formatDropoff(trip.dropoffLocation)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    {formatDate(trip.createdTime)}
                   </div>
                 </div>
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium">Dropoff</p>
-                    <p className="text-sm text-muted-foreground">{formatLocation(trip.dropoffLocation)}</p>
+                {Number(trip.totalFare) > 0 && (
+                  <div className="text-right shrink-0">
+                    <p className="text-xs text-muted-foreground">Fare</p>
+                    <p className="font-semibold">₹{Number(trip.totalFare)}</p>
                   </div>
-                </div>
+                )}
               </div>
-              <Badge variant="outline" className={statusColors[trip.status]}>
-                {trip.status}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Calendar className="h-3 w-3" />
-              {new Date(Number(trip.createdTime) / 1000000).toLocaleString()}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
     </ScrollArea>

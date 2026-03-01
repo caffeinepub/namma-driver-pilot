@@ -1,77 +1,121 @@
 import { useGetRequestedTrips, useAcceptTrip } from '../hooks/useQueries';
+import type { Trip } from '../lib/types';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MapPin, Calendar } from 'lucide-react';
-import { toast } from 'sonner';
-import type { Location } from '../backend';
+import { MapPin, Clock, Car, Loader2 } from 'lucide-react';
 
-function formatLocation(location: Location | undefined): string {
-  if (!location) return 'N/A';
-  return `${location.area}, ${location.pincode}`;
+function formatLocation(loc: Trip['pickupLocation']): string {
+  const parts = [loc.area, loc.pincode].filter(Boolean);
+  return parts.join(', ') || '—';
+}
+
+function formatDropoff(loc: Trip['dropoffLocation']): string {
+  if (!loc || loc.length === 0) return '—';
+  const l = loc[0];
+  if (!l) return '—';
+  const parts = [l.area, l.pincode].filter(Boolean);
+  return parts.join(', ') || '—';
+}
+
+function getVehicleLabel(trip: Trip): string {
+  const v = trip.vehicleType;
+  if ('#hatchback' in v) return 'Hatchback';
+  if ('#sedan' in v) return 'Sedan';
+  if ('#suv' in v) return 'SUV';
+  if ('#luxury' in v) return 'Luxury';
+  return 'Vehicle';
+}
+
+function getTripTypeLabel(trip: Trip): string {
+  const t = trip.tripType;
+  if ('#local' in t) return 'Local';
+  if ('#outstation' in t) return 'Outstation';
+  return 'Trip';
+}
+
+function formatDate(timestamp: bigint): string {
+  try {
+    const ms = Number(timestamp) / 1_000_000;
+    return new Date(ms).toLocaleString();
+  } catch {
+    return '—';
+  }
 }
 
 export default function AvailableTripsSection() {
   const { data: trips, isLoading } = useGetRequestedTrips();
   const acceptTrip = useAcceptTrip();
 
-  const handleAccept = async (tripId: string) => {
-    try {
-      await acceptTrip.mutateAsync(tripId);
-      toast.success('Trip accepted successfully!');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to accept trip');
-    }
-  };
-
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="space-y-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-32 w-full" />
+        ))}
       </div>
     );
   }
 
   if (!trips || trips.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        <p>No available trips at the moment. Check back soon!</p>
+      <div className="text-center py-12 text-muted-foreground">
+        <Car className="h-10 w-10 mx-auto mb-3 opacity-40" />
+        <p>No available trips right now.</p>
+        <p className="text-sm mt-1">Check back soon for new ride requests.</p>
       </div>
     );
   }
 
   return (
-    <ScrollArea className="h-[500px] pr-4">
-      <div className="space-y-4">
+    <ScrollArea className="h-[500px]">
+      <div className="space-y-3 pr-3">
         {trips.map((trip) => (
-          <div key={trip.tripId} className="border border-border rounded-lg p-4 space-y-3 bg-card">
-            <div className="space-y-2">
-              <div className="flex items-start gap-2">
-                <MapPin className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Pickup</p>
-                  <p className="text-sm text-muted-foreground">{formatLocation(trip.pickupLocation)}</p>
+          <Card key={trip.tripId} className="border">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline">{getTripTypeLabel(trip)}</Badge>
+                    <Badge variant="secondary">{getVehicleLabel(trip)}</Badge>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-start gap-2 text-sm">
+                      <MapPin className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                      <div>
+                        <span className="text-muted-foreground text-xs">Pickup: </span>
+                        {formatLocation(trip.pickupLocation)}
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2 text-sm">
+                      <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div>
+                        <span className="text-muted-foreground text-xs">Drop: </span>
+                        {formatDropoff(trip.dropoffLocation)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    {formatDate(trip.createdTime)}
+                  </div>
                 </div>
+                <Button
+                  size="sm"
+                  onClick={() => acceptTrip.mutate(trip.tripId)}
+                  disabled={acceptTrip.isPending}
+                >
+                  {acceptTrip.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    'Accept'
+                  )}
+                </Button>
               </div>
-              <div className="flex items-start gap-2">
-                <MapPin className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Dropoff</p>
-                  <p className="text-sm text-muted-foreground">{formatLocation(trip.dropoffLocation)}</p>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Calendar className="h-3 w-3" />
-              {new Date(Number(trip.createdTime) / 1000000).toLocaleString()}
-            </div>
-            <Button
-              onClick={() => handleAccept(trip.tripId)}
-              disabled={acceptTrip.isPending}
-              className="w-full"
-            >
-              {acceptTrip.isPending ? 'Accepting...' : 'Accept Trip'}
-            </Button>
-          </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
     </ScrollArea>

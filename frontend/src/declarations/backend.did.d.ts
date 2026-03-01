@@ -13,15 +13,42 @@ import type { Principal } from '@icp-sdk/core/principal';
 export type AppRole = { 'admin' : null } |
   { 'customer' : null } |
   { 'driver' : null };
+export interface Commission { 'local' : number, 'outstation' : number }
 export type Duration = { 'hours' : bigint } |
   { 'days' : bigint };
 export type JourneyType = { 'roundTrip' : null } |
   { 'oneWay' : null };
+export interface LocalPricing {
+  'per_min_after_first_hour' : number,
+  'min_hours' : number,
+  'base_first_hour' : number,
+  'wait_per_min' : number,
+  'free_wait_mins' : number,
+}
 export interface Location {
   'latitude' : [] | [number],
   'area' : string,
   'longitude' : [] | [number],
   'pincode' : string,
+}
+export interface OutstationPricing {
+  'commission_rate' : number,
+  'km_slab_1_limit' : number,
+  'km_slab_2_limit' : number,
+  'min_days' : number,
+  'km_slab_3_limit' : number,
+  'per_km_slab_1' : number,
+  'per_km_slab_2' : number,
+  'per_km_slab_3' : number,
+  'per_km_slab_4' : number,
+  'driver_bata_per_day' : number,
+  'extra_driver_comp_per_100km_over_400' : number,
+}
+export interface PricingConfig {
+  'commission' : Commission,
+  'local' : LocalPricing,
+  'vehicle_multiplier' : VehicleMultiplier,
+  'outstation' : OutstationPricing,
 }
 export type Time = bigint;
 export type TransmissionComfort = { 'ev' : null } |
@@ -35,9 +62,30 @@ export interface Trip {
   'tripType' : TripType,
   'dropoffLocation' : [] | [Location],
   'tripId' : string,
+  'totalFare' : bigint,
   'createdTime' : Time,
   'endDateTime' : [] | [Time],
+  'ratePerHour' : bigint,
+  'billableHours' : bigint,
   'customerId' : Principal,
+  'landmark' : [] | [string],
+  'journeyType' : JourneyType,
+  'phone' : string,
+  'startDateTime' : [] | [Time],
+  'pickupLocation' : Location,
+}
+export interface TripRequest {
+  'driverId' : [] | [Principal],
+  'vehicleType' : VehicleType,
+  'duration' : Duration,
+  'tripType' : TripType,
+  'dropoffLocation' : [] | [Location],
+  'tripId' : string,
+  'totalFare' : bigint,
+  'endDateTime' : [] | [Time],
+  'ratePerHour' : bigint,
+  'billableHours' : bigint,
+  'customerId' : [] | [Principal],
   'landmark' : [] | [string],
   'journeyType' : JourneyType,
   'phone' : string,
@@ -50,6 +98,11 @@ export type TripStatus = { 'requested' : null } |
   { 'accepted' : null };
 export type TripType = { 'local' : null } |
   { 'outstation' : null };
+export type UpdateConfigResult = { 'ok' : PricingConfig } |
+  { 'failedUpdate' : string } |
+  { 'notAdmin' : null } |
+  { 'invalidConfig' : string } |
+  { 'noConfigFound' : null };
 export interface UserProfile {
   'serviceAreaName' : string,
   'servicePincode' : string,
@@ -71,43 +124,36 @@ export type VehicleExperience = { 'suv' : null } |
   { 'sedan' : null } |
   { 'luxury' : null } |
   { 'hatchback' : null };
+export interface VehicleMultiplier {
+  'suv' : number,
+  'sedan' : number,
+  'luxury' : number,
+  'hatchback' : number,
+}
 export type VehicleType = { 'suv' : null } |
   { 'sedan' : null } |
   { 'luxury' : null } |
   { 'hatchback' : null };
 export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
-  'acceptTrip' : ActorMethod<[string], undefined>,
-  'adminAssignRole' : ActorMethod<[Principal, AppRole], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
-  'completeTrip' : ActorMethod<[string], undefined>,
-  'createTrip' : ActorMethod<
-    [
-      TripType,
-      JourneyType,
-      VehicleType,
-      Duration,
-      [] | [Time],
-      [] | [Time],
-      Location,
-      [] | [Location],
-      string,
-      [] | [string],
-    ],
-    string
-  >,
-  'getAllTrips' : ActorMethod<[], Array<Trip>>,
-  'getAllUsers' : ActorMethod<[], Array<UserProfile>>,
+  'createTrip' : ActorMethod<[TripRequest], Trip>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
-  'getMyTrips' : ActorMethod<[], Array<Trip>>,
-  'getRequestedTrips' : ActorMethod<[], Array<Trip>>,
+  'getMyRole' : ActorMethod<[], [] | [AppRole]>,
+  'getPricingConfig' : ActorMethod<[], PricingConfig>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
+  /**
+   * / Returns "ok" as a health check that the backend runs correctly.
+   */
+  'health' : ActorMethod<[], string>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
-  'updateAvailability' : ActorMethod<[boolean], undefined>,
-  'updateUserRole' : ActorMethod<[AppRole], undefined>,
-  'upgradeCurrentUserToAdmin' : ActorMethod<[string], [] | [string]>,
+  'setMyRole' : ActorMethod<
+    [{ 'customer' : null } | { 'driver' : null }],
+    { 'ok' : null }
+  >,
+  'updatePricingConfig' : ActorMethod<[PricingConfig], UpdateConfigResult>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

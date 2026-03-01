@@ -1,54 +1,30 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-25T01:25:15.575Z",
-  "summary": "The diff modifies RideRequestForm.tsx to implement the three required visibility rules. The implementation uses 'locationMode' instead of the specified 'pickupLocationMode', 'returnToPickup' instead of 'returnToSamePickup', and 'oneWay'/'roundTrip' instead of 'oneway'/'roundtrip'. The constraint explicitly requires using existing state variable names pickupLocationMode, journeyType, and returnToSamePickup without renaming them. The core functional logic for all three requirements appears present, but the naming violations are clear from the truncated code.",
+  "generatedAt": "2026-03-01T06:57:56.274Z",
+  "summary": "The diff implements the Candid opt variant encoding fix for role submission. A `convertRoleToVariant` helper is added in `useQueries.ts` that maps 'customer' to { customer: null } and 'driver' to { driver: null }, and this is applied in `useSetMyRole`. The `RoleSelectionWarningModal.tsx` is updated to use `useSetMyRole` which internally applies the conversion. However, the requirement specifies roles must be wrapped in an array to represent the Candid opt type (e.g., [{ customer: null }]), but the helper returns plain variant objects without the array wrapper. Additionally, no changes to `SelectRolePage.tsx` are present in the diff.",
   "missing_requirements": [
     {
       "id": "REQ-1",
-      "requirement": "State variable must be named pickupLocationMode — the build request explicitly constrains: 'Use existing state variable names: pickupLocationMode, journeyType, returnToSamePickup — do not rename them.'",
-      "reason": "The diff declares 'locationMode' as the state variable instead of the required 'pickupLocationMode'.",
+      "requirement": "The role must be wrapped in an array to represent the Candid opt type (e.g., [{ customer: null }]), not just a plain variant object.",
+      "reason": "The `convertRoleToVariant` function returns { customer: null } or { driver: null } as plain objects without an array wrapper. The requirement and acceptance criteria explicitly state the role must be sent as [{ customer: null }] for correct Candid opt encoding.",
       "evidence": [
-        "frontend/src/components/RideRequestForm.tsx"
+        "frontend/src/hooks/useQueries.ts"
       ]
     },
     {
-      "id": "REQ-2",
-      "requirement": "State variable must be named returnToSamePickup — the build request explicitly constrains against renaming it.",
-      "reason": "The diff uses 'returnToPickup' instead of the required 'returnToSamePickup'.",
-      "evidence": [
-        "frontend/src/components/RideRequestForm.tsx"
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "requirement": "GPS failure handler must set pickupLocationMode to 'manual'. Since the variable is named locationMode in the diff, if the original code used pickupLocationMode this is a constraint violation.",
-      "reason": "The GPS failure handler sets 'locationMode' to 'manual' rather than 'pickupLocationMode' to 'manual' as required by the naming constraint.",
-      "evidence": [
-        "frontend/src/components/RideRequestForm.tsx"
-      ]
+      "id": "REQ-1",
+      "requirement": "The corrected encoding must also be applied in SelectRolePage.tsx.",
+      "reason": "The diff shows no changes to SelectRolePage.tsx. REQ-1 explicitly lists it as one of the files where the fix must be applied, and the acceptance criteria state that role selection from SelectRolePage must use the corrected encoding.",
+      "evidence": []
     }
   ],
-  "hallucinated_features": [
-    {
-      "description": "Journey type selection modal dialog shown when switching journey type",
-      "reason": "The diff includes showJourneyModal state and handleJourneyTypeChange that displays a modal with descriptive text. This was not requested in the build requirements.",
-      "evidence": [
-        "frontend/src/components/RideRequestForm.tsx"
-      ]
-    },
-    {
-      "description": "Date/time range picker with calculated days for outstation trips",
-      "reason": "The diff introduces startDateTime, endDateTime, calculatedDays, and dateTimeError states with a useEffect to compute trip duration in days. This was not part of the requested micro patch scope.",
-      "evidence": [
-        "frontend/src/components/RideRequestForm.tsx"
-      ]
-    }
-  ],
-  "confidence": 0.62,
+  "hallucinated_features": [],
+  "confidence": 0.82,
   "changed_files": [
     "frontend-file-summaries.txt",
-    "frontend/src/components/RideRequestForm.tsx",
+    "frontend/src/components/RoleSelectionWarningModal.tsx",
+    "frontend/src/hooks/useQueries.ts",
     "project_state.json"
   ]
 }

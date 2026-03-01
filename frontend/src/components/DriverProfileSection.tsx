@@ -1,172 +1,99 @@
-/**
- * POST-BUILD CHECKLIST (Driver Duty Status Lock):
- * (1) Accept trip → duty status toggle is disabled (greyed out) and shows "On-Duty"
- *     with helper text "Duty status is locked while you have an active trip."
- * (2) Complete trip → toggle is re-enabled and reflects the driver's last saved availability value.
- */
-
+import type { UserProfile } from '../lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Lock } from 'lucide-react';
-import type { UserProfile } from '../backend';
-
-type VehicleExperience = 'hatchback' | 'sedan' | 'suv' | 'luxury';
-type TransmissionComfort = 'manual' | 'automatic' | 'ev';
+import { MapPin, Car, DollarSign, Lock } from 'lucide-react';
 
 interface DriverProfileSectionProps {
-  userProfile: UserProfile | null | undefined;
-  isLoading: boolean;
-  error: Error | null;
-  onEditClick: () => void;
-  /** True when the driver has at least one trip with status "accepted" */
-  hasAcceptedTrip: boolean;
+  profile: UserProfile;
+  hasAcceptedTrip?: boolean;
 }
 
-export default function DriverProfileSection({
-  userProfile,
-  isLoading,
-  error,
-  onEditClick,
-  hasAcceptedTrip,
-}: DriverProfileSectionProps) {
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>My Profile</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-4 w-1/2" />
-        </CardContent>
-      </Card>
-    );
-  }
+function getVehicleLabels(profile: UserProfile): string[] {
+  return profile.vehicleExperience.map((v) => {
+    if ('#hatchback' in v) return 'Hatchback';
+    if ('#sedan' in v) return 'Sedan';
+    if ('#suv' in v) return 'SUV';
+    if ('#luxury' in v) return 'Luxury';
+    return 'Unknown';
+  });
+}
 
-  if (error) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>My Profile</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-destructive">Failed to load profile: {error.message}</p>
-        </CardContent>
-      </Card>
-    );
-  }
+function getTransmissionLabels(profile: UserProfile): string[] {
+  return profile.transmissionComfort.map((t) => {
+    if ('#manual' in t) return 'Manual';
+    if ('#automatic' in t) return 'Automatic';
+    if ('#ev' in t) return 'EV';
+    return 'Unknown';
+  });
+}
 
-  if (!userProfile) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>My Profile</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">No profile data available</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const formatVehicleExperience = (experience: VehicleExperience[]): string => {
-    if (!experience || experience.length === 0) return 'None';
-    return experience.map(exp => {
-      switch (exp) {
-        case 'hatchback': return 'Hatchback';
-        case 'sedan': return 'Sedan';
-        case 'suv': return 'SUV';
-        case 'luxury': return 'Luxury';
-        default: return exp;
-      }
-    }).join(', ');
-  };
-
-  const formatTransmissionComfort = (comfort: TransmissionComfort[]): string => {
-    if (!comfort || comfort.length === 0) return 'None';
-    return comfort.map(trans => {
-      switch (trans) {
-        case 'manual': return 'Manual';
-        case 'automatic': return 'Automatic';
-        case 'ev': return 'EV';
-        default: return trans;
-      }
-    }).join(', ');
-  };
-
-  const formatLanguages = (languages: string[] | undefined): string => {
-    if (!languages || languages.length === 0) return 'None';
-    return languages.join(', ');
-  };
-
-  const formatEarnings = (earnings: bigint): string => {
-    return `₹${earnings.toString()}`;
-  };
-
-  // When locked, always display On-Duty regardless of saved value
-  const displayAvailable = hasAcceptedTrip ? true : userProfile.isAvailable;
+export default function DriverProfileSection({ profile, hasAcceptedTrip }: DriverProfileSectionProps) {
+  const vehicleLabels = getVehicleLabels(profile);
+  const transmissionLabels = getTransmissionLabels(profile);
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle>My Profile</CardTitle>
-        <Button onClick={onEditClick} variant="outline" size="sm">
-          <Edit className="h-4 w-4 mr-2" />
-          Edit Profile
-        </Button>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <span>Driver Profile</span>
+          <div className="flex items-center gap-2">
+            {hasAcceptedTrip && (
+              <Badge variant="outline" className="text-xs gap-1">
+                <Lock className="h-3 w-3" />
+                Locked
+              </Badge>
+            )}
+            <Badge variant={profile.isAvailable ? 'default' : 'secondary'}>
+              {profile.isAvailable ? 'On-Duty' : 'Off-Duty'}
+            </Badge>
+          </div>
+        </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Service Pincode</p>
-            <p className="text-base font-semibold">{userProfile.servicePincode || 'Not set'}</p>
+      <CardContent className="space-y-4">
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+              <MapPin className="h-3 w-3" /> Service Area
+            </p>
+            <p className="font-medium">
+              {profile.serviceAreaName || '—'}
+              {profile.servicePincode ? ` (${profile.servicePincode})` : ''}
+            </p>
           </div>
-
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Service Area Name</p>
-            <p className="text-base font-semibold">{userProfile.serviceAreaName || 'Not set'}</p>
-          </div>
-
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Vehicle Experience</p>
-            <p className="text-base">{formatVehicleExperience(userProfile.vehicleExperience as VehicleExperience[])}</p>
-          </div>
-
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Transmission Comfort</p>
-            <p className="text-base">{formatTransmissionComfort(userProfile.transmissionComfort as TransmissionComfort[])}</p>
-          </div>
-
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Duty Status</p>
-            <div className="mt-1 space-y-1">
-              {displayAvailable ? (
-                <Badge variant="default" className="bg-green-600 hover:bg-green-700">On-Duty</Badge>
-              ) : (
-                <Badge variant="secondary">Off-Duty</Badge>
-              )}
-              {hasAcceptedTrip && (
-                <p className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 mt-1">
-                  <Lock className="h-3 w-3 shrink-0" />
-                  Duty status is locked while you have an active trip.
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Total Earnings</p>
-            <p className="text-base font-semibold">{formatEarnings(userProfile.totalEarnings)}</p>
-          </div>
-
-          <div className="md:col-span-2">
-            <p className="text-sm font-medium text-muted-foreground">Languages</p>
-            <p className="text-base">{formatLanguages(userProfile.languages)}</p>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+              <DollarSign className="h-3 w-3" /> Total Earnings
+            </p>
+            <p className="font-medium">₹{Number(profile.totalEarnings)}</p>
           </div>
         </div>
+
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+            <Car className="h-3 w-3" /> Vehicle Experience
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {vehicleLabels.length > 0
+              ? vehicleLabels.map((v) => <Badge key={v} variant="outline">{v}</Badge>)
+              : <span className="text-sm text-muted-foreground">None specified</span>}
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">Transmission</p>
+          <div className="flex flex-wrap gap-2">
+            {transmissionLabels.length > 0
+              ? transmissionLabels.map((t) => <Badge key={t} variant="secondary">{t}</Badge>)
+              : <span className="text-sm text-muted-foreground">None specified</span>}
+          </div>
+        </div>
+
+        {hasAcceptedTrip && (
+          <p className="text-xs text-muted-foreground flex items-center gap-1 border rounded-md px-3 py-2 bg-muted/50">
+            <Lock className="h-3 w-3 shrink-0" />
+            Duty status is locked while you have an active trip.
+          </p>
+        )}
       </CardContent>
     </Card>
   );

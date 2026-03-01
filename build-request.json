@@ -1,87 +1,49 @@
 {
   "kind": "build_request",
-  "title": "Micro Patch: Customer Booking Form Pickup/Drop Field Visibility Rules",
+  "title": "Fix Candid opt variant encoding for role submission",
   "projectName": "Namma Driver Pilot",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "In RideRequestForm.tsx, fix pickup manual field visibility so that Pickup Pincode and Pickup Area Name inputs are shown if and only if pickupLocationMode === 'manual', and hidden if pickupLocationMode === 'gps'. This visibility rule must be completely independent of journeyType — do not gate these fields on trip type or journey type in any way.",
+      "text": "In the frontend role submission logic, convert the plain string role value to the correct Candid opt variant format before sending to the backend. Specifically: map \"customer\" → [{ customer: null }], \"driver\" → [{ driver: null }], and \"admin\" → [{ admin: null }]. This conversion must be applied wherever a role is submitted to the backend (e.g., useQueries.ts updateRole mutation, SelectRolePage.tsx, RoleSelectionWarningModal.tsx).",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-5"
+          "msg-6"
         ],
         "quotes": [
-          "Pickup field visibility must NOT depend on journeyType at all.",
-          "IF pickupLocationMode === 'manual' SHOW pickupPincode input (required, 6 digits) SHOW pickupArea input (required) ELSE IF pickupLocationMode === 'gps' HIDE pickupPincode input HIDE pickupArea input"
+          "Currently frontend is sending a string like: role: \"customer\"",
+          "If role is \"customer\" send: role: { customer: null }",
+          "Wrap it correctly inside opt: role: [{ customer: null }]"
         ]
       },
       "acceptanceCriteria": [
-        "When pickupLocationMode is 'manual', both pickupPincode and pickupArea inputs are rendered regardless of journeyType value.",
-        "When pickupLocationMode is 'gps', both pickupPincode and pickupArea inputs are not rendered regardless of journeyType value.",
-        "Switching journeyType between 'oneway' and 'roundtrip' does not affect visibility of pickup manual fields."
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "text": "In RideRequestForm.tsx, fix drop field visibility so that: (a) when journeyType === 'oneway', Drop Pincode and Drop Area Name inputs are always shown as required; (b) when journeyType === 'roundtrip', a checkbox/toggle labeled 'Return to same pickup location' is shown (default checked/true). If returnToSamePickup is true, hide Drop Pincode and Drop Area Name and set their UI state values equal to the current pickup values (no backend schema change). If returnToSamePickup is false, show Drop Pincode and Drop Area Name as required. Drop field visibility must never depend on pickupLocationMode.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-5"
-        ],
-        "quotes": [
-          "Do not hide Drop fields just because pickupLocationMode === 'gps'. Drop visibility depends ONLY on journeyType and returnToSamePickup (rule #2).",
-          "IF journeyType === 'oneway' SHOW dropPincode input (required, 6 digits) SHOW dropArea input (required)",
-          "ELSE IF journeyType === 'roundtrip' SHOW checkbox/toggle 'Return to same pickup location' (default TRUE) IF returnToSamePickup === true HIDE dropPincode input HIDE dropArea input (and set drop values = pickup values in UI state only, without changing backend schema)"
-        ]
-      },
-      "acceptanceCriteria": [
-        "When journeyType is 'oneway', dropPincode and dropArea inputs are rendered and required, regardless of pickupLocationMode.",
-        "When journeyType is 'roundtrip', a 'Return to same pickup location' checkbox is rendered, defaulting to checked (true).",
-        "When journeyType is 'roundtrip' and returnToSamePickup is true, dropPincode and dropArea inputs are hidden, and their state values mirror the current pickup values.",
-        "When journeyType is 'roundtrip' and returnToSamePickup is false, dropPincode and dropArea inputs are rendered and required.",
-        "Setting pickupLocationMode to 'gps' does not hide drop fields when journeyType is 'oneway'.",
-        "Setting pickupLocationMode to 'gps' does not hide drop fields when journeyType is 'roundtrip' and returnToSamePickup is false."
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "text": "In RideRequestForm.tsx, in the existing GPS capture error/failure handler (do not rebuild GPS logic), ensure that when geolocation permission is denied or the geolocation API call fails, pickupLocationMode is set to 'manual'. This causes the pickup manual fields to re-appear automatically via the rule in REQ-1.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-5"
-        ],
-        "quotes": [
-          "When user clicks 'Capture GPS Location' and permission is denied OR geolocation fails: set pickupLocationMode = 'manual' (so pickup manual fields re-appear automatically)"
-        ]
-      },
-      "acceptanceCriteria": [
-        "When GPS permission is denied, pickupLocationMode is set to 'manual' in component state.",
-        "When the geolocation API call fails for any reason, pickupLocationMode is set to 'manual' in component state.",
-        "After GPS failure, the Pickup Pincode and Pickup Area Name inputs become visible (because pickupLocationMode is now 'manual').",
-        "The GPS permission request and geolocation API call code itself is not rewritten or restructured — only the error/failure branch sets pickupLocationMode to 'manual'."
+        "Submitting role 'customer' sends [{ customer: null }] to the backend, not the string \"customer\"",
+        "Submitting role 'driver' sends [{ driver: null }] to the backend",
+        "Submitting role 'admin' sends [{ admin: null }] to the backend",
+        "The role is wrapped in an array to represent the Candid opt type (e.g., [{ customer: null }])",
+        "No changes are made to auth logic, route guards, admin logic, booking, pricing, GPS, or UI design",
+        "Role selection from SelectRolePage and RoleSelectionWarningModal both use the corrected encoding",
+        "The backend no longer returns a Candid variant encoding error when a role is saved"
       ]
     }
   ],
   "constraints": [
-    "Do not modify backend/main.mo or any backend files.",
-    "Do not change the trip payload structure or backend schema.",
-    "Do not modify pricing, role routing, or GPS permission request logic.",
-    "Do not touch DriverDashboard.tsx, AdminDashboard.tsx, or any Driver/Admin page or component.",
-    "Use existing state variable names: pickupLocationMode, journeyType, returnToSamePickup — do not rename them.",
-    "Drop values equalling pickup values on returnToSamePickup=true must be UI state only — no backend schema change.",
-    "Do not edit any file listed in frontend.immutablePaths."
+    "Do not modify auth logic or Internet Identity hooks",
+    "Do not modify route guards (AuthGate, ProtectedRoute, RoleGuard)",
+    "Do not modify admin logic or AdminUpgradePage",
+    "Do not modify booking or trip-related logic",
+    "Do not modify pricing configuration logic",
+    "Do not modify GPS or location logic",
+    "Do not modify any UI design, layout, or styling",
+    "Only fix the role variant encoding mismatch in role submission calls"
   ],
   "nonGoals": [
-    "Rebuilding or refactoring GPS permission request logic.",
-    "Changing backend data models or trip payload fields.",
-    "Modifying pricing calculation logic.",
-    "Modifying role-based routing.",
-    "Any changes to Driver or Admin pages or components.",
-    "Adding new state variables beyond the three specified."
+    "Changing backend Motoko types or schema",
+    "Modifying how roles are read or displayed (getRoleString helper)",
+    "Any new features or UI changes",
+    "Fixing unrelated bugs"
   ],
   "imageRequirements": {
     "required": [],

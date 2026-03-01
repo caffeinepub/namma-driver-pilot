@@ -1,6 +1,25 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
-import type { Trip, UserProfile, AppRole, TripType, JourneyType, Duration, Location, Time } from '../backend';
+import { useInternetIdentity } from './useInternetIdentity';
+import type { PricingConfig, UpdateConfigResult, TripRequest } from '../backend';
+import { AppRole as BackendAppRole } from '../backend';
+import type { Trip, UserProfile, AppRole } from '../lib/types';
+import { withTimeout } from '../utils/withTimeout';
+import { DEFAULT_CONFIG } from '../lib/defaultConfig';
+import { toast } from 'sonner';
+
+const QUERY_TIMEOUT_MS = 10_000;
+const ROLE_TIMEOUT_MS = 5_000;
+
+/**
+ * Converts a plain role string to the correct Candid variant object format.
+ * The backend expects { customer: null }, { driver: null }, or { admin: null }
+ * wrapped in an opt (array) for the role field.
+ */
+export function convertRoleToVariant(role: 'customer' | 'driver'): { customer: null } | { driver: null } {
+  if (role === 'customer') return { customer: null };
+  return { driver: null };
+}
 
 // Get caller's user profile
 export function useGetCallerUserProfile() {
@@ -10,7 +29,7 @@ export function useGetCallerUserProfile() {
     queryKey: ['currentUserProfile'],
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
-      return actor.getCallerUserProfile();
+      return withTimeout((actor as any).getCallerUserProfile(), QUERY_TIMEOUT_MS);
     },
     enabled: !!actor && !actorFetching,
     retry: false,
@@ -23,6 +42,83 @@ export function useGetCallerUserProfile() {
   };
 }
 
+// Get the caller's app role from the backend (admin | customer | driver | null)
+export function useGetMyRole() {
+  const { actor, isFetching: actorFetching } = useActor();
+  const { identity } = useInternetIdentity();
+
+  const query = useQuery<AppRole | null>({
+    queryKey: ['myRole', identity?.getPrincipal().toString()],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      const result = await withTimeout(actor.getMyRole(), ROLE_TIMEOUT_MS);
+      if (result === null || result === undefined) return null;
+      // Map backend AppRole enum to local AppRole string
+      if (result === BackendAppRole.admin) return 'admin';
+      if (result === BackendAppRole.customer) return 'customer';
+      if (result === BackendAppRole.driver) return 'driver';
+      return null;
+    },
+    enabled: !!actor && !actorFetching && !!identity,
+    retry: false,
+  });
+
+  return {
+    ...query,
+    isLoading: actorFetching || query.isLoading,
+    isFetched: !!actor && !!identity && query.isFetched,
+    role: query.data ?? null,
+  };
+}
+
+// Set the caller's role (customer or driver)
+// Sends the correct Candid variant object format: { customer: null } or { driver: null }
+export function useSetMyRole() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  const { identity } = useInternetIdentity();
+
+  return useMutation({
+    mutationFn: async (role: 'customer' | 'driver') => {
+      if (!actor) throw new Error('Actor not available');
+      // Convert plain string to Candid variant object format required by the backend
+      const backendRole = convertRoleToVariant(role);
+      return withTimeout(actor.setMyRole(backendRole as any), ROLE_TIMEOUT_MS);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myRole', identity?.getPrincipal().toString()] });
+    },
+  });
+}
+
+// Check if the current caller is an admin
+export function useCheckIsAdmin() {
+  const { actor, isFetching: actorFetching } = useActor();
+  const { identity } = useInternetIdentity();
+
+  const query = useQuery<boolean>({
+    queryKey: ['isAdmin', identity?.getPrincipal().toString()],
+    queryFn: async () => {
+      if (!actor || !identity) return false;
+      try {
+        return await withTimeout(actor.isCallerAdmin(), QUERY_TIMEOUT_MS);
+      } catch (err) {
+        console.error('[useCheckIsAdmin] Failed:', err);
+        return false;
+      }
+    },
+    enabled: !!actor && !actorFetching && !!identity,
+    retry: false,
+  });
+
+  return {
+    ...query,
+    isLoading: actorFetching || query.isLoading,
+    isFetched: !!actor && !!identity && query.isFetched,
+    isAdmin: query.data === true,
+  };
+}
+
 // Save caller's user profile
 export function useSaveCallerUserProfile() {
   const { actor } = useActor();
@@ -31,7 +127,7 @@ export function useSaveCallerUserProfile() {
   return useMutation({
     mutationFn: async (profile: UserProfile) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.saveCallerUserProfile(profile);
+      return (actor as any).saveCallerUserProfile(profile);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
@@ -39,37 +135,41 @@ export function useSaveCallerUserProfile() {
   });
 }
 
-// Update user role (calls backend updateUserRole)
+// Update user role — delegates to useSetMyRole for correct Candid variant encoding
 export function useUpdateUserRole() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
+  const { identity } = useInternetIdentity();
 
   return useMutation({
     mutationFn: async (role: AppRole) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.updateUserRole(role);
+      if (role === 'admin') throw new Error('Cannot set admin role via this method');
+      // Convert plain string to Candid variant object format required by the backend
+      const backendRole = convertRoleToVariant(role as 'customer' | 'driver');
+      return withTimeout(actor.setMyRole(backendRole as any), ROLE_TIMEOUT_MS);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myRole', identity?.getPrincipal().toString()] });
       queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
     },
   });
 }
 
-// Keep old name as alias for backward compatibility with any remaining references
+// Keep old name as alias for backward compatibility
 export const useUpdateUserRoleAndLock = useUpdateUserRole;
 
-// Upgrade current user to admin using a secret setup code
+// Upgrade current user to admin
 export function useUpgradeToAdmin() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (code: string): Promise<string | null> => {
+    mutationFn: async (_code: string): Promise<string | null> => {
       if (!actor) throw new Error('Actor not available');
-      return actor.upgradeCurrentUserToAdmin(code);
+      return 'Admin access is determined by your principal ID. Contact the system owner to be added as an admin.';
     },
     onSuccess: (result) => {
-      // null result means success (no error message returned)
       if (result === null) {
         queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
       }
@@ -77,54 +177,23 @@ export function useUpgradeToAdmin() {
   });
 }
 
-// Define VehicleType locally since it's used in Trip but not exported from backend
-type VehicleType = 'hatchback' | 'sedan' | 'suv' | 'luxury';
-
-// Create a new trip with comprehensive fields
+// Create a new trip — calls actor.createTrip(tripData: TripRequest) with a single object argument
 export function useCreateTrip() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      tripType,
-      journeyType,
-      vehicleType,
-      duration,
-      startDateTime,
-      endDateTime,
-      pickupLocation,
-      dropoffLocation,
-      phone,
-      landmark,
-    }: {
-      tripType: TripType;
-      journeyType: JourneyType;
-      vehicleType: VehicleType;
-      duration: Duration;
-      startDateTime: Time | null;
-      endDateTime: Time | null;
-      pickupLocation: Location;
-      dropoffLocation: Location | null;
-      phone: string;
-      landmark: string | null;
-    }) => {
+    mutationFn: async (tripRequest: TripRequest) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.createTrip(
-        tripType,
-        journeyType,
-        vehicleType as any,
-        duration,
-        startDateTime,
-        endDateTime,
-        pickupLocation,
-        dropoffLocation,
-        phone,
-        landmark
-      );
+      return withTimeout(actor.createTrip(tripRequest), QUERY_TIMEOUT_MS);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myTrips'] });
+      toast.success('Ride requested successfully');
+    },
+    onError: (err: unknown) => {
+      console.error('Booking error:', err);
+      toast.error('Booking failed. Please try again.');
     },
   });
 }
@@ -137,9 +206,15 @@ export function useGetMyTrips() {
     queryKey: ['myTrips'],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getMyTrips();
+      try {
+        return await withTimeout((actor as any).getMyTrips(), QUERY_TIMEOUT_MS);
+      } catch (err) {
+        console.error('[useGetMyTrips] Failed:', err);
+        return [];
+      }
     },
     enabled: !!actor && !actorFetching,
+    placeholderData: [],
   });
 }
 
@@ -151,9 +226,15 @@ export function useGetRequestedTrips() {
     queryKey: ['requestedTrips'],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getRequestedTrips();
+      try {
+        return await withTimeout((actor as any).getRequestedTrips(), QUERY_TIMEOUT_MS);
+      } catch (err) {
+        console.error('[useGetRequestedTrips] Failed:', err);
+        return [];
+      }
     },
     enabled: !!actor && !actorFetching,
+    placeholderData: [],
   });
 }
 
@@ -165,7 +246,7 @@ export function useAcceptTrip() {
   return useMutation({
     mutationFn: async (tripId: string) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.acceptTrip(tripId);
+      return (actor as any).acceptTrip(tripId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['requestedTrips'] });
@@ -182,17 +263,16 @@ export function useCompleteTrip() {
   return useMutation({
     mutationFn: async (tripId: string) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.completeTrip(tripId);
+      return (actor as any).completeTrip(tripId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myTrips'] });
-      // Also refresh profile so availability reflects latest saved value after unlock
       queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
     },
   });
 }
 
-// Update driver availability — blocked by backend when accepted trip exists
+// Update driver availability
 export function useUpdateAvailability() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
@@ -200,7 +280,7 @@ export function useUpdateAvailability() {
   return useMutation({
     mutationFn: async (isAvailable: boolean) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.updateAvailability(isAvailable);
+      return (actor as any).updateAvailability(isAvailable);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
@@ -216,9 +296,15 @@ export function useGetAllUsers() {
     queryKey: ['allUsers'],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getAllUsers();
+      try {
+        return await withTimeout((actor as any).getAllUsers(), QUERY_TIMEOUT_MS);
+      } catch (err) {
+        console.error('[useGetAllUsers] Failed:', err);
+        return [];
+      }
     },
     enabled: !!actor && !actorFetching,
+    placeholderData: [],
   });
 }
 
@@ -230,8 +316,47 @@ export function useGetAllTrips() {
     queryKey: ['allTrips'],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getAllTrips();
+      try {
+        return await withTimeout((actor as any).getAllTrips(), QUERY_TIMEOUT_MS);
+      } catch (err) {
+        console.error('[useGetAllTrips] Failed:', err);
+        return [];
+      }
     },
     enabled: !!actor && !actorFetching,
+    placeholderData: [],
+  });
+}
+
+// Get pricing config
+export function useGetPricingConfig() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<PricingConfig>({
+    queryKey: ['pricingConfig'],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      return withTimeout(actor.getPricingConfig(), QUERY_TIMEOUT_MS);
+    },
+    enabled: !!actor && !actorFetching,
+    retry: false,
+    placeholderData: DEFAULT_CONFIG,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+// Update pricing config (admin)
+export function useUpdatePricingConfig() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (config: PricingConfig): Promise<UpdateConfigResult> => {
+      if (!actor) throw new Error('Actor not available');
+      return withTimeout(actor.updatePricingConfig(config), QUERY_TIMEOUT_MS);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pricingConfig'] });
+    },
   });
 }

@@ -1,94 +1,107 @@
 import { useState } from 'react';
 import { useSaveCallerUserProfile } from '../hooks/useQueries';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import type { UserProfile } from '../lib/types';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import { type UserProfile } from '../backend';
+import { Loader2 } from 'lucide-react';
 
-export default function ProfileSetupModal() {
-  const { identity } = useInternetIdentity();
-  const [email, setEmail] = useState('');
-  const [fullName, setFullName] = useState('');
+interface ProfileSetupModalProps {
+  open: boolean;
+  onComplete: () => void;
+  existingProfile?: UserProfile | null;
+}
+
+export default function ProfileSetupModal({ open, onComplete, existingProfile }: ProfileSetupModalProps) {
+  const [fullName, setFullName] = useState(existingProfile?.fullName ?? '');
+  const [email, setEmail] = useState(existingProfile?.email ?? '');
+  const [error, setError] = useState('');
+
   const saveProfile = useSaveCallerUserProfile();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
 
-    if (!email || !fullName) {
-      toast.error('Please fill in all fields');
+    if (!fullName.trim()) {
+      setError('Full name is required.');
       return;
     }
-
-    if (!identity) {
-      toast.error('Not authenticated');
+    if (!email.trim()) {
+      setError('Email is required.');
       return;
     }
-
-    // Save profile with no role yet — role will be selected on the Role Selection screen
-    const profile: UserProfile = {
-      principalId: identity.getPrincipal(),
-      email,
-      fullName,
-      role: undefined, // no role assigned yet
-      createdTime: BigInt(Date.now() * 1000000),
-      servicePincode: '',
-      serviceAreaName: '',
-      vehicleExperience: [],
-      transmissionComfort: [],
-      isAvailable: false,
-      totalEarnings: BigInt(0),
-      languages: undefined,
-    };
 
     try {
-      await saveProfile.mutateAsync(profile);
-      toast.success('Profile created! Please select your role.');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create profile');
+      await saveProfile.mutateAsync({
+        ...(existingProfile as UserProfile),
+        fullName: fullName.trim(),
+        email: email.trim(),
+        role: [],
+        servicePincode: existingProfile?.servicePincode ?? '',
+        serviceAreaName: existingProfile?.serviceAreaName ?? '',
+        vehicleExperience: existingProfile?.vehicleExperience ?? [],
+        transmissionComfort: existingProfile?.transmissionComfort ?? [],
+        isAvailable: existingProfile?.isAvailable ?? false,
+        totalEarnings: existingProfile?.totalEarnings ?? BigInt(0),
+        languages: existingProfile?.languages ?? [],
+      } as unknown as UserProfile);
+      onComplete();
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to save profile. Please try again.');
     }
   };
 
   return (
-    <Dialog open={true}>
+    <Dialog open={open}>
       <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle>Welcome to Namma Driver Pilot</DialogTitle>
+          <DialogTitle>Set Up Your Profile</DialogTitle>
           <DialogDescription>
-            Please complete your profile to get started
+            Please enter your name and email to get started.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <div className="space-y-2">
+            <Label htmlFor="fullName">Full Name</Label>
+            <Input
+              id="fullName"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Your full name"
+              disabled={saveProfile.isPending}
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
-              placeholder="your.email@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
+              placeholder="your@email.com"
+              disabled={saveProfile.isPending}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="fullName">Full Name</Label>
-            <Input
-              id="fullName"
-              type="text"
-              placeholder="John Doe"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-            />
-          </div>
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={saveProfile.isPending}
-          >
-            {saveProfile.isPending ? 'Creating Profile...' : 'Continue'}
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
+          <Button type="submit" className="w-full" disabled={saveProfile.isPending}>
+            {saveProfile.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              'Continue'
+            )}
           </Button>
         </form>
       </DialogContent>
