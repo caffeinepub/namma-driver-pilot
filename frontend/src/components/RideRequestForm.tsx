@@ -62,12 +62,12 @@ function backendTripToLocalTrip(bt: BackendTrip): Trip {
     duration = { '#hours': BigInt(dur?.hours ?? 1) };
   }
 
-  // Location helpers
+  // Location helper — local Location uses optional number fields (not arrays)
   const toLocalLocation = (loc: any): Trip['pickupLocation'] => ({
     pincode: loc?.pincode ?? '',
     area: loc?.area ?? '',
-    latitude: loc?.latitude !== undefined && loc?.latitude !== null ? [loc.latitude] : [],
-    longitude: loc?.longitude !== undefined && loc?.longitude !== null ? [loc.longitude] : [],
+    latitude: loc?.latitude !== undefined && loc?.latitude !== null ? loc.latitude : undefined,
+    longitude: loc?.longitude !== undefined && loc?.longitude !== null ? loc.longitude : undefined,
   });
 
   const dropoff = bt.dropoffLocation;
@@ -137,9 +137,6 @@ export default function RideRequestForm({ onTripCreated }: RideRequestFormProps)
   const [dropPincode, setDropPincode] = useState('');
   const [dropArea, setDropArea] = useState('');
 
-  // Round trip
-  const [returnToPickup, setReturnToPickup] = useState(false);
-
   // Contact
   const [phone, setPhone] = useState('');
   const [landmark, setLandmark] = useState('');
@@ -150,7 +147,7 @@ export default function RideRequestForm({ onTripCreated }: RideRequestFormProps)
   const [error, setError] = useState('');
 
   const showDropFields =
-    journeyType === 'oneWay' || (journeyType === 'roundTrip' && !returnToPickup);
+    journeyType === 'oneWay' || (journeyType === 'roundTrip');
 
   const handleGpsCapture = () => {
     if (!navigator.geolocation) {
@@ -266,264 +263,243 @@ export default function RideRequestForm({ onTripCreated }: RideRequestFormProps)
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Book a Ride</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Trip Type */}
-          <div className="space-y-2">
-            <Label>Trip Type</Label>
-            <div className="flex gap-2">
-              {(['local', 'outstation'] as TripTypeKey[]).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setTripType(t)}
-                  className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
-                    tripType === t
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'border-border hover:bg-muted'
-                  }`}
-                >
-                  {t === 'local' ? 'Local' : 'Outstation'}
-                </button>
-              ))}
-            </div>
-          </div>
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Trip Type */}
+      <div className="space-y-2">
+        <Label>Trip Type</Label>
+        <div className="flex gap-2">
+          {(['local', 'outstation'] as TripTypeKey[]).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTripType(t)}
+              className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
+                tripType === t
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'border-border hover:bg-muted'
+              }`}
+            >
+              {t === 'local' ? 'Local' : 'Outstation'}
+            </button>
+          ))}
+        </div>
+      </div>
 
-          {/* Journey Type */}
-          <div className="space-y-2">
-            <Label>Journey Type</Label>
-            <div className="flex gap-2">
-              {(['oneWay', 'roundTrip'] as JourneyTypeKey[]).map((j) => (
-                <button
-                  key={j}
-                  type="button"
-                  onClick={() => setJourneyType(j)}
-                  className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
-                    journeyType === j
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'border-border hover:bg-muted'
-                  }`}
-                >
-                  {j === 'oneWay' ? 'One Way' : 'Round Trip'}
-                </button>
-              ))}
-            </div>
-          </div>
+      {/* Journey Type */}
+      <div className="space-y-2">
+        <Label>Journey Type</Label>
+        <div className="flex gap-2">
+          {(['oneWay', 'roundTrip'] as JourneyTypeKey[]).map((j) => (
+            <button
+              key={j}
+              type="button"
+              onClick={() => setJourneyType(j)}
+              className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
+                journeyType === j
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'border-border hover:bg-muted'
+              }`}
+            >
+              {j === 'oneWay' ? 'One Way' : 'Round Trip'}
+            </button>
+          ))}
+        </div>
+      </div>
 
-          {/* Vehicle Type */}
-          <div className="space-y-2">
-            <Label>Vehicle Type</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {(['hatchback', 'sedan', 'suv', 'luxury'] as VehicleTypeKey[]).map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => setVehicleType(v)}
-                  className={`py-2 px-3 rounded-lg border text-sm font-medium capitalize transition-colors ${
-                    vehicleType === v
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'border-border hover:bg-muted'
-                  }`}
-                >
-                  {v.toUpperCase()}
-                </button>
-              ))}
-            </div>
-          </div>
+      {/* Vehicle Type */}
+      <div className="space-y-2">
+        <Label>Vehicle Type</Label>
+        <div className="grid grid-cols-2 gap-2">
+          {(['hatchback', 'sedan', 'suv', 'luxury'] as VehicleTypeKey[]).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setVehicleType(v)}
+              className={`py-2 px-3 rounded-lg border text-sm font-medium capitalize transition-colors ${
+                vehicleType === v
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'border-border hover:bg-muted'
+              }`}
+            >
+              {v.toUpperCase()}
+            </button>
+          ))}
+        </div>
+      </div>
 
-          {/* Duration */}
-          <div className="space-y-2">
-            <Label>{tripType === 'local' ? 'Duration (hours)' : 'Duration (days)'}</Label>
-            <Input
-              type="number"
-              min="1"
-              value={tripType === 'local' ? hours : days}
-              onChange={(e) =>
-                tripType === 'local' ? setHours(e.target.value) : setDays(e.target.value)
-              }
-            />
-          </div>
+      {/* Duration */}
+      <div className="space-y-2">
+        <Label>{tripType === 'local' ? 'Duration (hours)' : 'Duration (days)'}</Label>
+        <Input
+          type="number"
+          min="1"
+          value={tripType === 'local' ? hours : days}
+          onChange={(e) =>
+            tripType === 'local' ? setHours(e.target.value) : setDays(e.target.value)
+          }
+        />
+      </div>
 
-          {/* Location Mode */}
-          <div className="space-y-2">
-            <Label>Pickup Location Mode</Label>
-            <div className="flex gap-2">
-              {(['manual', 'gps'] as LocationMode[]).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setLocationMode(m)}
-                  className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
-                    locationMode === m
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'border-border hover:bg-muted'
-                  }`}
-                >
-                  {m === 'manual' ? (
-                    <span className="flex items-center justify-center gap-1">
-                      <MapPin className="h-4 w-4" /> Manual
-                    </span>
-                  ) : (
-                    <span className="flex items-center justify-center gap-1">
-                      <Navigation className="h-4 w-4" /> GPS
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Pickup Manual Fields */}
-          {locationMode === 'manual' && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="pickupArea">Pickup Area</Label>
-                <Input
-                  id="pickupArea"
-                  value={pickupArea}
-                  onChange={(e) => setPickupArea(e.target.value)}
-                  placeholder="e.g. Koramangala"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="pickupPincode">Pickup Pincode</Label>
-                <Input
-                  id="pickupPincode"
-                  value={pickupPincode}
-                  onChange={(e) => setPickupPincode(e.target.value)}
-                  placeholder="e.g. 560034"
-                />
-              </div>
-            </>
-          )}
-
-          {/* GPS Capture */}
-          {locationMode === 'gps' && (
-            <div className="space-y-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleGpsCapture}
-                disabled={gpsLoading}
-                className="w-full"
-              >
-                {gpsLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Getting location…
-                  </>
-                ) : pickupLat !== null ? (
-                  <>
-                    <Navigation className="h-4 w-4 mr-2" />
-                    Location captured ✓
-                  </>
-                ) : (
-                  <>
-                    <Navigation className="h-4 w-4 mr-2" />
-                    Capture GPS Location
-                  </>
-                )}
-              </Button>
-              {pickupLat !== null && (
-                <p className="text-xs text-muted-foreground text-center">
-                  {pickupLat.toFixed(5)}, {pickupLng?.toFixed(5)}
-                </p>
+      {/* Location Mode */}
+      <div className="space-y-2">
+        <Label>Pickup Location Mode</Label>
+        <div className="flex gap-2">
+          {(['manual', 'gps'] as LocationMode[]).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setLocationMode(m)}
+              className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
+                locationMode === m
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'border-border hover:bg-muted'
+              }`}
+            >
+              {m === 'manual' ? (
+                <span className="flex items-center justify-center gap-1">
+                  <MapPin className="h-4 w-4" /> Manual
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-1">
+                  <Navigation className="h-4 w-4" /> GPS
+                </span>
               )}
-            </div>
-          )}
+            </button>
+          ))}
+        </div>
+      </div>
 
-          {/* Return to same pickup (round trip only) */}
-          {journeyType === 'roundTrip' && (
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="returnToPickup"
-                checked={returnToPickup}
-                onChange={(e) => setReturnToPickup(e.target.checked)}
-                className="rounded border-border"
-              />
-              <Label htmlFor="returnToPickup" className="font-normal cursor-pointer">
-                Return to same pickup location
-              </Label>
-            </div>
-          )}
-
-          {/* Drop Location */}
-          {showDropFields && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="dropArea">Drop Area</Label>
-                <Input
-                  id="dropArea"
-                  value={dropArea}
-                  onChange={(e) => setDropArea(e.target.value)}
-                  placeholder="e.g. Whitefield"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="dropPincode">Drop Pincode</Label>
-                <Input
-                  id="dropPincode"
-                  value={dropPincode}
-                  onChange={(e) => setDropPincode(e.target.value)}
-                  placeholder="e.g. 560066"
-                />
-              </div>
-            </>
-          )}
-
-          {/* Start Date/Time */}
+      {/* Pickup Manual Fields */}
+      {locationMode === 'manual' && (
+        <>
           <div className="space-y-2">
-            <Label htmlFor="startDateTime">Start Date &amp; Time</Label>
+            <Label htmlFor="pickupArea">Pickup Area</Label>
             <Input
-              id="startDateTime"
-              type="datetime-local"
-              value={startDateTime}
-              onChange={(e) => setStartDateTime(e.target.value)}
+              id="pickupArea"
+              value={pickupArea}
+              onChange={(e) => setPickupArea(e.target.value)}
+              placeholder="e.g. Koramangala"
             />
           </div>
-
-          {/* Phone */}
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number *</Label>
+            <Label htmlFor="pickupPincode">Pickup Pincode</Label>
             <Input
-              id="phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="e.g. 9876543210"
+              id="pickupPincode"
+              value={pickupPincode}
+              onChange={(e) => setPickupPincode(e.target.value)}
+              placeholder="e.g. 560034"
             />
           </div>
+        </>
+      )}
 
-          {/* Landmark */}
-          <div className="space-y-2">
-            <Label htmlFor="landmark">Landmark (optional)</Label>
-            <Input
-              id="landmark"
-              value={landmark}
-              onChange={(e) => setLandmark(e.target.value)}
-              placeholder="e.g. Near City Mall"
-            />
-          </div>
-
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
-          <Button type="submit" className="w-full" disabled={createTrip.isPending}>
-            {createTrip.isPending ? (
+      {/* GPS Capture */}
+      {locationMode === 'gps' && (
+        <div className="space-y-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleGpsCapture}
+            disabled={gpsLoading}
+            className="w-full"
+          >
+            {gpsLoading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Booking…
+                Getting location…
               </>
             ) : (
-              'Book Ride'
+              <>
+                <Navigation className="h-4 w-4 mr-2" />
+                {pickupLat ? 'Location captured ✓' : 'Capture GPS Location'}
+              </>
             )}
           </Button>
-        </form>
-      </CardContent>
-    </Card>
+          {pickupLat && pickupLng && (
+            <p className="text-xs text-muted-foreground">
+              Lat: {pickupLat.toFixed(5)}, Lng: {pickupLng.toFixed(5)}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Dropoff Fields */}
+      {showDropFields && (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="dropArea">Drop Area</Label>
+            <Input
+              id="dropArea"
+              value={dropArea}
+              onChange={(e) => setDropArea(e.target.value)}
+              placeholder="e.g. Whitefield"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="dropPincode">Drop Pincode</Label>
+            <Input
+              id="dropPincode"
+              value={dropPincode}
+              onChange={(e) => setDropPincode(e.target.value)}
+              placeholder="e.g. 560066"
+            />
+          </div>
+        </>
+      )}
+
+      {/* Start Date/Time */}
+      <div className="space-y-2">
+        <Label htmlFor="startDateTime">Start Date & Time</Label>
+        <Input
+          id="startDateTime"
+          type="datetime-local"
+          value={startDateTime}
+          onChange={(e) => setStartDateTime(e.target.value)}
+        />
+      </div>
+
+      {/* Phone */}
+      <div className="space-y-2">
+        <Label htmlFor="phone">Phone Number *</Label>
+        <Input
+          id="phone"
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="e.g. 9876543210"
+          required
+        />
+      </div>
+
+      {/* Landmark */}
+      <div className="space-y-2">
+        <Label htmlFor="landmark">Landmark (optional)</Label>
+        <Input
+          id="landmark"
+          value={landmark}
+          onChange={(e) => setLandmark(e.target.value)}
+          placeholder="e.g. Near Metro Station"
+        />
+      </div>
+
+      {error && (
+        <p className="text-sm text-destructive font-medium">{error}</p>
+      )}
+
+      <Button
+        type="submit"
+        className="w-full"
+        disabled={createTrip.isPending}
+      >
+        {createTrip.isPending ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            Booking…
+          </>
+        ) : (
+          'Book Ride'
+        )}
+      </Button>
+    </form>
   );
 }

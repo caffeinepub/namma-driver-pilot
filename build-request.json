@@ -1,72 +1,55 @@
 {
   "kind": "build_request",
-  "title": "Backend-only admin role recovery with seeded stable principals",
-  "projectName": "Namma Driver Pilot",
+  "title": "Fix 'in' operator crash on trip fields in driver frontend components",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Replace the current admin principals set in backend/main.mo with a stable set seeded with BOTH of the following principals: '6ngnc-ph7ou-g23nw-z2zbr-czprs-ohpe6-2wolp-eeo7o-c32lo-deiso-yqe' and 'g3c77-j7yp6-ydsrd-2zp2q-vajyd-4ymec-tydvo-kcxwl-s7reg-37yws-eae'. The set must be declared as a stable variable so it persists across upgrades.",
-      "target": "backend",
+      "text": "Scan DriverDashboard, DriverTripList, AvailableTripsSection, all TripCard components, and every helper/utility function in the frontend for any use of the JavaScript 'in' operator applied to trip fields (status, tripType, journeyType, vehicleType). Remove every such check and replace with safe comparison logic: if the value is a string, compare using ===; if the value is an object, extract the key using Object.keys(value)[0] before comparing.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-admin-recovery"
+          "msg-4"
         ],
         "quotes": [
-          "Replace the current admin principals set with a stable set seeded with BOTH: 6ngnc-ph7ou-g23nw-z2zbr-czprs-ohpe6-2wolp-eeo7o-c32lo-deiso-yqe and g3c77-j7yp6-ydsrd-2zp2q-vajyd-4ymec-tydvo-kcxwl-s7reg-37yws-eae"
+          "Cannot use 'in' operator to search for '#local' in local",
+          "Remove ALL in operator checks on trip fields.",
+          "Use safe comparison logic: If typeof value === 'string' → compare using === If typeof value === 'object' → use Object.keys(value)[0]"
         ]
       },
       "acceptanceCriteria": [
-        "The stable admin principals set contains exactly the two specified principals after deployment.",
-        "The set persists across canister upgrades."
+        "No use of the 'in' operator on trip.status, trip.tripType, trip.journeyType, or trip.vehicleType exists anywhere in DriverDashboard, DriverTripList, AvailableTripsSection, TripCard components, or any helper/utility files.",
+        "All comparisons on those fields use === (for strings) or Object.keys(value)[0] (for objects).",
+        "The driver dashboard no longer throws 'Cannot use in operator to search for #local in local' after login."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Update the isAdmin(caller) function in backend/main.mo to return true if and only if the caller's principal is present in the stable admin principals set.",
-      "target": "backend",
+      "text": "Ensure every trip data source rendered inside DriverDashboard, DriverTripList, and AvailableTripsSection is passed through the existing normalizeTrip() utility before being used in render logic or passed to child components, so all trip fields are guaranteed plain strings at render time.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-admin-recovery"
+          "msg-4"
         ],
         "quotes": [
-          "isAdmin(caller) must return true if caller is in that set."
+          "Also ensure all trip sources are normalized through normalizeTrip() before rendering."
         ]
       },
       "acceptanceCriteria": [
-        "Calling isAdmin() with either seeded principal returns true.",
-        "Calling isAdmin() with any other principal returns false."
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "text": "Update the getMyRole() function in backend/main.mo so that if isAdmin(caller) is true, it returns #admin regardless of the stored user role. Otherwise, it returns the stored user role as before.",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-admin-recovery"
-        ],
-        "quotes": [
-          "getMyRole() must: return #admin if isAdmin(caller) == true, otherwise return stored user role"
-        ]
-      },
-      "acceptanceCriteria": [
-        "When called by either seeded admin principal, getMyRole() returns #admin.",
-        "When called by a non-admin principal, getMyRole() returns the principal's stored role.",
-        "No changes are made to trip schema, pricing, driver logic, customer logic, or any frontend files."
+        "All trip arrays or trip objects in DriverDashboard, DriverTripList, and AvailableTripsSection are mapped through normalizeTrip() before any field access or rendering.",
+        "No raw backend trip objects reach TripCard or any rendering component without normalization.",
+        "Driver dashboard loads without runtime errors after login."
       ]
     }
   ],
   "constraints": [
-    "Do NOT modify the trip schema.",
-    "Do NOT modify pricing logic.",
-    "Do NOT modify driver logic.",
-    "Do NOT modify customer logic.",
-    "Do NOT modify any frontend files or dashboard UI."
+    "No scope changes beyond fixing the 'in' operator crash and ensuring normalizeTrip() is applied — do not add, remove, or alter any other features or UI."
   ],
   "nonGoals": [
-    "Adding or removing any other admin principals beyond the two specified.",
-    "Changes to trip management, pricing configuration, driver/customer flows, or any UI components."
+    "Changes to backend data models or Motoko code.",
+    "UI redesign or layout changes.",
+    "Adding new trip fields or normalizing fields beyond status, tripType, journeyType, and vehicleType.",
+    "Modifying any file listed under frontend.immutablePaths."
   ],
   "imageRequirements": {
     "required": [],

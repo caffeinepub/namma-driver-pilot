@@ -1,48 +1,56 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-03-01T16:00:42.541Z",
+  "generatedAt": "2026-03-02T20:33:49.365Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 3,
-    "implemented": 0,
+    "total": 2,
+    "implemented": 2,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Replace the current admin principals set in backend/main.mo with a stable set seeded with BOTH of the following principals: '6ngnc-ph7ou-g23nw-z2zbr-czprs-ohpe6-2wolp-eeo7o-c32lo-deiso-yqe' and 'g3c77-j7yp6-ydsrd-2zp2q-vajyd-4ymec-tydvo-kcxwl-s7reg-37yws-eae'. The set must be declared as a stable variable so it persists across upgrades.",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
+        "summary": "Scan DriverDashboard, DriverTripList, AvailableTripsSection, all TripCard components, and every helper/utility function in the frontend for any use of the JavaScript 'in' operator applied to trip fields (status, tripType, journeyType, vehicleType). Remove every such check and replace with safe comparison logic: if the value is a string, compare using ===; if the value is an object, extract the key using Object.keys(value)[0] before comparing.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/AvailableTripsSection.tsx",
+          "frontend/src/components/DriverTripList.tsx",
+          "frontend/src/components/CustomerTripList.tsx",
+          "frontend/src/components/AdminTripsTab.tsx",
+          "frontend/src/components/RideRequestForm.tsx",
+          "frontend/src/pages/DriverDashboard.tsx",
+          "frontend/src/pages/CustomerDashboard.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/AvailableTripsSection.tsx"
+        ]
       },
       {
         "id": "REQ-2",
-        "summary": "Update the isAdmin(caller) function in backend/main.mo to return true if and only if the caller's principal is present in the stable admin principals set.",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
-      },
-      {
-        "id": "REQ-3",
-        "summary": "Update the getMyRole() function in backend/main.mo so that if isAdmin(caller) is true, it returns #admin regardless of the stored user role. Otherwise, it returns the stored user role as before.",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
+        "summary": "Ensure every trip data source rendered inside DriverDashboard, DriverTripList, and AvailableTripsSection is passed through the existing normalizeTrip() utility before being used in render logic or passed to child components, so all trip fields are guaranteed plain strings at render time.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/AvailableTripsSection.tsx",
+          "frontend/src/components/DriverTripList.tsx",
+          "frontend/src/pages/DriverDashboard.tsx",
+          "frontend/src/components/CustomerTripList.tsx",
+          "frontend/src/pages/CustomerDashboard.tsx",
+          "frontend/src/components/AdminTripsTab.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/AvailableTripsSection.tsx"
+        ]
       }
     ]
   },
   "changedFiles": [
-    "backend/main.mo",
-    "backend/migration.mo",
     "build-request.json",
     "feature_evidence.json",
+    "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/backend.d.ts",
-    "frontend/src/backend.ts",
-    "frontend/src/declarations/backend.did.d.ts",
-    "frontend/src/declarations/backend.did.js",
+    "frontend/src/components/AvailableTripsSection.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

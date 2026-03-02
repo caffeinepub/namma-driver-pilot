@@ -7,6 +7,7 @@ import PricingTab from '../components/PricingTab';
 import { useGetAllUsers, useGetAllTrips, useGetMyRole } from '../hooks/useQueries';
 import { useGetCallerUserProfile } from '../hooks/useGetCallerUserProfile';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
+import { Role } from '../backend';
 import { ShieldCheck, User, Hash, Settings2 } from 'lucide-react';
 import DataLoadErrorBanner from '../components/DataLoadErrorBanner';
 
@@ -15,23 +16,21 @@ export default function AdminDashboard() {
   const { data: trips, isLoading: loadingTrips, isError: tripsError } = useGetAllTrips();
   const { data: userProfile, isError: profileError } = useGetCallerUserProfile();
   const { identity } = useInternetIdentity();
-  const { role: myRole } = useGetMyRole();
+  const { data: myRole } = useGetMyRole();
 
   const principalId = identity?.getPrincipal().toString() ?? '—';
 
-  // Derive role label from getMyRole() result, not from userProfile.role
-  const roleLabel = myRole
-    ? myRole.charAt(0).toUpperCase() + myRole.slice(1)
+  const roleLabel = myRole === Role.admin ? 'Admin'
+    : myRole === Role.driver ? 'Driver'
+    : myRole === Role.customer ? 'Customer'
     : '—';
 
   const hasDataError = usersError || tripsError || profileError;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
-      {/* Data load error banner */}
       {hasDataError && <DataLoadErrorBanner />}
 
-      {/* Header */}
       <div className="mb-8 flex items-start gap-4">
         <div className="flex items-center justify-center w-12 h-12 bg-primary/10 rounded-lg shrink-0">
           <ShieldCheck className="h-6 w-6 text-primary" />
@@ -42,7 +41,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Identity Info Card */}
       <Card className="mb-8">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
@@ -76,7 +74,6 @@ export default function AdminDashboard() {
         </CardContent>
       </Card>
 
-      {/* Stats Row */}
       <div className="grid grid-cols-2 gap-4 mb-8">
         <Card>
           <CardContent className="pt-6">
@@ -92,7 +89,6 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Tabs */}
       <Tabs defaultValue="trips" className="w-full">
         <TabsList className="grid w-full max-w-lg grid-cols-3">
           <TabsTrigger value="trips">

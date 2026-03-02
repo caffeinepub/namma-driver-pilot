@@ -1,11 +1,11 @@
 # Specification
 
 ## Summary
-**Goal:** Restore admin role access in the backend by seeding a stable admin principals set with two specific principals and updating the admin check logic accordingly.
+**Goal:** Fix the runtime crash caused by the JavaScript `in` operator being applied to trip fields in driver frontend components.
 
 **Planned changes:**
-- Replace the current admin principals set in `backend/main.mo` with a `stable` variable containing exactly two principals: `6ngnc-ph7ou-g23nw-z2zbr-czprs-ohpe6-2wolp-eeo7o-c32lo-deiso-yqe` and `g3c77-j7yp6-ydsrd-2zp2q-vajyd-4ymec-tydvo-kcxwl-s7reg-37yws-eae`
-- Update `isAdmin(caller)` to return `true` if and only if the caller is present in the stable admin principals set
-- Update `getMyRole()` to return `#admin` when `isAdmin(caller)` is true, otherwise return the stored user role as before
+- Scan `DriverDashboard`, `DriverTripList`, `AvailableTripsSection`, all `TripCard` components, and any helper/utility files for uses of the `in` operator on `trip.status`, `trip.tripType`, `trip.journeyType`, and `trip.vehicleType`
+- Replace every such `in` operator check with safe comparison logic: use `===` when the value is a string, or `Object.keys(value)[0]` to extract the key when the value is an object
+- Ensure all trip data in `DriverDashboard`, `DriverTripList`, and `AvailableTripsSection` is passed through the existing `normalizeTrip()` utility before being used in render logic or passed to child components
 
-**User-visible outcome:** The two specified principals will have admin access restored after canister upgrade, with the admin set persisting across future upgrades. No frontend or other backend logic is affected.
+**User-visible outcome:** The driver dashboard loads without throwing "Cannot use 'in' operator to search for '#local' in local" after login, and trip data renders correctly.

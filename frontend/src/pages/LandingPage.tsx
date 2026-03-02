@@ -1,75 +1,40 @@
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useGetCallerUserProfile } from '../hooks/useGetCallerUserProfile';
-import { useCheckIsAdmin } from '../hooks/useQueries';
+import React, { useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useEffect } from 'react';
-import { getRoleString } from '../lib/types';
+import { useInternetIdentity } from '../hooks/useInternetIdentity';
+import { useGetMyRole } from '../hooks/useQueries';
+import { Role } from '../backend';
+import { Loader2 } from 'lucide-react';
 
-/**
- * LandingPage at "/" acts purely as a router:
- * - Not authenticated → /login
- * - Authenticated, admin → /admin/dashboard
- * - Authenticated, role set → correct dashboard
- * - Authenticated, no role → /select-role
- * - Authenticated, no profile → /post-login
- */
 export default function LandingPage() {
-  const { identity } = useInternetIdentity();
-  const { data: userProfile, isFetched: profileFetched } = useGetCallerUserProfile();
-  const { isAdmin, isFetched: adminFetched } = useCheckIsAdmin();
   const navigate = useNavigate();
+  const { identity, isInitializing } = useInternetIdentity();
+  const { data: role, isLoading: roleLoading, isFetched } = useGetMyRole();
 
   useEffect(() => {
-    // Not authenticated → go to login
+    if (isInitializing) return;
+
     if (!identity) {
       navigate({ to: '/login' });
       return;
     }
 
-    // Admin check: if confirmed admin, go to admin dashboard
-    if (adminFetched && isAdmin) {
+    // Authenticated — wait for role
+    if (roleLoading || !isFetched) return;
+
+    if (role === Role.admin) {
       navigate({ to: '/admin/dashboard' });
-      return;
-    }
-
-    // Wait for profile to be fetched
-    if (!profileFetched) return;
-
-    // No profile yet — go to post-login landing
-    if (!userProfile) {
-      if (adminFetched && !isAdmin) {
-        navigate({ to: '/post-login' });
-      }
-      return;
-    }
-
-    const role = getRoleString(userProfile.role);
-
-    // No role set yet — go to role selection
-    if (role == null) {
-      if (adminFetched && !isAdmin) {
-        navigate({ to: '/select-role' });
-      }
-      return;
-    }
-
-    // Route to the appropriate dashboard
-    if (role === 'admin') {
-      navigate({ to: '/admin/dashboard' });
-    } else if (role === 'driver') {
+    } else if (role === Role.driver) {
       navigate({ to: '/driver/dashboard' });
-    } else if (role === 'customer') {
+    } else if (role === Role.customer) {
       navigate({ to: '/customer/dashboard' });
+    } else {
+      navigate({ to: '/select-role' });
     }
-  }, [identity, userProfile, profileFetched, isAdmin, adminFetched, navigate]);
+  }, [identity, isInitializing, role, roleLoading, isFetched, navigate]);
 
-  // Render a neutral loading screen while routing
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center space-y-4">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto" />
-        <p className="text-muted-foreground text-sm">Redirecting…</p>
-      </div>
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
     </div>
   );
 }

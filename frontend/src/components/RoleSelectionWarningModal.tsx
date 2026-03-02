@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useSetMyRoleCustomer, useSetMyRoleDriver, useGetMyRole } from '../hooks/useQueries';
+import { Role } from '../backend';
 import {
   Dialog,
   DialogContent,
@@ -20,11 +21,11 @@ interface RoleSelectionWarningModalProps {
 
 export default function RoleSelectionWarningModal({ open, onClose }: RoleSelectionWarningModalProps) {
   const navigate = useNavigate();
-  const { role } = useGetMyRole();
+  const { data: role } = useGetMyRole();
   const setCustomer = useSetMyRoleCustomer();
   const setDriver = useSetMyRoleDriver();
 
-  const isAdmin = role === 'admin';
+  const isAdmin = role === Role.admin;
   const isSetting = setCustomer.isPending || setDriver.isPending;
 
   useEffect(() => {

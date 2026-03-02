@@ -1,82 +1,52 @@
-import { useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useGetMyRole } from '../hooks/useQueries';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useGetMyRole } from '../hooks/useQueries';
+import { Role } from '../backend';
+import { Button } from '../components/ui/button';
 
 export default function PostLoginLandingPage() {
-  const { identity } = useInternetIdentity();
   const navigate = useNavigate();
-  const { role, isLoading, isError, isFetched, refetch } = useGetMyRole();
+  const { data: role, isLoading, isError, isFetched, refetch } = useGetMyRole();
 
-  useEffect(() => {
-    if (!isFetched || isLoading || isError) return;
+  React.useEffect(() => {
+    if (!isFetched || isLoading) return;
 
-    // role is already a normalized AppRole string ('admin' | 'customer' | 'driver' | null)
-    // derived via normalizeRole() in useGetMyRole — safe to compare directly
-    const roleKey = role ?? null;
-
-    if (roleKey === 'admin') {
+    if (role === Role.admin) {
       navigate({ to: '/admin/dashboard' });
-    } else if (roleKey === 'driver') {
+    } else if (role === Role.driver) {
       navigate({ to: '/driver/dashboard' });
-    } else if (roleKey === 'customer') {
+    } else if (role === Role.customer) {
       navigate({ to: '/customer/dashboard' });
     } else {
-      // No role assigned yet
+      // unassigned or null
       navigate({ to: '/select-role' });
     }
-  }, [role, isLoading, isError, isFetched, navigate]);
+  }, [role, isLoading, isFetched, navigate]);
 
-  if (isLoading) {
+  if (isError) {
     return (
-      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto" />
-          <p className="text-muted-foreground text-sm">Determining your role…</p>
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className="text-center max-w-sm">
+          <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-foreground mb-2">Failed to load your role</h2>
+          <p className="text-muted-foreground mb-6 text-sm">
+            We couldn't determine your account type. Please try again.
+          </p>
+          <Button onClick={() => refetch()} variant="outline" className="gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Retry
+          </Button>
         </div>
       </div>
     );
   }
 
-  if (isError) {
-    return (
-      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4">
-        <Card className="w-full max-w-md shadow-lg">
-          <CardHeader className="text-center space-y-3">
-            <div className="flex justify-center">
-              <AlertCircle className="h-12 w-12 text-destructive" />
-            </div>
-            <CardTitle className="text-xl font-bold">Unable to Determine Role</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              We couldn't fetch your role from the backend. Please try again.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {identity && (
-              <div className="bg-muted rounded-md p-3">
-                <p className="text-xs text-muted-foreground mb-1">Principal ID</p>
-                <p className="text-xs font-mono break-all">{identity.getPrincipal().toString()}</p>
-              </div>
-            )}
-            <Button className="w-full" onClick={() => refetch()}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Retry
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Redirect is in progress — show a brief spinner
   return (
-    <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4">
-      <div className="text-center space-y-4">
-        <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto" />
-        <p className="text-muted-foreground text-sm">Redirecting…</p>
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
+        <p className="text-muted-foreground text-sm">Setting up your account…</p>
       </div>
     </div>
   );

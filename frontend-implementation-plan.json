@@ -1,6 +1,94 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Backend-only admin role recovery with seeded stable principals",
-  "requirements": []
+  "title": "Fix 'in' operator crash on trip fields in driver frontend components",
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "summary": "Remove all 'in' operator checks on trip fields (status, tripType, journeyType, vehicleType) from DriverDashboard, DriverTripList, AvailableTripsSection, TripCard components, and helper/utility functions. Replace with safe comparison logic using === for strings or Object.keys(value)[0] for objects.",
+      "acceptanceCriteria": [
+        "No use of the 'in' operator on trip.status, trip.tripType, trip.journeyType, or trip.vehicleType exists anywhere in DriverDashboard, DriverTripList, AvailableTripsSection, TripCard components, or any helper/utility files.",
+        "All comparisons on those fields use === (for strings) or Object.keys(value)[0] (for objects).",
+        "The driver dashboard no longer throws 'Cannot use in operator to search for #local in local' after login."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/AvailableTripsSection.tsx",
+          "operation": "modify",
+          "description": "Remove all 'in' operator checks on trip.tripType, trip.journeyType, trip.vehicleType, and trip.status. Replace with safe comparisons: if typeof value === 'string', use === for direct comparison; if typeof value === 'object', extract the key using Object.keys(value)[0] before comparing. Specifically target any checks like '#local' in trip.tripType or similar patterns that cause runtime errors."
+        },
+        {
+          "path": "frontend/src/components/DriverTripList.tsx",
+          "operation": "modify",
+          "description": "Remove all 'in' operator checks on trip.status, trip.tripType, trip.journeyType, and trip.vehicleType. Replace with safe string comparisons using === or Object.keys extraction for variant objects. Ensure no runtime errors occur when accessing these fields."
+        },
+        {
+          "path": "frontend/src/components/CustomerTripList.tsx",
+          "operation": "modify",
+          "description": "Remove all 'in' operator checks on trip.status, trip.tripType, trip.journeyType, and trip.vehicleType. Replace with safe comparison logic that handles both string values and Candid variant objects."
+        },
+        {
+          "path": "frontend/src/components/AdminTripsTab.tsx",
+          "operation": "modify",
+          "description": "Remove all 'in' operator checks on trip.status, trip.tripType, trip.journeyType, and trip.vehicleType from the admin trips table rendering logic. Use === comparisons for strings or Object.keys(value)[0] extraction for objects."
+        },
+        {
+          "path": "frontend/src/components/RideRequestForm.tsx",
+          "operation": "modify",
+          "description": "Remove any 'in' operator checks on trip.tripType, trip.journeyType, or trip.vehicleType from the convertBackendTripType helper function and form logic. Replace with safe string equality checks or Object.keys extraction."
+        },
+        {
+          "path": "frontend/src/pages/DriverDashboard.tsx",
+          "operation": "modify",
+          "description": "Remove all 'in' operator checks on trip fields. Ensure any trip data handling or display logic uses safe comparison methods (=== for strings, Object.keys for variant objects) rather than the 'in' operator."
+        },
+        {
+          "path": "frontend/src/pages/CustomerDashboard.tsx",
+          "operation": "modify",
+          "description": "Remove all 'in' operator checks on trip fields from any trip merging, filtering, or display logic. Use safe string comparisons instead."
+        }
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "summary": "Ensure all trip data sources in DriverDashboard, DriverTripList, and AvailableTripsSection are normalized through normalizeTrip() before rendering or passing to child components, guaranteeing plain string fields at render time.",
+      "acceptanceCriteria": [
+        "All trip arrays or trip objects in DriverDashboard, DriverTripList, and AvailableTripsSection are mapped through normalizeTrip() before any field access or rendering.",
+        "No raw backend trip objects reach TripCard or any rendering component without normalization.",
+        "Driver dashboard loads without runtime errors after login."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/AvailableTripsSection.tsx",
+          "operation": "modify",
+          "description": "Apply normalizeTrip() to all trip data returned from useGetAvailableTripsForDriver before rendering. Ensure the .map() iteration normalizes each trip before passing it to any display logic or child components, so all status/tripType/journeyType/vehicleType fields are plain strings."
+        },
+        {
+          "path": "frontend/src/components/DriverTripList.tsx",
+          "operation": "modify",
+          "description": "Apply normalizeTrip() to all trip data returned from useGetMyDriverTrips before rendering. Map the trips array through normalizeTrip() to ensure all variant fields are converted to plain strings before any rendering or child component usage."
+        },
+        {
+          "path": "frontend/src/pages/DriverDashboard.tsx",
+          "operation": "modify",
+          "description": "Ensure any trip data fetched or displayed in DriverDashboard is normalized via normalizeTrip() before being passed to DriverTripList, AvailableTripsSection, or any other child components. Verify that no raw backend trip objects are used directly in render logic."
+        },
+        {
+          "path": "frontend/src/components/CustomerTripList.tsx",
+          "operation": "modify",
+          "description": "Apply normalizeTrip() to all trip data from useGetMyCustomerTrips before rendering to ensure consistent plain-string fields, preventing any potential 'in' operator issues in future iterations."
+        },
+        {
+          "path": "frontend/src/pages/CustomerDashboard.tsx",
+          "operation": "modify",
+          "description": "Ensure all trip data (both from backend and optimistic updates) is normalized through normalizeTrip() before merging and rendering in CustomerTripList. Verify that the merged trip array contains only normalized trips with plain-string fields."
+        },
+        {
+          "path": "frontend/src/components/AdminTripsTab.tsx",
+          "operation": "modify",
+          "description": "Apply normalizeTrip() to all trip data from useGetAllTripsAdmin before rendering in the admin trips table. Ensure the normalization happens before any filtering, sorting, or display logic to guarantee plain-string fields throughout."
+        }
+      ]
+    }
+  ]
 }

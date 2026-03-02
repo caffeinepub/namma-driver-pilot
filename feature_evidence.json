@@ -1,4 +1,43 @@
 {
   "kind": "feature_evidence_report",
-  "features": []
+  "features": [
+    {
+      "featureId": "feature-scan-driverdashboard-drivertriplist-availabletripssection-all-tripcard-components-and-every-helper-utility-function-in-the-frontend-for-any-use-of-the-javascript-in-operator-applied-to-trip-fields-status-triptype-journeytype-vehicletype-remove-every-such-check-and-replace-with-safe-comparison-logic-if-the-value-is-a-string-compare-using-if-the-value-is-an-object-extract-the-key-using-object-keys-value-0-before-comparing",
+      "featureTitle": "Scan DriverDashboard, DriverTripList, AvailableTripsSection, all TripCard components, and every helper/utility function in the frontend for any use of the JavaScript 'in' operator applied to trip fields (status, tripType, journeyType, vehicleType). Remove every such check and replace with safe comparison logic: if the value is a string, compare using ===; if the value is an object, extract the key using Object.keys(value)[0] before comparing.",
+      "files": [
+        "frontend/src/components/AvailableTripsSection.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-ensure-every-trip-data-source-rendered-inside-driverdashboard-drivertriplist-and-availabletripssection-is-passed-through-the-existing-normalizetrip-utility-before-being-used-in-render-logic-or-passed-to-child-components-so-all-trip-fields-are-guaranteed-plain-strings-at-render-time",
+      "featureTitle": "Ensure every trip data source rendered inside DriverDashboard, DriverTripList, and AvailableTripsSection is passed through the existing normalizeTrip() utility before being used in render logic or passed to child components, so all trip fields are guaranteed plain strings at render time.",
+      "files": [
+        "frontend/src/components/AvailableTripsSection.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-2"
+      ],
+      "confidence": "high"
+    }
+  ]
 }

@@ -1,102 +1,65 @@
-import { ReactNode, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { useGetMyRole } from '../hooks/useQueries';
-import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Role } from '../backend';
+import { Loader2 } from 'lucide-react';
 import NotAuthorizedPage from '../pages/NotAuthorizedPage';
-import type { AppRole } from '../lib/types';
 import { toast } from 'sonner';
 
 interface RoleGuardProps {
-  requiredRole: AppRole;
-  children: ReactNode;
-  /** If true, show NotAuthorizedPage instead of redirecting to /select-role on mismatch */
-  showNotAuthorized?: boolean;
+  allowedRole: 'admin' | 'driver' | 'customer';
+  children: React.ReactNode;
 }
 
-/**
- * RoleGuard checks the user's role after authentication.
- * - If not authenticated: redirects to /login
- * - While loading: shows a spinner
- * - On error: shows a retry UI (no infinite loading)
- * - If role matches: renders children
- * - If role mismatches:
- *   - For admin routes (showNotAuthorized=true): shows NotAuthorizedPage + toast "Admin only"
- *   - For customer/driver routes: redirects to /select-role
- */
-export default function RoleGuard({ requiredRole, children, showNotAuthorized = false }: RoleGuardProps) {
-  const { identity } = useInternetIdentity();
+export default function RoleGuard({ allowedRole, children }: RoleGuardProps) {
   const navigate = useNavigate();
-  const { role, isLoading, isError, isFetched, refetch } = useGetMyRole();
+  const { data: role, isLoading, isFetched } = useGetMyRole();
 
-  const isAuthenticated = !!identity;
+  React.useEffect(() => {
+    if (!isFetched || isLoading) return;
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate({ to: '/login' });
-    }
-  }, [isAuthenticated, navigate]);
-
-  useEffect(() => {
-    if (!isFetched || isLoading || isError || !isAuthenticated) return;
-    if (role === requiredRole) return; // authorized — do nothing
-
-    if (showNotAuthorized) {
-      // For admin routes: show toast and render NotAuthorizedPage below
-      if (requiredRole === 'admin') {
-        toast.error('Admin only', {
-          description: 'You do not have permission to access this area.',
-          id: 'admin-only-toast', // prevent duplicate toasts
-        });
-      }
+    // Unassigned → go pick a role
+    if (role === Role.unassigned || role === null || role === undefined) {
+      navigate({ to: '/select-role' });
       return;
     }
-    // For customer/driver routes: redirect to /select-role
-    navigate({ to: '/select-role' });
-  }, [role, isLoading, isError, isFetched, isAuthenticated, requiredRole, showNotAuthorized, navigate]);
 
-  if (!isAuthenticated) return null;
-
-  if (isLoading) {
-    return (
-      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto" />
-          <p className="text-muted-foreground text-sm">Verifying access…</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4">
-        <div className="text-center space-y-4 max-w-sm">
-          <AlertCircle className="h-10 w-10 text-destructive mx-auto" />
-          <p className="font-semibold">Unable to verify access</p>
-          <p className="text-muted-foreground text-sm">
-            We couldn't verify your permissions. Please try again.
-          </p>
-          <Button onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Retry
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isFetched) return null;
-
-  // Role mismatch
-  if (role !== requiredRole) {
-    if (showNotAuthorized) {
-      return <NotAuthorizedPage />;
+    // Admin trying to access non-admin route
+    if (role === Role.admin && allowedRole !== 'admin') {
+      toast.error('Admin only area');
+      return;
     }
-    // Redirect is handled by the useEffect above; render nothing while it fires
+  }, [role, isLoading, isFetched, allowedRole, navigate]);
+
+  if (isLoading || !isFetched) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Unassigned — redirect handled in effect, show nothing
+  if (role === Role.unassigned || role === null || role === undefined) {
     return null;
   }
 
-  return <>{children}</>;
+  // Admin accessing admin route — allow
+  if (role === Role.admin && allowedRole === 'admin') {
+    return <>{children}</>;
+  }
+
+  // Admin accessing non-admin route — show not authorized
+  if (role === Role.admin && allowedRole !== 'admin') {
+    return <NotAuthorizedPage />;
+  }
+
+  // Role matches — allow
+  const roleKey = role === Role.customer ? 'customer' : role === Role.driver ? 'driver' : role;
+  if (roleKey === allowedRole) {
+    return <>{children}</>;
+  }
+
+  // Role mismatch
+  return <NotAuthorizedPage />;
 }

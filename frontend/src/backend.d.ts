@@ -47,17 +47,19 @@ export interface Trip {
     pickupLocation: Location;
 }
 export type Time = bigint;
-export interface ProfileUpdate {
-    serviceAreaName: string;
-    servicePincode: string;
-    vehicleExperience: Array<VehicleExperience>;
-    languages?: Array<string>;
-    isAvailable: boolean;
-    fullName: string;
-    email: string;
-    totalEarnings: bigint;
-    transmissionComfort: Array<TransmissionComfort>;
-}
+export type CompleteTripResult = {
+    __kind__: "ok";
+    ok: Trip;
+} | {
+    __kind__: "notAssigned";
+    notAssigned: null;
+} | {
+    __kind__: "notFound";
+    notFound: null;
+} | {
+    __kind__: "notAccepted";
+    notAccepted: null;
+};
 export interface TripRequest {
     driverId?: Principal;
     vehicleType: VehicleType;
@@ -134,10 +136,6 @@ export type AcceptTripResult = {
     __kind__: "alreadyAccepted";
     alreadyAccepted: null;
 };
-export interface ProfileInput {
-    fullName: string;
-    email: string;
-}
 export interface UserProfile {
     serviceAreaName: string;
     servicePincode: string;
@@ -172,6 +170,7 @@ export enum JourneyType {
 export enum Role {
     admin = "admin",
     customer = "customer",
+    unassigned = "unassigned",
     driver = "driver"
 }
 export enum TransmissionType {
@@ -203,27 +202,25 @@ export enum VehicleType {
 export interface backendInterface {
     acceptTrip(tripId: string): Promise<AcceptTripResult>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    completeTrip(tripId: string): Promise<CompleteTripResult>;
     createTrip(tripData: TripRequest): Promise<Trip>;
-    createUserProfile(profile: ProfileInput): Promise<UserProfile>;
+    getAllTripsAdmin(): Promise<Array<Trip>>;
+    getAvailableTripsForDriver(): Promise<Array<Trip>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getDriverProfile(): Promise<DriverProfile | null>;
+    getMyCustomerTrips(): Promise<Array<Trip>>;
+    getMyDriverTrips(): Promise<Array<Trip>>;
     getMyRole(): Promise<Role>;
     getPricingConfig(): Promise<PricingConfig>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     health(): Promise<string>;
-    isAdminCheck(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
     listAdmins(): Promise<Array<Principal>>;
-    makeMeAdmin(): Promise<boolean>;
     persistentAdminCheck(): Promise<boolean>;
     ping(): Promise<string>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    setMyRoleCustomer(): Promise<void>;
-    setMyRoleDriver(): Promise<void>;
-    setProfile(input: ProfileInput): Promise<UserProfile>;
+    setMyRole(newRole: Role): Promise<void>;
     updatePricingConfig(newConfig: PricingConfig): Promise<UpdateConfigResult>;
-    updateProfile(update: ProfileUpdate): Promise<UserProfile>;
-    updateProfileFields(fullName: string, email: string): Promise<UserProfile>;
     upsertDriverProfile(profile: DriverProfile): Promise<boolean>;
 }

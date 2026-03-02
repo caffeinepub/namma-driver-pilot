@@ -1,47 +1,34 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Ride-sharing/trip management app with driver and customer flows, admin role management, and trip filtering UI. Currently implementing backend-only admin role recovery: stable admin principals set seeded with two specified principals, isAdmin() check, and getMyRole() returning #admin for admin callers.",
+  "summary": "A ride-hailing app with driver and trip management features. Currently fixing frontend crashes caused by improper use of the 'in' operator on trip fields that are now plain strings.",
   "architectural_notes": [
-    "Admin principals are stored in a stable set seeded with two hardcoded principal IDs; isAdmin() checks this set; getMyRole() returns #admin if isAdmin(caller) is true"
+    "Trip fields (status, tripType, journeyType, vehicleType) are plain strings — never use 'in' operator on them. Use === for string comparison, Object.keys(value)[0] for object variants.",
+    "All trip data must be normalized through normalizeTrip() before rendering in any component."
   ],
   "known_issues": [],
   "isFixRequest": true,
-  "existing_features": [],
-  "new_feature_requests": [
+  "existing_features": [
     {
-      "id": "AR-1",
-      "summary": "Backend-only admin role recovery: seed stable admin principals set with two specified principals, fix isAdmin() and getMyRole() to return #admin for admin callers",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-2",
-      "summary": "Replace the current admin principals set in backend/main.mo with a stable set seeded with BOTH of the following principals: '6ngnc-ph7ou-g23nw-z2zbr-czprs-ohpe6-2wolp-eeo7o-c32lo-deiso-yqe' and 'g3c77-j7yp6-ydsrd-2zp2q-vajyd-4ymec-tydvo-kcxwl-s7reg-37yws-eae'. The set must be declared as a stable variable so it persists across upgrades.",
+      "id": "feature-scan-driverdashboard-drivertriplist-availabletripssection-all-tripcard-components-and-every-helper-utility-function-in-the-frontend-for-any-use-of-the-javascript-in-operator-applied-to-trip-fields-status-triptype-journeytype-vehicletype-remove-every-such-check-and-replace-with-safe-comparison-logic-if-the-value-is-a-string-compare-using-if-the-value-is-an-object-extract-the-key-using-object-keys-value-0-before-comparing",
+      "title": "Scan DriverDashboard, DriverTripList, AvailableTripsSection, all TripCard components, and every helper/utility function in the frontend for any use of the JavaScript 'in' operator applied to trip fields (status, tripType, journeyType, vehicleType). Remove every such check and replace with safe comparison logic: if the value is a string, compare using ===; if the value is an object, extract the key using Object.keys(value)[0] before comparing.",
       "reqIds": [
         "REQ-1"
       ],
-      "status": "pending"
+      "version": 1
     },
     {
-      "id": "AR-3",
-      "summary": "Update the isAdmin(caller) function in backend/main.mo to return true if and only if the caller's principal is present in the stable admin principals set.",
+      "id": "feature-ensure-every-trip-data-source-rendered-inside-driverdashboard-drivertriplist-and-availabletripssection-is-passed-through-the-existing-normalizetrip-utility-before-being-used-in-render-logic-or-passed-to-child-components-so-all-trip-fields-are-guaranteed-plain-strings-at-render-time",
+      "title": "Ensure every trip data source rendered inside DriverDashboard, DriverTripList, and AvailableTripsSection is passed through the existing normalizeTrip() utility before being used in render logic or passed to child components, so all trip fields are guaranteed plain strings at render time.",
       "reqIds": [
         "REQ-2"
       ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-4",
-      "summary": "Update the getMyRole() function in backend/main.mo so that if isAdmin(caller) is true, it returns #admin regardless of the stored user role. Otherwise, it returns the stored user role as before.",
-      "reqIds": [
-        "REQ-3"
-      ],
-      "status": "pending"
+      "version": 1
     }
   ],
+  "new_feature_requests": [],
   "gameProjectType": "none",
-  "projectName": "Namma Driver Pilot",
+  "projectName": "Fix 'in' operator crash on trip fields in driver frontend components",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

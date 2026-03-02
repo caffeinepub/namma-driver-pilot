@@ -1,45 +1,25 @@
 import Map "mo:core/Map";
 import Set "mo:core/Set";
 import Text "mo:core/Text";
-import Nat "mo:core/Nat";
-import Time "mo:core/Time";
-import Order "mo:core/Order";
-import Principal "mo:core/Principal";
-import Iter "mo:core/Iter";
-import Runtime "mo:core/Runtime";
-import List "mo:core/List";
 import Nat64 "mo:core/Nat64";
+import Time "mo:core/Time";
+import Iter "mo:core/Iter";
 import Array "mo:core/Array";
-import Migration "migration";
+import Principal "mo:core/Principal";
+import Runtime "mo:core/Runtime";
 
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
 
-(with migration = Migration.run)
-actor {
-  type StableAdminSet = Set.Set<Text>;
 
-  public type UserRole = AccessControl.UserRole;
+actor {
+  type AdminPrincipalSet = Set.Set<Text>;
 
   public type Role = {
     #customer;
     #driver;
     #admin;
-  };
-
-  public type UserProfile = {
-    principalId : Principal;
-    fullName : Text;
-    email : Text;
-    role : Role;
-    createdTime : Time.Time;
-    servicePincode : Text;
-    serviceAreaName : Text;
-    vehicleExperience : [VehicleExperience];
-    transmissionComfort : [TransmissionComfort];
-    isAvailable : Bool;
-    totalEarnings : Nat64;
-    languages : ?[Text];
+    #unassigned;
   };
 
   public type VehicleExperience = {
@@ -78,26 +58,16 @@ actor {
     #ev;
   };
 
-  public type DriverProfile = {
-    serviceAreaName : Text;
-    servicePincode : Text;
-    vehicleExperience : [VehicleType];
-    transmissionComfort : [TransmissionType];
-    languages : [Text];
-    isAvailable : Bool;
-    updatedTime : Nat64;
-  };
-
-  public type Duration = {
-    #hours : Nat;
-    #days : Nat;
-  };
-
   public type Location = {
     pincode : Text;
     area : Text;
     latitude : ?Float;
     longitude : ?Float;
+  };
+
+  public type Duration = {
+    #hours : Nat;
+    #days : Nat;
   };
 
   public type TripRequest = {
@@ -147,6 +117,31 @@ actor {
     billableHours : Nat;
   };
 
+  public type UserProfile = {
+    principalId : Principal;
+    fullName : Text;
+    email : Text;
+    role : Role;
+    createdTime : Time.Time;
+    servicePincode : Text;
+    serviceAreaName : Text;
+    vehicleExperience : [VehicleExperience];
+    transmissionComfort : [TransmissionComfort];
+    isAvailable : Bool;
+    totalEarnings : Nat64;
+    languages : ?[Text];
+  };
+
+  public type DriverProfile = {
+    serviceAreaName : Text;
+    servicePincode : Text;
+    vehicleExperience : [VehicleType];
+    transmissionComfort : [TransmissionType];
+    languages : [Text];
+    isAvailable : Bool;
+    updatedTime : Nat64;
+  };
+
   public type LocalPricing = {
     base_first_hour : Float;
     min_hours : Float;
@@ -188,49 +183,28 @@ actor {
     commission : Commission;
   };
 
-  module Profile {
-    public func compareByEmail(profile1 : UserProfile, profile2 : UserProfile) : Order.Order {
-      Text.compare(profile1.email, profile2.email);
-    };
-  };
-
-  module Trip {
-    public func compareByTripId(trip1 : Trip, trip2 : Trip) : Order.Order {
-      Text.compare(trip1.tripId, trip2.tripId);
-    };
-
-    public func compareByPickupLocation(trip1 : Trip, trip2 : Trip) : Order.Order {
-      Text.compare(trip1.pickupLocation.area, trip2.pickupLocation.area);
-    };
-
-    public func compareByDropoffLocation(trip1 : Trip, trip2 : Trip) : Order.Order {
-      switch (trip1.dropoffLocation, trip2.dropoffLocation) {
-        case (?loc1, ?loc2) { Text.compare(loc1.area, loc2.area) };
-        case (?_, null) { #greater };
-        case (null, ?_) { #less };
-        case (null, null) { #equal };
-      };
-    };
-  };
-
-  // Stable variable so it persists across upgrades
-  stable var adminPrincipalSet : StableAdminSet = Set.fromArray([
+  var adminPrincipals : AdminPrincipalSet = Set.fromArray([
     "6ngnc-ph7ou-g23nw-z2zbr-czprs-ohpe6-2wolp-eeo7o-c32lo-deiso-yqe",
     "g3c77-j7yp6-ydsrd-2zp2q-vajyd-4ymec-tydvo-kcxwl-s7reg-37yws-eae",
   ]);
-
   var pricingConfig : ?PricingConfig = null;
   let userProfiles = Map.empty<Principal, UserProfile>();
   let driverProfiles = Map.empty<Principal, DriverProfile>();
   let trips = Map.empty<Text, Trip>();
-  let userRoles = Map.empty<Principal, { #customer; #driver }>();
 
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
-  // isAdmin checks the stable admin principals set
+  public type UpdateConfigResult = {
+    #ok : PricingConfig;
+    #notAdmin;
+    #invalidConfig : Text;
+    #noConfigFound;
+    #failedUpdate : Text;
+  };
+
   private func isAdmin(caller : Principal) : Bool {
-    adminPrincipalSet.contains(caller.toText());
+    adminPrincipals.contains(caller.toText());
   };
 
   private func isAnonymous(caller : Principal) : Bool {
@@ -282,14 +256,6 @@ actor {
     };
   };
 
-  public type UpdateConfigResult = {
-    #ok : PricingConfig;
-    #notAdmin;
-    #invalidConfig : Text;
-    #noConfigFound;
-    #failedUpdate : Text;
-  };
-
   public query func getPricingConfig() : async PricingConfig {
     switch (pricingConfig) {
       case (?config) { config };
@@ -330,131 +296,6 @@ actor {
     #ok(newConfig);
   };
 
-  // getMyRole: returns #admin if caller is in admin set, otherwise returns stored role
-  public query ({ caller }) func getMyRole() : async Role {
-    requireAuthenticated(caller);
-    if (isAdmin(caller)) {
-      return #admin;
-    };
-    switch (userProfiles.get(caller)) {
-      case (?profile) { profile.role };
-      case (null) { #customer };
-    };
-  };
-
-  // isAdminCheck: public query to check if caller is admin
-  public query ({ caller }) func isAdminCheck() : async Bool {
-    requireAuthenticated(caller);
-    isAdmin(caller);
-  };
-
-  public type ProfileInput = {
-    fullName : Text;
-    email : Text;
-  };
-
-  public shared ({ caller }) func setProfile(input : ProfileInput) : async UserProfile {
-    requireAuthenticated(caller);
-
-    let currentTime = Time.now();
-
-    let role : Role = switch (userProfiles.get(caller)) {
-      case (?existingProfile) {
-        existingProfile.role;
-      };
-      case (null) {
-        if (isAdmin(caller)) {
-          #admin;
-        } else {
-          #customer;
-        };
-      };
-    };
-
-    let userProfile : UserProfile = {
-      principalId = caller;
-      fullName = input.fullName;
-      email = input.email;
-      role;
-      createdTime = currentTime;
-      servicePincode = "000000";
-      serviceAreaName = "Unknown";
-      vehicleExperience = [];
-      transmissionComfort = [];
-      isAvailable = false;
-      totalEarnings = 0;
-      languages = null;
-    };
-
-    userProfiles.add(caller, userProfile);
-    userProfile;
-  };
-
-  public shared ({ caller }) func updateProfileFields(fullName : Text, email : Text) : async UserProfile {
-    requireAuthenticated(caller);
-    switch (userProfiles.get(caller)) {
-      case (?existingProfile) {
-        let updatedProfile : UserProfile = {
-          existingProfile with
-          fullName = fullName;
-          email;
-        };
-        userProfiles.add(caller, updatedProfile);
-        updatedProfile;
-      };
-      case (null) {
-        Runtime.trap("Profile not found for caller");
-      };
-    };
-  };
-
-  public type ProfileUpdate = {
-    fullName : Text;
-    email : Text;
-    servicePincode : Text;
-    serviceAreaName : Text;
-    vehicleExperience : [VehicleExperience];
-    transmissionComfort : [TransmissionComfort];
-    isAvailable : Bool;
-    totalEarnings : Nat64;
-    languages : ?[Text];
-  };
-
-  public shared ({ caller }) func updateProfile(update : ProfileUpdate) : async UserProfile {
-    requireAuthenticated(caller);
-    switch (userProfiles.get(caller)) {
-      case (?existingProfile) {
-        let updatedUserProfile : UserProfile = {
-          existingProfile with
-          fullName = update.fullName;
-          email = update.email;
-          servicePincode = update.servicePincode;
-          serviceAreaName = update.serviceAreaName;
-          vehicleExperience = update.vehicleExperience;
-          transmissionComfort = update.transmissionComfort;
-          isAvailable = update.isAvailable;
-          totalEarnings = update.totalEarnings;
-          languages = update.languages;
-        };
-        userProfiles.add(caller, updatedUserProfile);
-        updatedUserProfile;
-      };
-      case (null) {
-        Runtime.trap("Profile not found for caller");
-      };
-    };
-  };
-
-  public shared ({ caller }) func setMyRoleCustomer() : async () {
-    requireAuthenticated(caller);
-    updateCurrentRoleSecure(caller, #customer);
-  };
-
-  public shared ({ caller }) func setMyRoleDriver() : async () {
-    requireAuthenticated(caller);
-    updateCurrentRoleSecure(caller, #driver);
-  };
-
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     requireAuthenticated(caller);
     switch (userProfiles.get(caller)) {
@@ -468,26 +309,30 @@ actor {
     if (caller != user and not isAdmin(caller)) {
       Runtime.trap("Unauthorized: Can only view your own profile");
     };
-    switch (userProfiles.get(user)) {
-      case (null) { null };
-      case (?profile) { ?profile };
-    };
+    userProfiles.get(user);
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
     requireAuthenticated(caller);
-    let preservedRole : Role = switch (userProfiles.get(caller)) {
-      case (?existingProfile) { existingProfile.role };
+
+    let persistentRole : Role = switch (userProfiles.get(caller)) {
+      case (?existing) {
+        existing.role;
+      };
       case (null) {
-        if (isAdmin(caller)) { #admin } else { #customer };
+        switch (profile.role) {
+          case (#driver) { #driver };
+          case (#customer) { #customer };
+          case (_) { #unassigned };
+        };
       };
     };
-    let safeProfile : UserProfile = {
+
+    userProfiles.add(caller, {
       profile with
       principalId = caller;
-      role = preservedRole;
-    };
-    userProfiles.add(caller, safeProfile);
+      role = persistentRole;
+    });
   };
 
   public type TripRequestInput = {
@@ -566,18 +411,6 @@ actor {
     };
   };
 
-  func updateCurrentRoleSecure(caller : Principal, newRole : Role) {
-    switch (userProfiles.get(caller)) {
-      case (?profile) {
-        let updatedProfile : UserProfile = { profile with role = newRole };
-        userProfiles.add(caller, updatedProfile);
-      };
-      case (null) {
-        Runtime.trap("Profile not found");
-      };
-    };
-  };
-
   public query ({ caller }) func getDriverProfile() : async ?DriverProfile {
     requireAuthenticated(caller);
     driverProfiles.get(caller);
@@ -589,11 +422,12 @@ actor {
     true;
   };
 
-  // Admin-only: list all admins
   public query ({ caller }) func listAdmins() : async [Principal] {
     requireAuthenticated(caller);
     requireAdminCaller(caller);
-    adminPrincipalSet.toArray().map<Text, Principal>(func(p) { Principal.fromText(p) : Principal });
+    adminPrincipals.toArray().map<Text, Principal>(
+      func(p) { Principal.fromText(p) : Principal }
+    );
   };
 
   public query ({ caller }) func persistentAdminCheck() : async Bool {
@@ -601,39 +435,154 @@ actor {
     isAdmin(caller);
   };
 
-  // makeMeAdmin is disabled: the admin set is pre-seeded and stable.
-  // Only returns false to avoid breaking existing callers.
-  public shared ({ caller }) func makeMeAdmin() : async Bool {
-    requireAuthenticated(caller);
-    false;
-  };
-
-  public shared ({ caller }) func createUserProfile(profile : ProfileInput) : async UserProfile {
-    requireAuthenticated(caller);
-
-    // Role is determined by admin set membership; never auto-grant admin via this function
-    let role : Role = if (isAdmin(caller)) { #admin } else { #customer };
-
-    let newUser : UserProfile = {
-      principalId = caller;
-      fullName = profile.fullName;
-      email = profile.email;
-      role;
-      createdTime = Time.now();
-      servicePincode = "000000";
-      serviceAreaName = "Unknown";
-      vehicleExperience = [];
-      transmissionComfort = [];
-      isAvailable = false;
-      totalEarnings = 0;
-      languages = null;
-    };
-
-    userProfiles.add(caller, newUser);
-    newUser;
-  };
-
   public query func ping() : async Text { "ok" };
 
   public query func health() : async Text { "ok" };
+
+  public query ({ caller }) func getAvailableTripsForDriver() : async [Trip] {
+    requireAuthenticated(caller);
+
+    switch (driverProfiles.get(caller)) {
+      case (null) {
+        [];
+      };
+      case (?driverProfile) {
+        if (not driverProfile.isAvailable) {
+          return [];
+        };
+
+        let driverServicePincode = driverProfile.servicePincode;
+
+        trips.entries().toArray().filter(
+          func((_, trip)) {
+            trip.status == #requested and
+            trip.driverId == null and
+            trip.pickupLocation.pincode == driverServicePincode
+          }
+        ).map(func((_, trip)) { trip });
+      };
+    };
+  };
+
+  public query ({ caller }) func getMyRole() : async Role {
+    requireAuthenticated(caller);
+    if (isAdmin(caller)) {
+      return #admin;
+    };
+    switch (userProfiles.get(caller)) {
+      case (?profile) { profile.role };
+      case (null) { #unassigned };
+    };
+  };
+
+  public shared ({ caller }) func setMyRole(newRole : Role) : async () {
+    requireAuthenticated(caller);
+
+    if (isAdmin(caller)) {
+      Runtime.trap("Admins cannot change their role");
+    };
+
+    switch (newRole) {
+      case (#customer) {};
+      case (#driver) {};
+      case (_) {
+        Runtime.trap("Only #driver or #customer roles can be self-assigned");
+      };
+    };
+
+    let currentTime = Time.now();
+
+    switch (userProfiles.get(caller)) {
+      case (?existing) {
+        userProfiles.add(caller, { existing with role = newRole });
+      };
+      case (null) {
+        let newProfile : UserProfile = {
+          principalId = caller;
+          fullName = "";
+          email = "";
+          role = newRole;
+          createdTime = currentTime;
+          servicePincode = "000000";
+          serviceAreaName = "Unknown";
+          vehicleExperience = [];
+          transmissionComfort = [];
+          isAvailable = false;
+          totalEarnings = 0;
+          languages = null;
+        };
+        userProfiles.add(caller, newProfile);
+      };
+    };
+  };
+
+  public query ({ caller }) func getAllTripsAdmin() : async [Trip] {
+    requireAuthenticated(caller);
+    requireAdminCaller(caller);
+
+    trips.entries().toArray().reverse().map(func((_, trip)) { trip });
+  };
+
+  public query ({ caller }) func getMyCustomerTrips() : async [Trip] {
+    requireAuthenticated(caller);
+
+    let filteredEntries = trips.entries().toArray().filter(
+      func((_, trip)) { trip.customerId == caller }
+    );
+
+    filteredEntries.reverse().map(func((_, trip)) { trip });
+  };
+
+  public query ({ caller }) func getMyDriverTrips() : async [Trip] {
+    requireAuthenticated(caller);
+
+    let filteredEntries = trips.entries().toArray().filter(
+      func((_, trip)) {
+        switch (trip.driverId) {
+          case (?ref) { ref == caller };
+          case (null) { false };
+        };
+      }
+    );
+
+    filteredEntries.reverse().map(func((_, trip)) { trip });
+  };
+
+  public type CompleteTripResult = {
+    #ok : Trip;
+    #notFound;
+    #notAssigned;
+    #notAccepted;
+  };
+
+  public shared ({ caller }) func completeTrip(tripId : Text) : async CompleteTripResult {
+    requireAuthenticated(caller);
+
+    switch (trips.get(tripId)) {
+      case (null) {
+        #notFound;
+      };
+      case (?trip) {
+        switch (trip.driverId) {
+          case (?ref) {
+            if (ref != caller) {
+              #notAssigned;
+            } else {
+              switch (trip.status) {
+                case (#accepted) {
+                  let updatedTrip : Trip = {
+                    trip with status = #completed
+                  };
+                  trips.add(tripId, updatedTrip);
+                  #ok(updatedTrip);
+                };
+                case (_) { #notAccepted };
+              };
+            };
+          };
+          case (null) { #notAssigned };
+        };
+      };
+    };
+  };
 };

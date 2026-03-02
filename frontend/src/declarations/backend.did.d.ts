@@ -16,6 +16,10 @@ export type AcceptTripResult = { 'ok' : Trip } |
   { 'unauthorized' : null } |
   { 'alreadyAccepted' : null };
 export interface Commission { 'local' : number, 'outstation' : number }
+export type CompleteTripResult = { 'ok' : Trip } |
+  { 'notAssigned' : null } |
+  { 'notFound' : null } |
+  { 'notAccepted' : null };
 export interface DriverProfile {
   'serviceAreaName' : string,
   'updatedTime' : bigint,
@@ -61,20 +65,9 @@ export interface PricingConfig {
   'vehicle_multiplier' : VehicleMultiplier,
   'outstation' : OutstationPricing,
 }
-export interface ProfileInput { 'fullName' : string, 'email' : string }
-export interface ProfileUpdate {
-  'serviceAreaName' : string,
-  'servicePincode' : string,
-  'vehicleExperience' : Array<VehicleExperience>,
-  'languages' : [] | [Array<string>],
-  'isAvailable' : boolean,
-  'fullName' : string,
-  'email' : string,
-  'totalEarnings' : bigint,
-  'transmissionComfort' : Array<TransmissionComfort>,
-}
 export type Role = { 'admin' : null } |
   { 'customer' : null } |
+  { 'unassigned' : null } |
   { 'driver' : null };
 export type Time = bigint;
 export type TransmissionComfort = { 'ev' : null } |
@@ -167,28 +160,26 @@ export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'acceptTrip' : ActorMethod<[string], AcceptTripResult>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'completeTrip' : ActorMethod<[string], CompleteTripResult>,
   'createTrip' : ActorMethod<[TripRequest], Trip>,
-  'createUserProfile' : ActorMethod<[ProfileInput], UserProfile>,
+  'getAllTripsAdmin' : ActorMethod<[], Array<Trip>>,
+  'getAvailableTripsForDriver' : ActorMethod<[], Array<Trip>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getDriverProfile' : ActorMethod<[], [] | [DriverProfile]>,
+  'getMyCustomerTrips' : ActorMethod<[], Array<Trip>>,
+  'getMyDriverTrips' : ActorMethod<[], Array<Trip>>,
   'getMyRole' : ActorMethod<[], Role>,
   'getPricingConfig' : ActorMethod<[], PricingConfig>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'health' : ActorMethod<[], string>,
-  'isAdminCheck' : ActorMethod<[], boolean>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'listAdmins' : ActorMethod<[], Array<Principal>>,
-  'makeMeAdmin' : ActorMethod<[], boolean>,
   'persistentAdminCheck' : ActorMethod<[], boolean>,
   'ping' : ActorMethod<[], string>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
-  'setMyRoleCustomer' : ActorMethod<[], undefined>,
-  'setMyRoleDriver' : ActorMethod<[], undefined>,
-  'setProfile' : ActorMethod<[ProfileInput], UserProfile>,
+  'setMyRole' : ActorMethod<[Role], undefined>,
   'updatePricingConfig' : ActorMethod<[PricingConfig], UpdateConfigResult>,
-  'updateProfile' : ActorMethod<[ProfileUpdate], UserProfile>,
-  'updateProfileFields' : ActorMethod<[string, string], UserProfile>,
   'upsertDriverProfile' : ActorMethod<[DriverProfile], boolean>,
 }
 export declare const idlService: IDL.ServiceClass;

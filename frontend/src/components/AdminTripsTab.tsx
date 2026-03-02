@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useGetAllTrips } from '../hooks/useQueries';
-import type { Trip } from '../lib/types';
+import { useGetAllTripsAdmin } from '../hooks/useQueries';
+import type { NormalizedTrip } from '../utils/normalizeTrip';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,33 +14,29 @@ import {
 } from '@/components/ui/table';
 import { Search } from 'lucide-react';
 
-function getStatusLabel(trip: Trip): string {
-  const s = trip.status;
-  if ('#requested' in s) return 'Requested';
-  if ('#accepted' in s) return 'Accepted';
-  if ('#completed' in s) return 'Completed';
-  if ('#cancelled' in s) return 'Cancelled';
+function getStatusLabel(status: string): string {
+  if (status === 'requested') return 'Requested';
+  if (status === 'accepted') return 'Accepted';
+  if (status === 'completed') return 'Completed';
+  if (status === 'cancelled') return 'Cancelled';
   return 'Unknown';
 }
 
-function getStatusVariant(trip: Trip): 'default' | 'secondary' | 'outline' | 'destructive' {
-  const s = trip.status;
-  if ('#completed' in s) return 'default';
-  if ('#accepted' in s) return 'secondary';
-  if ('#cancelled' in s) return 'destructive';
+function getStatusVariant(status: string): 'default' | 'secondary' | 'outline' | 'destructive' {
+  if (status === 'completed') return 'default';
+  if (status === 'accepted') return 'secondary';
+  if (status === 'cancelled') return 'destructive';
   return 'outline';
 }
 
-function formatLocation(loc: Trip['pickupLocation']): string {
+function formatLocation(loc: NormalizedTrip['pickupLocation']): string {
   const parts = [loc.area, loc.pincode].filter(Boolean);
   return parts.join(', ') || '—';
 }
 
-function formatDropoff(loc: Trip['dropoffLocation']): string {
-  if (!loc || loc.length === 0) return '—';
-  const l = loc[0];
-  if (!l) return '—';
-  const parts = [l.area, l.pincode].filter(Boolean);
+function formatDropoff(loc: NormalizedTrip['dropoffLocation']): string {
+  if (loc == null) return '—';
+  const parts = [loc.area, loc.pincode].filter(Boolean);
   return parts.join(', ') || '—';
 }
 
@@ -60,15 +56,16 @@ function formatFare(fare: bigint): string {
 }
 
 export default function AdminTripsTab() {
-  const { data: trips, isLoading } = useGetAllTrips();
+  const { data: trips, isLoading } = useGetAllTripsAdmin();
   const [search, setSearch] = useState('');
 
   const filtered = (trips ?? []).filter((t) => {
     const q = search.toLowerCase();
+    const dropArea = t.dropoffLocation != null ? t.dropoffLocation.area.toLowerCase() : '';
     return (
       t.tripId.toLowerCase().includes(q) ||
       t.pickupLocation.area.toLowerCase().includes(q) ||
-      (t.dropoffLocation.length > 0 && t.dropoffLocation[0]?.area.toLowerCase().includes(q))
+      dropArea.includes(q)
     );
   });
 
@@ -120,8 +117,8 @@ export default function AdminTripsTab() {
                     {trip.customerId.toString().slice(0, 8)}…
                   </TableCell>
                   <TableCell className="font-mono text-xs">
-                    {trip.driverId.length > 0 && trip.driverId[0]
-                      ? `${trip.driverId[0].toString().slice(0, 8)}…`
+                    {trip.driverId !== null
+                      ? `${trip.driverId.toString().slice(0, 8)}…`
                       : '—'}
                   </TableCell>
                   <TableCell>{formatLocation(trip.pickupLocation)}</TableCell>
@@ -130,8 +127,8 @@ export default function AdminTripsTab() {
                     {formatDate(trip.createdTime)}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getStatusVariant(trip)}>
-                      {getStatusLabel(trip)}
+                    <Badge variant={getStatusVariant(trip.status)}>
+                      {getStatusLabel(trip.status)}
                     </Badge>
                   </TableCell>
                   <TableCell>{formatFare(trip.totalFare)}</TableCell>

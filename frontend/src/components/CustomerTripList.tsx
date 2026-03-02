@@ -1,4 +1,4 @@
-import type { Trip } from '../lib/types';
+import type { NormalizedTrip } from '../utils/normalizeTrip';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -6,37 +6,33 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { MapPin, Clock, Car } from 'lucide-react';
 
 interface CustomerTripListProps {
-  trips?: Trip[];
+  trips?: NormalizedTrip[];
   isLoading?: boolean;
 }
 
-function getStatusLabel(trip: Trip): string {
-  const s = trip.status;
-  if ('#requested' in s) return 'Pending';
-  if ('#accepted' in s) return 'Accepted';
-  if ('#completed' in s) return 'Completed';
-  if ('#cancelled' in s) return 'Cancelled';
+function getStatusLabel(status: string): string {
+  if (status === 'requested') return 'Pending';
+  if (status === 'accepted') return 'Accepted';
+  if (status === 'completed') return 'Completed';
+  if (status === 'cancelled') return 'Cancelled';
   return 'Unknown';
 }
 
-function getStatusVariant(trip: Trip): 'default' | 'secondary' | 'outline' | 'destructive' {
-  const s = trip.status;
-  if ('#completed' in s) return 'default';
-  if ('#accepted' in s) return 'secondary';
-  if ('#cancelled' in s) return 'destructive';
+function getStatusVariant(status: string): 'default' | 'secondary' | 'outline' | 'destructive' {
+  if (status === 'completed') return 'default';
+  if (status === 'accepted') return 'secondary';
+  if (status === 'cancelled') return 'destructive';
   return 'outline';
 }
 
-function formatLocation(loc: Trip['pickupLocation']): string {
+function formatLocation(loc: NormalizedTrip['pickupLocation']): string {
   const parts = [loc.area, loc.pincode].filter(Boolean);
   return parts.join(', ') || '—';
 }
 
-function formatDropoff(loc: Trip['dropoffLocation']): string {
-  if (!loc || loc.length === 0) return '—';
-  const l = loc[0];
-  if (!l) return '—';
-  const parts = [l.area, l.pincode].filter(Boolean);
+function formatDropoff(loc: NormalizedTrip['dropoffLocation']): string {
+  if (!loc) return '—';
+  const parts = [loc.area, loc.pincode].filter(Boolean);
   return parts.join(', ') || '—';
 }
 
@@ -49,12 +45,11 @@ function formatDate(timestamp: bigint): string {
   }
 }
 
-function getVehicleLabel(trip: Trip): string {
-  const v = trip.vehicleType;
-  if ('#hatchback' in v) return 'Hatchback';
-  if ('#sedan' in v) return 'Sedan';
-  if ('#suv' in v) return 'SUV';
-  if ('#luxury' in v) return 'Luxury';
+function getVehicleLabel(vehicleType: string): string {
+  if (vehicleType === 'hatchback') return 'Hatchback';
+  if (vehicleType === 'sedan') return 'Sedan';
+  if (vehicleType === 'suv') return 'SUV';
+  if (vehicleType === 'luxury') return 'Luxury';
   return 'Vehicle';
 }
 
@@ -88,10 +83,10 @@ export default function CustomerTripList({ trips, isLoading }: CustomerTripListP
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant={getStatusVariant(trip)}>
-                      {getStatusLabel(trip)}
+                    <Badge variant={getStatusVariant(trip.status)}>
+                      {getStatusLabel(trip.status)}
                     </Badge>
-                    <Badge variant="outline">{getVehicleLabel(trip)}</Badge>
+                    <Badge variant="outline">{getVehicleLabel(trip.vehicleType)}</Badge>
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-start gap-2 text-sm">

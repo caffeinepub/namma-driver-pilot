@@ -1,59 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
 import { useInternetIdentity } from './useInternetIdentity';
-import type {
-  PricingConfig,
-  UpdateConfigResult,
-  TripRequest,
-  ProfileInput,
-  TransmissionType as BackendTransmissionType,
-  DriverProfile,
-  Trip as BackendTrip,
+import {
+  Role,
+  type Trip as BackendTrip,
+  type UserProfile,
+  type DriverProfile,
+  type PricingConfig,
+  type TripRequest,
 } from '../backend';
-import type { Trip, UserProfile, AppRole } from '../lib/types';
-import { withTimeout } from '../utils/withTimeout';
-import { DEFAULT_CONFIG } from '../lib/defaultConfig';
-import { normalizeRole } from '../utils/normalizeRole';
-import { toast } from 'sonner';
-
-const QUERY_TIMEOUT_MS = 30_000;
-const ROLE_TIMEOUT_MS = 30_000;
-
-/**
- * Input type for saving a caller's user profile.
- */
-export interface SaveProfileInput {
-  fullName: string;
-  email: string;
-  serviceAreaName?: string;
-  servicePincode?: string;
-  vehicleExperience?: string[];
-  transmissionComfort?: string[];
-  languages?: string[];
-  isAvailable?: boolean;
-}
-
-// ─── User Profile ─────────────────────────────────────────────────────────────
-
-export function useGetCallerUserProfile() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  const query = useQuery<UserProfile | null>({
-    queryKey: ['currentUserProfile'],
-    queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      return withTimeout((actor as any).getCallerUserProfile(), QUERY_TIMEOUT_MS);
-    },
-    enabled: !!actor && !actorFetching,
-    retry: false,
-  });
-
-  return {
-    ...query,
-    isLoading: actorFetching || query.isLoading,
-    isFetched: !!actor && query.isFetched,
-  };
-}
+import { normalizeTrip, type NormalizedTrip } from '../utils/normalizeTrip';
 
 // ─── Role ─────────────────────────────────────────────────────────────────────
 
@@ -61,19 +17,12 @@ export function useGetMyRole() {
   const { actor, isFetching: actorFetching } = useActor();
   const { identity } = useInternetIdentity();
 
-  const query = useQuery<AppRole | null>({
+  const query = useQuery<Role | null>({
     queryKey: ['myRole', identity?.getPrincipal().toString()],
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
-      const result = await withTimeout(actor.getMyRole(), ROLE_TIMEOUT_MS);
-      if (result === null || result === undefined) return null;
-      // Use normalizeRole to safely handle both string and object variant formats
-      // e.g. "admin" or { admin: null } both normalize to "admin"
-      const normalized = normalizeRole(result);
-      if (normalized === 'admin') return 'admin';
-      if (normalized === 'customer') return 'customer';
-      if (normalized === 'driver') return 'driver';
-      return null;
+      const role = await actor.getMyRole();
+      return role ?? null;
     },
     enabled: !!actor && !actorFetching && !!identity,
     retry: false,
@@ -83,6 +32,7 @@ export function useGetMyRole() {
     ...query,
     isLoading: actorFetching || query.isLoading,
     isFetched: !!actor && !!identity && query.isFetched,
+    // Convenience alias: role === query.data
     role: query.data ?? null,
   };
 }
@@ -95,16 +45,11 @@ export function useSetMyRoleCustomer() {
   return useMutation({
     mutationFn: async () => {
       if (!actor) throw new Error('Actor not available');
-      return withTimeout(actor.setMyRoleCustomer(), ROLE_TIMEOUT_MS);
+      await actor.setMyRole(Role.customer);
     },
-    retry: 1,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myRole', identity?.getPrincipal().toString()] });
       queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
-    },
-    onError: (err: unknown) => {
-      console.error('[useSetMyRoleCustomer] Failed:', err);
-      toast.error('Failed to set role. Please try again.');
     },
   });
 }
@@ -117,148 +62,62 @@ export function useSetMyRoleDriver() {
   return useMutation({
     mutationFn: async () => {
       if (!actor) throw new Error('Actor not available');
-      return withTimeout(actor.setMyRoleDriver(), ROLE_TIMEOUT_MS);
+      await actor.setMyRole(Role.driver);
     },
-    retry: 1,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myRole', identity?.getPrincipal().toString()] });
       queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
     },
-    onError: (err: unknown) => {
-      console.error('[useSetMyRoleDriver] Failed:', err);
-      toast.error('Failed to set role. Please try again.');
-    },
   });
-}
-
-// Legacy alias
-export function useSetMyRole() {
-  const setCustomer = useSetMyRoleCustomer();
-  const setDriver = useSetMyRoleDriver();
-
-  return {
-    mutateAsync: async (role: 'customer' | 'driver') => {
-      if (role === 'customer') return setCustomer.mutateAsync();
-      return setDriver.mutateAsync();
-    },
-    isPending: setCustomer.isPending || setDriver.isPending,
-    isError: setCustomer.isError || setDriver.isError,
-    isSuccess: setCustomer.isSuccess || setDriver.isSuccess,
-  };
 }
 
 export function useCheckIsAdmin() {
   const { role, isLoading, isFetched, isError, refetch } = useGetMyRole();
-
   return {
-    isAdmin: role === 'admin',
+    isAdmin: role === Role.admin,
     isLoading,
     isFetched,
     isError,
     refetch,
-    data: role === 'admin',
+    data: role === Role.admin,
   };
 }
 
-export function useUpdateUserRole() {
+// ─── User Profile ─────────────────────────────────────────────────────────────
+
+export function useGetCallerUserProfile() {
+  const { actor, isFetching: actorFetching } = useActor();
+  const { identity } = useInternetIdentity();
+
+  const query = useQuery<UserProfile | null>({
+    queryKey: ['currentUserProfile', identity?.getPrincipal().toString()],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.getCallerUserProfile();
+    },
+    enabled: !!actor && !actorFetching && !!identity,
+    retry: false,
+  });
+
+  return {
+    ...query,
+    isLoading: actorFetching || query.isLoading,
+    isFetched: !!actor && !!identity && query.isFetched,
+  };
+}
+
+export function useSaveCallerUserProfile() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
   const { identity } = useInternetIdentity();
 
   return useMutation({
-    mutationFn: async (role: AppRole) => {
+    mutationFn: async (profile: UserProfile) => {
       if (!actor) throw new Error('Actor not available');
-      if (role === 'admin') throw new Error('Cannot set admin role via this method');
-      if (role === 'customer') {
-        return withTimeout(actor.setMyRoleCustomer(), ROLE_TIMEOUT_MS);
-      }
-      return withTimeout(actor.setMyRoleDriver(), ROLE_TIMEOUT_MS);
+      await actor.saveCallerUserProfile(profile);
     },
-    retry: 1,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['myRole', identity?.getPrincipal().toString()] });
-      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
-    },
-    onError: (err: unknown) => {
-      console.error('[useUpdateUserRole] Failed:', err);
-      toast.error('Failed to update role. Please try again.');
-    },
-  });
-}
-
-export const useUpdateUserRoleAndLock = useUpdateUserRole;
-
-export function useUpgradeToAdmin() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (_code: string): Promise<string | null> => {
-      if (!actor) throw new Error('Actor not available');
-      return 'Admin access is determined by your principal ID. Contact the system owner to be added as an admin.';
-    },
-    onSuccess: (result) => {
-      if (result === null) {
-        queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
-      }
-    },
-  });
-}
-
-// ─── Profile Save ─────────────────────────────────────────────────────────────
-
-export function useSaveCallerUserProfile() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (input: SaveProfileInput) => {
-      if (!actor) throw new Error('Actor not available');
-
-      const profileInput: ProfileInput = {
-        fullName: input.fullName.trim(),
-        email: input.email.trim(),
-      };
-
-      const savedProfile = await withTimeout(actor.setProfile(profileInput), QUERY_TIMEOUT_MS);
-
-      const hasDriverFields =
-        input.serviceAreaName !== undefined ||
-        input.servicePincode !== undefined ||
-        input.vehicleExperience !== undefined ||
-        input.transmissionComfort !== undefined ||
-        input.languages !== undefined ||
-        input.isAvailable !== undefined;
-
-      if (hasDriverFields) {
-        const vehicleExperience = (input.vehicleExperience ?? []) as any[];
-        const transmissionComfort = (input.transmissionComfort ?? []) as BackendTransmissionType[];
-
-        return withTimeout(
-          actor.updateProfile({
-            fullName: input.fullName.trim(),
-            email: input.email.trim(),
-            serviceAreaName: input.serviceAreaName ?? (savedProfile as any).serviceAreaName ?? '',
-            servicePincode: input.servicePincode ?? (savedProfile as any).servicePincode ?? '',
-            vehicleExperience,
-            transmissionComfort,
-            languages: input.languages,
-            isAvailable: input.isAvailable ?? (savedProfile as any).isAvailable ?? false,
-            totalEarnings: (savedProfile as any).totalEarnings ?? BigInt(0),
-          }),
-          QUERY_TIMEOUT_MS
-        );
-      }
-
-      return savedProfile;
-    },
-    retry: 1,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
-    },
-    onError: (err: unknown) => {
-      console.error('[useSaveCallerUserProfile] Failed:', err);
-      toast.error('Failed to save profile. Please try again.');
+      queryClient.invalidateQueries({ queryKey: ['currentUserProfile', identity?.getPrincipal().toString()] });
     },
   });
 }
@@ -271,11 +130,10 @@ export function useGetDriverProfile() {
   return useQuery<DriverProfile | null>({
     queryKey: ['driverProfile'],
     queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      return withTimeout(actor.getDriverProfile(), QUERY_TIMEOUT_MS);
+      if (!actor) return null;
+      return actor.getDriverProfile();
     },
     enabled: !!actor && !actorFetching,
-    retry: false,
   });
 }
 
@@ -286,14 +144,12 @@ export function useUpsertDriverProfile() {
   return useMutation({
     mutationFn: async (profile: DriverProfile) => {
       if (!actor) throw new Error('Actor not available');
-      return withTimeout(actor.upsertDriverProfile(profile), QUERY_TIMEOUT_MS);
+      return actor.upsertDriverProfile(profile);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['driverProfile'] });
       queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
-    },
-    onError: (err: unknown) => {
-      console.error('[useUpsertDriverProfile] Failed:', err);
+      queryClient.invalidateQueries({ queryKey: ['availableTrips'] });
     },
   });
 }
@@ -301,101 +157,86 @@ export function useUpsertDriverProfile() {
 // ─── Trips ────────────────────────────────────────────────────────────────────
 
 /**
- * Create a trip and return the newly created Trip object from the backend.
- * The returned trip can be used for optimistic UI updates.
+ * Fetch trips for the current customer from the backend.
+ * Accepts an optional callerPrincipal (kept for backward compat with CustomerDashboard).
  */
+export function useGetCustomerTrips(_callerPrincipal?: string) {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<NormalizedTrip[]>({
+    queryKey: ['customerTrips'],
+    queryFn: async (): Promise<NormalizedTrip[]> => {
+      if (!actor) return [];
+      const trips = await actor.getMyCustomerTrips();
+      return trips.map(normalizeTrip);
+    },
+    enabled: !!actor && !actorFetching,
+    placeholderData: [] as NormalizedTrip[],
+  });
+}
+
+/**
+ * Fetch trips assigned to the current driver from the backend.
+ */
+export function useGetMyDriverTrips() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<NormalizedTrip[]>({
+    queryKey: ['driverTrips'],
+    queryFn: async (): Promise<NormalizedTrip[]> => {
+      if (!actor) return [];
+      const trips = await actor.getMyDriverTrips();
+      return trips.map(normalizeTrip);
+    },
+    enabled: !!actor && !actorFetching,
+    placeholderData: [] as NormalizedTrip[],
+  });
+}
+
+export function useGetAvailableTripsForDriver() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<NormalizedTrip[]>({
+    queryKey: ['availableTrips'],
+    queryFn: async (): Promise<NormalizedTrip[]> => {
+      if (!actor) return [];
+      const trips = await actor.getAvailableTripsForDriver();
+      return trips.map(normalizeTrip);
+    },
+    enabled: !!actor && !actorFetching,
+    placeholderData: [] as NormalizedTrip[],
+  });
+}
+
+export function useGetAllTripsAdmin() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<NormalizedTrip[]>({
+    queryKey: ['adminTrips'],
+    queryFn: async (): Promise<NormalizedTrip[]> => {
+      if (!actor) return [];
+      const trips = await actor.getAllTripsAdmin();
+      return trips.map(normalizeTrip);
+    },
+    enabled: !!actor && !actorFetching,
+    placeholderData: [] as NormalizedTrip[],
+  });
+}
+
 export function useCreateTrip() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation<BackendTrip, Error, TripRequest>({
-    mutationFn: async (tripRequest: TripRequest): Promise<BackendTrip> => {
+    mutationFn: async (tripData: TripRequest): Promise<BackendTrip> => {
       if (!actor) throw new Error('Actor not available');
-      return withTimeout(actor.createTrip(tripRequest), QUERY_TIMEOUT_MS);
+      return actor.createTrip(tripData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customerTrips'] });
-      queryClient.invalidateQueries({ queryKey: ['requestedTrips'] });
-      toast.success('Ride requested successfully');
+      queryClient.invalidateQueries({ queryKey: ['availableTrips'] });
+      queryClient.invalidateQueries({ queryKey: ['adminTrips'] });
     },
-    onError: (err: unknown) => {
-      console.error('Booking error:', err);
-      toast.error('Booking failed. Please try again.');
-    },
-  });
-}
-
-/**
- * Fetch all trips from the backend and filter client-side by the caller's principal.
- * Falls back to an empty array if the backend method is unavailable.
- */
-export function useGetCustomerTrips(callerPrincipal: string | undefined) {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<Trip[]>({
-    queryKey: ['customerTrips', callerPrincipal],
-    queryFn: async () => {
-      if (!actor || !callerPrincipal) return [];
-      try {
-        const allTrips: Trip[] = await withTimeout(
-          (actor as any).getAllTrips(),
-          QUERY_TIMEOUT_MS
-        );
-        if (!Array.isArray(allTrips)) return [];
-        // Filter to only trips belonging to this customer
-        return allTrips.filter((trip) => {
-          const cid = trip.customerId;
-          if (!cid) return false;
-          const cidStr = typeof cid === 'object' && 'toString' in cid
-            ? cid.toString()
-            : String(cid);
-          return cidStr === callerPrincipal;
-        });
-      } catch (err) {
-        console.error('[useGetCustomerTrips] Failed to fetch trips:', err);
-        return [];
-      }
-    },
-    enabled: !!actor && !actorFetching && !!callerPrincipal,
-    placeholderData: [],
-  });
-}
-
-export function useGetMyTrips() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<Trip[]>({
-    queryKey: ['myTrips'],
-    queryFn: async () => {
-      if (!actor) return [];
-      try {
-        return await withTimeout((actor as any).getMyTrips(), QUERY_TIMEOUT_MS);
-      } catch (err) {
-        console.error('[useGetMyTrips] Failed:', err);
-        return [];
-      }
-    },
-    enabled: !!actor && !actorFetching,
-    placeholderData: [],
-  });
-}
-
-export function useGetRequestedTrips() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<Trip[]>({
-    queryKey: ['requestedTrips'],
-    queryFn: async () => {
-      if (!actor) return [];
-      try {
-        return await withTimeout((actor as any).getRequestedTrips(), QUERY_TIMEOUT_MS);
-      } catch (err) {
-        console.error('[useGetRequestedTrips] Failed:', err);
-        return [];
-      }
-    },
-    enabled: !!actor && !actorFetching,
-    placeholderData: [],
   });
 }
 
@@ -406,11 +247,12 @@ export function useAcceptTrip() {
   return useMutation({
     mutationFn: async (tripId: string) => {
       if (!actor) throw new Error('Actor not available');
-      return (actor as any).acceptTrip(tripId);
+      return actor.acceptTrip(tripId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['requestedTrips'] });
-      queryClient.invalidateQueries({ queryKey: ['myTrips'] });
+      queryClient.invalidateQueries({ queryKey: ['availableTrips'] });
+      queryClient.invalidateQueries({ queryKey: ['driverTrips'] });
+      queryClient.invalidateQueries({ queryKey: ['adminTrips'] });
     },
   });
 }
@@ -422,26 +264,47 @@ export function useCompleteTrip() {
   return useMutation({
     mutationFn: async (tripId: string) => {
       if (!actor) throw new Error('Actor not available');
-      return (actor as any).completeTrip(tripId);
+      const result = await actor.completeTrip(tripId);
+      if (result.__kind__ === 'notFound') throw new Error('Trip not found');
+      if (result.__kind__ === 'notAssigned') throw new Error('You are not assigned to this trip');
+      if (result.__kind__ === 'notAccepted') throw new Error('Trip is not in accepted state');
+      return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['myTrips'] });
-      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['driverTrips'] });
+      queryClient.invalidateQueries({ queryKey: ['availableTrips'] });
+      queryClient.invalidateQueries({ queryKey: ['adminTrips'] });
     },
   });
 }
 
-export function useUpdateAvailability() {
+// ─── Pricing ──────────────────────────────────────────────────────────────────
+
+export function useGetPricingConfig() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<PricingConfig>({
+    queryKey: ['pricingConfig'],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.getPricingConfig();
+    },
+    enabled: !!actor && !actorFetching,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useUpdatePricingConfig() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (isAvailable: boolean) => {
+    mutationFn: async (config: PricingConfig) => {
       if (!actor) throw new Error('Actor not available');
-      return (actor as any).updateAvailability(isAvailable);
+      return actor.updatePricingConfig(config);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['pricingConfig'] });
     },
   });
 }
@@ -455,68 +318,43 @@ export function useGetAllUsers() {
     queryKey: ['allUsers'],
     queryFn: async () => {
       if (!actor) return [];
-      try {
-        return await withTimeout((actor as any).getAllUsers(), QUERY_TIMEOUT_MS);
-      } catch (err) {
-        console.error('[useGetAllUsers] Failed:', err);
-        return [];
-      }
+      // Backend doesn't expose getAllUsers; return empty for now
+      return [];
     },
     enabled: !!actor && !actorFetching,
-    placeholderData: [],
+    placeholderData: [] as UserProfile[],
   });
 }
 
-export function useGetAllTrips() {
+export function useListAdmins() {
   const { actor, isFetching: actorFetching } = useActor();
 
-  return useQuery<Trip[]>({
-    queryKey: ['allTrips'],
+  return useQuery({
+    queryKey: ['adminList'],
     queryFn: async () => {
       if (!actor) return [];
-      try {
-        return await withTimeout((actor as any).getAllTrips(), QUERY_TIMEOUT_MS);
-      } catch (err) {
-        console.error('[useGetAllTrips] Failed:', err);
-        return [];
-      }
+      return actor.listAdmins();
     },
     enabled: !!actor && !actorFetching,
-    placeholderData: [],
   });
 }
 
-// ─── Pricing Config ───────────────────────────────────────────────────────────
-
-export function useGetPricingConfig() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<PricingConfig>({
-    queryKey: ['pricingConfig'],
-    queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      return withTimeout(actor.getPricingConfig(), QUERY_TIMEOUT_MS);
-    },
-    enabled: !!actor && !actorFetching,
-    retry: false,
-    placeholderData: DEFAULT_CONFIG,
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
-export function useUpdatePricingConfig() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
+/**
+ * Admin upgrade — backend determines admin status by principal ID.
+ * This mutation is a no-op stub; admin access is granted by the canister owner.
+ */
+export function useUpgradeToAdmin() {
   return useMutation({
-    mutationFn: async (config: PricingConfig): Promise<UpdateConfigResult> => {
-      if (!actor) throw new Error('Actor not available');
-      return withTimeout(actor.updatePricingConfig(config), QUERY_TIMEOUT_MS);
-    },
-    onSuccess: (result) => {
-      if (result.__kind__ === 'ok') {
-        queryClient.invalidateQueries({ queryKey: ['pricingConfig'] });
-      }
+    mutationFn: async (_code: string): Promise<string | null> => {
+      return 'Admin access is determined by your principal ID. Contact the system owner to be added as an admin.';
     },
   });
 }
+
+// ─── Legacy aliases ───────────────────────────────────────────────────────────
+
+export const useUpdateUserRole = useSetMyRoleCustomer;
+export const useUpdateUserRoleAndLock = useSetMyRoleCustomer;
+
+/** Legacy alias kept for any components still importing useGetAllTrips */
+export const useGetAllTrips = useGetAllTripsAdmin;

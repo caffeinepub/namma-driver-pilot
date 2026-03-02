@@ -3,18 +3,17 @@ import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { useQueryClient } from '@tanstack/react-query';
 import { useGetMyRole } from '../hooks/useQueries';
 import { useBackendHealth } from '../hooks/useBackendHealth';
+import { Role } from '../backend';
 import { Car, LogOut, LayoutDashboard, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
-/**
- * Returns a display label for the role string.
- * role is already normalized to 'admin' | 'driver' | 'customer' | null by useGetMyRole.
- */
-function getRoleLabel(role: string | null): string | null {
+function getRoleLabel(role: Role | null): string | null {
   if (!role) return null;
-  // Capitalize first letter for display
-  return role.charAt(0).toUpperCase() + role.slice(1);
+  if (role === Role.admin) return 'Admin';
+  if (role === Role.driver) return 'Driver';
+  if (role === Role.customer) return 'Customer';
+  return null;
 }
 
 export default function Navigation() {
@@ -22,7 +21,7 @@ export default function Navigation() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const isAuthenticated = !!identity;
-  const { role, isFetched: roleFetched } = useGetMyRole();
+  const { data: role, isFetched: roleFetched } = useGetMyRole();
   const { isHealthy, isChecking } = useBackendHealth();
 
   const handleLogout = async () => {
@@ -32,14 +31,13 @@ export default function Navigation() {
   };
 
   const getDashboardLink = () => {
-    if (role === 'admin') return '/admin/dashboard';
-    if (role === 'customer') return '/customer/dashboard';
-    if (role === 'driver') return '/driver/dashboard';
+    if (role === Role.admin) return '/admin/dashboard';
+    if (role === Role.customer) return '/customer/dashboard';
+    if (role === Role.driver) return '/driver/dashboard';
     return null;
   };
 
   const dashboardLink = getDashboardLink();
-  // Only show role label when authenticated, role is fetched, and role is a non-empty string
   const roleLabel = isAuthenticated && roleFetched && role ? getRoleLabel(role) : null;
 
   return (
@@ -75,10 +73,9 @@ export default function Navigation() {
             </span>
           )}
 
-          {/* Role label badge — only shown when authenticated and role is a non-empty string */}
           {isAuthenticated && roleLabel && (
             <Badge
-              variant={role === 'admin' ? 'default' : 'secondary'}
+              variant={role === Role.admin ? 'default' : 'secondary'}
               className="hidden sm:inline-flex capitalize text-xs"
             >
               {roleLabel}
@@ -86,7 +83,7 @@ export default function Navigation() {
           )}
 
           {isAuthenticated && dashboardLink && (
-            role === 'admin' ? (
+            role === Role.admin ? (
               <Link
                 to={dashboardLink}
                 className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"

@@ -3,8 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { User, MapPin, Car, Settings, Edit, Languages, Radio } from 'lucide-react';
-import type { DriverProfile } from '../backend';
-import type { UserProfile } from '../lib/types';
+import type { DriverProfile, UserProfile } from '../backend';
 import { type NormalizedDriverProfile } from '../utils/normalizeProfile';
 
 interface DriverProfileSectionProps {

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useGetAllUsers } from '../hooks/useQueries';
-import type { UserProfile } from '../lib/types';
 import { getRoleString } from '../lib/types';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +13,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Search } from 'lucide-react';
+import type { UserProfile } from '../backend';
 
 function getRoleLabel(profile: UserProfile): string {
   const role = getRoleString(profile.role);
