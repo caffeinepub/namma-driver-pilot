@@ -1,46 +1,58 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-03-02T20:33:49.365Z",
+  "generatedAt": "2026-03-03T12:06:19.554Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 2,
-    "implemented": 2,
+    "total": 4,
+    "implemented": 4,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Scan DriverDashboard, DriverTripList, AvailableTripsSection, all TripCard components, and every helper/utility function in the frontend for any use of the JavaScript 'in' operator applied to trip fields (status, tripType, journeyType, vehicleType). Remove every such check and replace with safe comparison logic: if the value is a string, compare using ===; if the value is an object, extract the key using Object.keys(value)[0] before comparing.",
+        "summary": "In the customer booking form (RideRequestForm.tsx / CustomerDashboard.tsx), when trip type is One Way: show Drop fields normally and add a 'Drop Location Mode: Manual | GPS' toggle with identical UX to the existing Pickup Location Mode toggle.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/AvailableTripsSection.tsx",
-          "frontend/src/components/DriverTripList.tsx",
-          "frontend/src/components/CustomerTripList.tsx",
-          "frontend/src/components/AdminTripsTab.tsx",
-          "frontend/src/components/RideRequestForm.tsx",
-          "frontend/src/pages/DriverDashboard.tsx",
-          "frontend/src/pages/CustomerDashboard.tsx"
+          "frontend/src/components/RideRequestForm.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/components/AvailableTripsSection.tsx"
+          "frontend/src/components/RideRequestForm.tsx"
         ]
       },
       {
         "id": "REQ-2",
-        "summary": "Ensure every trip data source rendered inside DriverDashboard, DriverTripList, and AvailableTripsSection is passed through the existing normalizeTrip() utility before being used in render logic or passed to child components, so all trip fields are guaranteed plain strings at render time.",
+        "summary": "When Drop Location Mode is set to GPS (One Way only): capture the device geolocation, store latitude and longitude into the drop location state, and reuse the existing GPS-to-area/pincode helper (already used by Pickup GPS) to auto-fill Drop Area and Drop Pincode fields.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/AvailableTripsSection.tsx",
-          "frontend/src/components/DriverTripList.tsx",
-          "frontend/src/pages/DriverDashboard.tsx",
-          "frontend/src/components/CustomerTripList.tsx",
-          "frontend/src/pages/CustomerDashboard.tsx",
-          "frontend/src/components/AdminTripsTab.tsx"
+          "frontend/src/components/RideRequestForm.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/components/AvailableTripsSection.tsx"
+          "frontend/src/components/RideRequestForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-3",
+        "summary": "When trip type is Round Trip: disable or hide all Drop input fields, automatically set drop location state equal to pickup location state, and display the helper text 'Round trip: Drop location is same as Pickup.' On form submit, map dropoffLocation to pickupLocation.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-4",
+        "summary": "When trip type is One Way, on form submit map dropoffLocation to the captured/entered drop location state (dropLocation). Ensure no console.log statements are added and no auth/flicker regressions are introduced.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/RideRequestForm.tsx",
+          "frontend/src/pages/CustomerDashboard.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/RideRequestForm.tsx"
         ]
       }
     ]
@@ -50,7 +62,7 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/components/AvailableTripsSection.tsx",
+    "frontend/src/components/RideRequestForm.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

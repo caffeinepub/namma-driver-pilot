@@ -1,55 +1,100 @@
 {
   "kind": "build_request",
-  "title": "Fix 'in' operator crash on trip fields in driver frontend components",
-  "priority": "high",
+  "title": "Fix Drop GPS + OneWay/RoundTrip logic in Customer booking form",
+  "projectName": "Namma Driver Pilot",
+  "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Scan DriverDashboard, DriverTripList, AvailableTripsSection, all TripCard components, and every helper/utility function in the frontend for any use of the JavaScript 'in' operator applied to trip fields (status, tripType, journeyType, vehicleType). Remove every such check and replace with safe comparison logic: if the value is a string, compare using ===; if the value is an object, extract the key using Object.keys(value)[0] before comparing.",
+      "text": "In the customer booking form (RideRequestForm.tsx / CustomerDashboard.tsx), when trip type is One Way: show Drop fields normally and add a 'Drop Location Mode: Manual | GPS' toggle with identical UX to the existing Pickup Location Mode toggle.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-recent"
         ],
         "quotes": [
-          "Cannot use 'in' operator to search for '#local' in local",
-          "Remove ALL in operator checks on trip fields.",
-          "Use safe comparison logic: If typeof value === 'string' → compare using === If typeof value === 'object' → use Object.keys(value)[0]"
+          "One Way: Pickup and Drop are different. Show Drop fields normally AND add \"Drop Location Mode: Manual | GPS\" (same UX as Pickup)."
         ]
       },
       "acceptanceCriteria": [
-        "No use of the 'in' operator on trip.status, trip.tripType, trip.journeyType, or trip.vehicleType exists anywhere in DriverDashboard, DriverTripList, AvailableTripsSection, TripCard components, or any helper/utility files.",
-        "All comparisons on those fields use === (for strings) or Object.keys(value)[0] (for objects).",
-        "The driver dashboard no longer throws 'Cannot use in operator to search for #local in local' after login."
+        "When trip type is One Way, a 'Drop Location Mode' toggle (Manual / GPS) is visible beneath the Drop fields.",
+        "The toggle design and behavior matches the existing Pickup Location Mode toggle exactly.",
+        "Selecting Manual leaves Drop Area and Drop Pincode inputs editable."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Ensure every trip data source rendered inside DriverDashboard, DriverTripList, and AvailableTripsSection is passed through the existing normalizeTrip() utility before being used in render logic or passed to child components, so all trip fields are guaranteed plain strings at render time.",
+      "text": "When Drop Location Mode is set to GPS (One Way only): capture the device geolocation, store latitude and longitude into the drop location state, and reuse the existing GPS-to-area/pincode helper (already used by Pickup GPS) to auto-fill Drop Area and Drop Pincode fields.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-recent"
         ],
         "quotes": [
-          "Also ensure all trip sources are normalized through normalizeTrip() before rendering."
+          "When Drop mode = GPS, capture geolocation and store into drop location state: latitude and longitude. Keep Drop Area + Drop Pincode inputs available. If the project already has a helper used by Pickup GPS to fill area/pincode, reuse it for Drop GPS too."
         ]
       },
       "acceptanceCriteria": [
-        "All trip arrays or trip objects in DriverDashboard, DriverTripList, and AvailableTripsSection are mapped through normalizeTrip() before any field access or rendering.",
-        "No raw backend trip objects reach TripCard or any rendering component without normalization.",
-        "Driver dashboard loads without runtime errors after login."
+        "Clicking GPS in the Drop Location Mode toggle triggers browser geolocation capture.",
+        "Captured latitude and longitude are stored in drop location state.",
+        "The same helper function used by Pickup GPS fills Drop Area and Drop Pincode from the captured coordinates.",
+        "Drop Area and Drop Pincode inputs remain visible and editable after GPS fill."
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "When trip type is Round Trip: disable or hide all Drop input fields, automatically set drop location state equal to pickup location state, and display the helper text 'Round trip: Drop location is same as Pickup.' On form submit, map dropoffLocation to pickupLocation.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-recent"
+        ],
+        "quotes": [
+          "Round Trip: Pickup and Drop are same. Disable or hide Drop inputs and automatically set drop location = pickup location. Show helper text \"Round trip: Drop location is same as Pickup.\"",
+          "Round Trip → dropoffLocation = ?pickupLocation"
+        ]
+      },
+      "acceptanceCriteria": [
+        "When trip type is Round Trip, all Drop input fields are disabled or hidden.",
+        "Drop location state is automatically synchronized to equal pickup location state.",
+        "Helper text 'Round trip: Drop location is same as Pickup.' is displayed.",
+        "On form submit, dropoffLocation is set to pickupLocation value.",
+        "Trip creation succeeds with Round Trip selection."
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "text": "When trip type is One Way, on form submit map dropoffLocation to the captured/entered drop location state (dropLocation). Ensure no console.log statements are added and no auth/flicker regressions are introduced.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-recent"
+        ],
+        "quotes": [
+          "One Way → dropoffLocation = ?dropLocation",
+          "No flicker/auth changes. No console logs added."
+        ]
+      },
+      "acceptanceCriteria": [
+        "On One Way submission, dropoffLocation is populated from dropLocation state (not pickupLocation).",
+        "No new console.log statements are present in modified files.",
+        "Auth state, login/logout flow, and health check banner behavior are unaffected."
       ]
     }
   ],
   "constraints": [
-    "No scope changes beyond fixing the 'in' operator crash and ensuring normalizeTrip() is applied — do not add, remove, or alter any other features or UI."
+    "Only touch frontend/src/components/RideRequestForm.tsx, frontend/src/pages/CustomerDashboard.tsx, and any shared location/GPS helper utility already used by Pickup GPS. No other files.",
+    "Do NOT touch auth hooks, routing, role selection, driver pages, admin pages, pricing tab, or backend/main.mo.",
+    "Do not add any console.log statements.",
+    "Do not introduce any auth or flicker regressions.",
+    "No backend changes of any kind."
   ],
   "nonGoals": [
-    "Changes to backend data models or Motoko code.",
-    "UI redesign or layout changes.",
-    "Adding new trip fields or normalizing fields beyond status, tripType, journeyType, and vehicleType.",
-    "Modifying any file listed under frontend.immutablePaths."
+    "Pricing calculation or fare estimation changes.",
+    "Backend/Motoko changes.",
+    "Driver dashboard or admin dashboard changes.",
+    "Auth, login/logout, or health check banner fixes.",
+    "Any component or hook outside the customer booking form and shared GPS location helper."
   ],
   "imageRequirements": {
     "required": [],

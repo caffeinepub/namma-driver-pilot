@@ -7,10 +7,15 @@ import { Button } from '../components/ui/button';
 
 export default function PostLoginLandingPage() {
   const navigate = useNavigate();
-  const { data: role, isLoading, isError, isFetched, refetch } = useGetMyRole();
+  const { data: role, isLoading, isFetching, isError, isFetched, refetch } = useGetMyRole();
+  const redirectedRef = React.useRef(false);
 
   React.useEffect(() => {
-    if (!isFetched || isLoading) return;
+    // Wait until the query has fully settled (not loading, not fetching, and fetched)
+    if (!isFetched || isLoading || isFetching) return;
+    if (redirectedRef.current) return;
+
+    redirectedRef.current = true;
 
     if (role === Role.admin) {
       navigate({ to: '/admin/dashboard' });
@@ -22,7 +27,7 @@ export default function PostLoginLandingPage() {
       // unassigned or null
       navigate({ to: '/select-role' });
     }
-  }, [role, isLoading, isFetched, navigate]);
+  }, [role, isLoading, isFetching, isFetched, navigate]);
 
   if (isError) {
     return (
@@ -33,7 +38,14 @@ export default function PostLoginLandingPage() {
           <p className="text-muted-foreground mb-6 text-sm">
             We couldn't determine your account type. Please try again.
           </p>
-          <Button onClick={() => refetch()} variant="outline" className="gap-2">
+          <Button
+            onClick={() => {
+              redirectedRef.current = false;
+              refetch();
+            }}
+            variant="outline"
+            className="gap-2"
+          >
             <RefreshCw className="h-4 w-4" />
             Retry
           </Button>

@@ -7,27 +7,34 @@ import { Role } from '../backend';
 
 export default function SelectRolePage() {
   const navigate = useNavigate();
-  const { data: currentRole, isLoading: roleLoading } = useGetMyRole();
+  const { data: currentRole, isLoading: roleLoading, isFetched: roleFetched } = useGetMyRole();
+  const redirectedRef = React.useRef(false);
 
   const setCustomer = useSetMyRoleCustomer();
   const setDriver = useSetMyRoleDriver();
 
-  // If user already has a role, redirect them
+  // If user already has a role, redirect them — but only after role is fully fetched
   React.useEffect(() => {
-    if (roleLoading) return;
+    if (roleLoading || !roleFetched) return;
+    if (redirectedRef.current) return;
+
     if (currentRole === Role.admin) {
+      redirectedRef.current = true;
       navigate({ to: '/admin/dashboard' });
     } else if (currentRole === Role.driver) {
+      redirectedRef.current = true;
       navigate({ to: '/driver/dashboard' });
     } else if (currentRole === Role.customer) {
+      redirectedRef.current = true;
       navigate({ to: '/customer/dashboard' });
     }
     // Role.unassigned or null => stay on this page
-  }, [currentRole, roleLoading, navigate]);
+  }, [currentRole, roleLoading, roleFetched, navigate]);
 
   const handleSelectCustomer = async () => {
     try {
       await setCustomer.mutateAsync();
+      redirectedRef.current = true;
       navigate({ to: '/customer/dashboard' });
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to set role. Please try again.');
@@ -37,6 +44,7 @@ export default function SelectRolePage() {
   const handleSelectDriver = async () => {
     try {
       await setDriver.mutateAsync();
+      redirectedRef.current = true;
       navigate({ to: '/driver/dashboard' });
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to set role. Please try again.');
@@ -45,7 +53,7 @@ export default function SelectRolePage() {
 
   const isLoading = setCustomer.isPending || setDriver.isPending;
 
-  if (roleLoading) {
+  if (roleLoading || !roleFetched) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

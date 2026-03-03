@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import AdminUsersTab from '../components/AdminUsersTab';
 import AdminTripsTab from '../components/AdminTripsTab';
 import PricingTab from '../components/PricingTab';
-import { useGetAllUsers, useGetAllTrips, useGetMyRole } from '../hooks/useQueries';
+import { useGetAllUsers, useGetAllTripsAdmin, useGetMyRole } from '../hooks/useQueries';
 import { useGetCallerUserProfile } from '../hooks/useGetCallerUserProfile';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { Role } from '../backend';
@@ -13,7 +13,7 @@ import DataLoadErrorBanner from '../components/DataLoadErrorBanner';
 
 export default function AdminDashboard() {
   const { data: users, isLoading: loadingUsers, isError: usersError } = useGetAllUsers();
-  const { data: trips, isLoading: loadingTrips, isError: tripsError } = useGetAllTrips();
+  const { data: trips, isLoading: loadingTrips, isError: tripsError } = useGetAllTripsAdmin();
   const { data: userProfile, isError: profileError } = useGetCallerUserProfile();
   const { identity } = useInternetIdentity();
   const { data: myRole } = useGetMyRole();

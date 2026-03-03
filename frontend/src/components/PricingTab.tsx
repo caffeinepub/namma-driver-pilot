@@ -115,19 +115,11 @@ export default function PricingTab() {
     };
 
     try {
-      const result = await updateMutation.mutateAsync(config);
-      if (result.__kind__ === 'ok') {
-        toast.success('Pricing saved');
-      } else if (result.__kind__ === 'notAdmin') {
-        toast.error('Not authorized to update pricing');
-      } else if (result.__kind__ === 'invalidConfig') {
-        toast.error(`Invalid config: ${result.invalidConfig}`);
-      } else {
-        toast.error('Failed to save pricing');
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to save pricing');
+      await updateMutation.mutateAsync(config);
+      toast.success('Pricing saved');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to save pricing';
+      toast.error(message);
     }
   }
 

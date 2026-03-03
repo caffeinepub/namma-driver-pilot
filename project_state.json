@@ -1,34 +1,59 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "A ride-hailing app with driver and trip management features. Currently fixing frontend crashes caused by improper use of the 'in' operator on trip fields that are now plain strings.",
+  "summary": "Ride-booking app with customer booking form, GPS location capture, and one-way/round-trip logic. Backend runs on ICP canisters. Frontend includes auth gating, health check system, and customer/driver/admin dashboards.",
   "architectural_notes": [
-    "Trip fields (status, tripType, journeyType, vehicleType) are plain strings — never use 'in' operator on them. Use === for string comparison, Object.keys(value)[0] for object variants.",
-    "All trip data must be normalized through normalizeTrip() before rendering in any component."
+    "Health check query should fire unconditionally (no auth gate) — red banner appears when health check is gated behind identityReady/actor state",
+    "Customer booking form lives in CustomerDashboard component; shared location helper used by Pickup GPS should be reused for Drop GPS"
   ],
-  "known_issues": [],
+  "known_issues": [
+    "Red 'backend is unreachable' banner persists after logout — health check gated behind auth state (Version 58 regression, unfixed)"
+  ],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-scan-driverdashboard-drivertriplist-availabletripssection-all-tripcard-components-and-every-helper-utility-function-in-the-frontend-for-any-use-of-the-javascript-in-operator-applied-to-trip-fields-status-triptype-journeytype-vehicletype-remove-every-such-check-and-replace-with-safe-comparison-logic-if-the-value-is-a-string-compare-using-if-the-value-is-an-object-extract-the-key-using-object-keys-value-0-before-comparing",
-      "title": "Scan DriverDashboard, DriverTripList, AvailableTripsSection, all TripCard components, and every helper/utility function in the frontend for any use of the JavaScript 'in' operator applied to trip fields (status, tripType, journeyType, vehicleType). Remove every such check and replace with safe comparison logic: if the value is a string, compare using ===; if the value is an object, extract the key using Object.keys(value)[0] before comparing.",
+      "id": "feature-in-the-customer-booking-form-riderequestform-tsx-customerdashboard-tsx-when-trip-type-is-one-way-show-drop-fields-normally-and-add-a-drop-location-mode-manual-gps-toggle-with-identical-ux-to-the-existing-pickup-location-mode-toggle",
+      "title": "In the customer booking form (RideRequestForm.tsx / CustomerDashboard.tsx), when trip type is One Way: show Drop fields normally and add a 'Drop Location Mode: Manual | GPS' toggle with identical UX to the existing Pickup Location Mode toggle.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-ensure-every-trip-data-source-rendered-inside-driverdashboard-drivertriplist-and-availabletripssection-is-passed-through-the-existing-normalizetrip-utility-before-being-used-in-render-logic-or-passed-to-child-components-so-all-trip-fields-are-guaranteed-plain-strings-at-render-time",
-      "title": "Ensure every trip data source rendered inside DriverDashboard, DriverTripList, and AvailableTripsSection is passed through the existing normalizeTrip() utility before being used in render logic or passed to child components, so all trip fields are guaranteed plain strings at render time.",
+      "id": "feature-when-drop-location-mode-is-set-to-gps-one-way-only-capture-the-device-geolocation-store-latitude-and-longitude-into-the-drop-location-state-and-reuse-the-existing-gps-to-area-pincode-helper-already-used-by-pickup-gps-to-auto-fill-drop-area-and-drop-pincode-fields",
+      "title": "When Drop Location Mode is set to GPS (One Way only): capture the device geolocation, store latitude and longitude into the drop location state, and reuse the existing GPS-to-area/pincode helper (already used by Pickup GPS) to auto-fill Drop Area and Drop Pincode fields.",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-when-trip-type-is-round-trip-disable-or-hide-all-drop-input-fields-automatically-set-drop-location-state-equal-to-pickup-location-state-and-display-the-helper-text-round-trip-drop-location-is-same-as-pickup-on-form-submit-map-dropofflocation-to-pickuplocation",
+      "title": "When trip type is Round Trip: disable or hide all Drop input fields, automatically set drop location state equal to pickup location state, and display the helper text 'Round trip: Drop location is same as Pickup.' On form submit, map dropoffLocation to pickupLocation.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-when-trip-type-is-one-way-on-form-submit-map-dropofflocation-to-the-captured-entered-drop-location-state-droplocation-ensure-no-console-log-statements-are-added-and-no-auth-flicker-regressions-are-introduced",
+      "title": "When trip type is One Way, on form submit map dropoffLocation to the captured/entered drop location state (dropLocation). Ensure no console.log statements are added and no auth/flicker regressions are introduced.",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "version": 1
     }
   ],
-  "new_feature_requests": [],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Fix Drop GPS + OneWay/RoundTrip logic in Customer booking form (frontend only): add Drop Location Mode toggle for One Way, auto-set drop=pickup for Round Trip, reuse GPS helper for Drop GPS capture",
+      "reqIds": [],
+      "status": "pending"
+    }
+  ],
   "gameProjectType": "none",
-  "projectName": "Fix 'in' operator crash on trip fields in driver frontend components",
+  "projectName": "Namma Driver Pilot",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

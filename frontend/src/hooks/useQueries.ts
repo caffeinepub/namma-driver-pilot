@@ -15,7 +15,9 @@ import { normalizeTrip, type NormalizedTrip } from '../utils/normalizeTrip';
 
 export function useGetMyRole() {
   const { actor, isFetching: actorFetching } = useActor();
-  const { identity } = useInternetIdentity();
+  const { identity, isInitializing } = useInternetIdentity();
+  // identityReady: session resolved (logged in OR confirmed logged out)
+  const identityReady = !isInitializing;
 
   const query = useQuery<Role | null>({
     queryKey: ['myRole', identity?.getPrincipal().toString()],
@@ -24,7 +26,8 @@ export function useGetMyRole() {
       const role = await actor.getMyRole();
       return role ?? null;
     },
-    enabled: !!actor && !actorFetching && !!identity,
+    // Only fire after identity session is resolved AND actor is ready
+    enabled: identityReady && !!actor && !actorFetching && !!identity,
     retry: false,
   });
 
@@ -223,6 +226,9 @@ export function useGetAllTripsAdmin() {
   });
 }
 
+/** Alias kept for backward compatibility with AdminDashboard */
+export const useGetAllTrips = useGetAllTripsAdmin;
+
 export function useCreateTrip() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
@@ -235,7 +241,6 @@ export function useCreateTrip() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customerTrips'] });
       queryClient.invalidateQueries({ queryKey: ['availableTrips'] });
-      queryClient.invalidateQueries({ queryKey: ['adminTrips'] });
     },
   });
 }
@@ -252,7 +257,6 @@ export function useAcceptTrip() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['availableTrips'] });
       queryClient.invalidateQueries({ queryKey: ['driverTrips'] });
-      queryClient.invalidateQueries({ queryKey: ['adminTrips'] });
     },
   });
 }
@@ -265,10 +269,10 @@ export function useCompleteTrip() {
     mutationFn: async (tripId: string) => {
       if (!actor) throw new Error('Actor not available');
       const result = await actor.completeTrip(tripId);
-      if (result.__kind__ === 'notFound') throw new Error('Trip not found');
-      if (result.__kind__ === 'notAssigned') throw new Error('You are not assigned to this trip');
-      if (result.__kind__ === 'notAccepted') throw new Error('Trip is not in accepted state');
-      return result;
+      if (result.__kind__ !== 'ok') {
+        throw new Error(`Failed to complete trip: ${result.__kind__}`);
+      }
+      return result.ok;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['driverTrips'] });
@@ -278,7 +282,7 @@ export function useCompleteTrip() {
   });
 }
 
-// ─── Pricing ──────────────────────────────────────────────────────────────────
+// ─── Pricing Config ───────────────────────────────────────────────────────────
 
 export function useGetPricingConfig() {
   const { actor, isFetching: actorFetching } = useActor();
@@ -290,7 +294,6 @@ export function useGetPricingConfig() {
       return actor.getPricingConfig();
     },
     enabled: !!actor && !actorFetching,
-    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -298,10 +301,20 @@ export function useUpdatePricingConfig() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (config: PricingConfig) => {
+  return useMutation<PricingConfig, Error, PricingConfig>({
+    mutationFn: async (config: PricingConfig): Promise<PricingConfig> => {
       if (!actor) throw new Error('Actor not available');
-      return actor.updatePricingConfig(config);
+      const result = await actor.updatePricingConfig(config);
+      if (result.__kind__ !== 'ok') {
+        if (result.__kind__ === 'invalidConfig') {
+          throw new Error(`Invalid config: ${result.invalidConfig}`);
+        }
+        if (result.__kind__ === 'notAdmin') {
+          throw new Error('Not authorized to update pricing');
+        }
+        throw new Error(`Failed to update pricing config: ${result.__kind__}`);
+      }
+      return result.ok;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pricingConfig'] });
@@ -318,11 +331,9 @@ export function useGetAllUsers() {
     queryKey: ['allUsers'],
     queryFn: async () => {
       if (!actor) return [];
-      // Backend doesn't expose getAllUsers; return empty for now
       return [];
     },
     enabled: !!actor && !actorFetching,
-    placeholderData: [] as UserProfile[],
   });
 }
 
@@ -339,22 +350,30 @@ export function useListAdmins() {
   });
 }
 
-/**
- * Admin upgrade — backend determines admin status by principal ID.
- * This mutation is a no-op stub; admin access is granted by the canister owner.
- */
-export function useUpgradeToAdmin() {
-  return useMutation({
-    mutationFn: async (_code: string): Promise<string | null> => {
-      return 'Admin access is determined by your principal ID. Contact the system owner to be added as an admin.';
+export function usePersistentAdminCheck() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<boolean>({
+    queryKey: ['persistentAdminCheck'],
+    queryFn: async () => {
+      if (!actor) return false;
+      return actor.persistentAdminCheck();
     },
+    enabled: !!actor && !actorFetching,
   });
 }
 
-// ─── Legacy aliases ───────────────────────────────────────────────────────────
-
-export const useUpdateUserRole = useSetMyRoleCustomer;
-export const useUpdateUserRoleAndLock = useSetMyRoleCustomer;
-
-/** Legacy alias kept for any components still importing useGetAllTrips */
-export const useGetAllTrips = useGetAllTripsAdmin;
+/**
+ * Stub hook for AdminUpgradePage.
+ * The backend uses hardcoded admin principals — there is no runtime upgrade endpoint.
+ * This mutation always rejects with a clear message so the UI can inform the user.
+ */
+export function useUpgradeToAdmin() {
+  return useMutation<null, Error, string>({
+    mutationFn: async (_code: string): Promise<null> => {
+      throw new Error(
+        'Admin access is managed by hardcoded principals. Contact the platform administrator to be added as an admin.'
+      );
+    },
+  });
+}

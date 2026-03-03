@@ -1,14 +1,14 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-03-02T20:33:49.362Z",
-  "summary": "The diff modifies AvailableTripsSection.tsx to normalize trips via normalizeTrip() and replace 'in' operator checks with === comparisons. File summaries confirm DriverTripList.tsx and DriverDashboard.tsx were also updated with similar fixes. Both REQ-1 and REQ-2 appear to be addressed across the relevant components.",
+  "generatedAt": "2026-03-03T12:06:19.548Z",
+  "summary": "The diff modifies RideRequestForm.tsx and CustomerDashboard.tsx to implement the Drop GPS + OneWay/RoundTrip logic. Based on the file summary descriptions, all four requirements appear to be addressed: REQ-1 (Drop Location Mode toggle for One Way), REQ-2 (GPS capture reusing shared helper for drop), REQ-3 (Round Trip hides drop fields, syncs drop=pickup, shows helper text, submits dropoffLocation=pickupLocation), and REQ-4 (One Way submits dropoffLocation from dropLocation state, no console.logs). The diff content is truncated so full verification of every AC is limited, but the file summary for RideRequestForm.tsx explicitly describes all four requirements being implemented.",
   "missing_requirements": [],
   "hallucinated_features": [],
   "confidence": 0.8,
   "changed_files": [
     "frontend-file-summaries.txt",
-    "frontend/src/components/AvailableTripsSection.tsx",
+    "frontend/src/components/RideRequestForm.tsx",
     "project_state.json"
   ]
 }

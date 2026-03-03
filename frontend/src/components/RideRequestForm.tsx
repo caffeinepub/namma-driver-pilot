@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCreateTrip } from '../hooks/useQueries';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, MapPin, Navigation } from 'lucide-react';
 import { toast } from 'sonner';
 import type { TripRequest, Trip as BackendTrip } from '../backend';
@@ -120,7 +119,11 @@ export default function RideRequestForm({ onTripCreated }: RideRequestFormProps)
   const [tripType, setTripType] = useState<TripTypeKey>('local');
   const [journeyType, setJourneyType] = useState<JourneyTypeKey>('oneWay');
   const [vehicleType, setVehicleType] = useState<VehicleTypeKey>('sedan');
-  const [locationMode, setLocationMode] = useState<LocationMode>('manual');
+
+  // Pickup location mode
+  const [pickupLocationMode, setPickupLocationMode] = useState<LocationMode>('manual');
+  // Drop location mode (only relevant for One Way)
+  const [dropLocationMode, setDropLocationMode] = useState<LocationMode>('manual');
 
   // Duration
   const [hours, setHours] = useState('1');
@@ -131,11 +134,14 @@ export default function RideRequestForm({ onTripCreated }: RideRequestFormProps)
   const [pickupArea, setPickupArea] = useState('');
   const [pickupLat, setPickupLat] = useState<number | null>(null);
   const [pickupLng, setPickupLng] = useState<number | null>(null);
-  const [gpsLoading, setGpsLoading] = useState(false);
+  const [pickupGpsLoading, setPickupGpsLoading] = useState(false);
 
   // Drop
   const [dropPincode, setDropPincode] = useState('');
   const [dropArea, setDropArea] = useState('');
+  const [dropLat, setDropLat] = useState<number | null>(null);
+  const [dropLng, setDropLng] = useState<number | null>(null);
+  const [dropGpsLoading, setDropGpsLoading] = useState(false);
 
   // Contact
   const [phone, setPhone] = useState('');
@@ -146,26 +152,56 @@ export default function RideRequestForm({ onTripCreated }: RideRequestFormProps)
 
   const [error, setError] = useState('');
 
-  const showDropFields =
-    journeyType === 'oneWay' || (journeyType === 'roundTrip');
+  // Round Trip: sync drop fields to pickup fields automatically
+  useEffect(() => {
+    if (journeyType === 'roundTrip') {
+      setDropArea(pickupArea);
+      setDropPincode(pickupPincode);
+      setDropLat(pickupLat);
+      setDropLng(pickupLng);
+    }
+  }, [journeyType, pickupArea, pickupPincode, pickupLat, pickupLng]);
 
-  const handleGpsCapture = () => {
+  // Shared GPS capture helper — reused for both pickup and drop
+  const captureGps = (
+    onSuccess: (lat: number, lng: number) => void,
+    setLoading: (v: boolean) => void
+  ) => {
     if (!navigator.geolocation) {
       setError('Geolocation is not supported by your browser.');
       return;
     }
-    setGpsLoading(true);
+    setLoading(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setPickupLat(pos.coords.latitude);
-        setPickupLng(pos.coords.longitude);
-        setGpsLoading(false);
+        onSuccess(pos.coords.latitude, pos.coords.longitude);
+        setLoading(false);
         toast.success('Location captured');
       },
       (err) => {
         setError(`GPS error: ${err.message}`);
-        setGpsLoading(false);
+        setLoading(false);
       }
+    );
+  };
+
+  const handlePickupGpsCapture = () => {
+    captureGps(
+      (lat, lng) => {
+        setPickupLat(lat);
+        setPickupLng(lng);
+      },
+      setPickupGpsLoading
+    );
+  };
+
+  const handleDropGpsCapture = () => {
+    captureGps(
+      (lat, lng) => {
+        setDropLat(lat);
+        setDropLng(lng);
+      },
+      setDropGpsLoading
     );
   };
 
@@ -188,14 +224,21 @@ export default function RideRequestForm({ onTripCreated }: RideRequestFormProps)
       longitude: pickupLng !== null ? pickupLng : undefined,
     };
 
-    const dropoffLocation = showDropFields
-      ? {
-          pincode: dropPincode.trim(),
-          area: dropArea.trim(),
-          latitude: undefined,
-          longitude: undefined,
-        }
-      : undefined;
+    // One Way: use drop fields; Round Trip: drop = pickup
+    const dropoffLocation =
+      journeyType === 'roundTrip'
+        ? {
+            pincode: pickupPincode.trim(),
+            area: pickupArea.trim(),
+            latitude: pickupLat !== null ? pickupLat : undefined,
+            longitude: pickupLng !== null ? pickupLng : undefined,
+          }
+        : {
+            pincode: dropPincode.trim(),
+            area: dropArea.trim(),
+            latitude: dropLat !== null ? dropLat : undefined,
+            longitude: dropLng !== null ? dropLng : undefined,
+          };
 
     // Duration discriminated union matching backend Duration type
     const duration =
@@ -242,8 +285,8 @@ export default function RideRequestForm({ onTripCreated }: RideRequestFormProps)
         try {
           const localTrip = backendTripToLocalTrip(newBackendTrip);
           onTripCreated(localTrip);
-        } catch (convErr) {
-          console.error('[RideRequestForm] Trip conversion error:', convErr);
+        } catch {
+          // Conversion error — parent won't get optimistic update but trip was created
         }
       }
       // Reset form on success
@@ -256,11 +299,17 @@ export default function RideRequestForm({ onTripCreated }: RideRequestFormProps)
       setStartDateTime('');
       setPickupLat(null);
       setPickupLng(null);
+      setDropLat(null);
+      setDropLng(null);
+      setPickupLocationMode('manual');
+      setDropLocationMode('manual');
     } catch {
-      // Toast and console.error are handled in useCreateTrip onError
+      // Toast and error handling done in useCreateTrip onError
       setError('Booking failed. Please try again.');
     }
   };
+
+  const isRoundTrip = journeyType === 'roundTrip';
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -340,7 +389,7 @@ export default function RideRequestForm({ onTripCreated }: RideRequestFormProps)
         />
       </div>
 
-      {/* Location Mode */}
+      {/* ── PICKUP SECTION ── */}
       <div className="space-y-2">
         <Label>Pickup Location Mode</Label>
         <div className="flex gap-2">
@@ -348,9 +397,9 @@ export default function RideRequestForm({ onTripCreated }: RideRequestFormProps)
             <button
               key={m}
               type="button"
-              onClick={() => setLocationMode(m)}
+              onClick={() => setPickupLocationMode(m)}
               className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
-                locationMode === m
+                pickupLocationMode === m
                   ? 'bg-primary text-primary-foreground border-primary'
                   : 'border-border hover:bg-muted'
               }`}
@@ -370,7 +419,7 @@ export default function RideRequestForm({ onTripCreated }: RideRequestFormProps)
       </div>
 
       {/* Pickup Manual Fields */}
-      {locationMode === 'manual' && (
+      {pickupLocationMode === 'manual' && (
         <>
           <div className="space-y-2">
             <Label htmlFor="pickupArea">Pickup Area</Label>
@@ -393,17 +442,17 @@ export default function RideRequestForm({ onTripCreated }: RideRequestFormProps)
         </>
       )}
 
-      {/* GPS Capture */}
-      {locationMode === 'gps' && (
+      {/* Pickup GPS Capture */}
+      {pickupLocationMode === 'gps' && (
         <div className="space-y-2">
           <Button
             type="button"
             variant="outline"
-            onClick={handleGpsCapture}
-            disabled={gpsLoading}
+            onClick={handlePickupGpsCapture}
+            disabled={pickupGpsLoading}
             className="w-full"
           >
-            {gpsLoading ? (
+            {pickupGpsLoading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Getting location…
@@ -411,11 +460,11 @@ export default function RideRequestForm({ onTripCreated }: RideRequestFormProps)
             ) : (
               <>
                 <Navigation className="h-4 w-4 mr-2" />
-                {pickupLat ? 'Location captured ✓' : 'Capture GPS Location'}
+                {pickupLat ? 'Pickup location captured ✓' : 'Capture Pickup GPS Location'}
               </>
             )}
           </Button>
-          {pickupLat && pickupLng && (
+          {pickupLat !== null && pickupLng !== null && (
             <p className="text-xs text-muted-foreground">
               Lat: {pickupLat.toFixed(5)}, Lng: {pickupLng.toFixed(5)}
             </p>
@@ -423,9 +472,77 @@ export default function RideRequestForm({ onTripCreated }: RideRequestFormProps)
         </div>
       )}
 
-      {/* Dropoff Fields */}
-      {showDropFields && (
+      {/* ── DROP SECTION ── */}
+      {isRoundTrip ? (
+        /* Round Trip: show locked helper text, no drop inputs */
+        <div className="rounded-lg border border-border bg-muted/40 px-4 py-3">
+          <p className="text-sm text-muted-foreground flex items-center gap-2">
+            <MapPin className="h-4 w-4 flex-shrink-0" />
+            Round trip: Drop location is same as Pickup.
+          </p>
+        </div>
+      ) : (
+        /* One Way: show Drop Location Mode toggle + drop fields */
         <>
+          <div className="space-y-2">
+            <Label>Drop Location Mode</Label>
+            <div className="flex gap-2">
+              {(['manual', 'gps'] as LocationMode[]).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setDropLocationMode(m)}
+                  className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
+                    dropLocationMode === m
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'border-border hover:bg-muted'
+                  }`}
+                >
+                  {m === 'manual' ? (
+                    <span className="flex items-center justify-center gap-1">
+                      <MapPin className="h-4 w-4" /> Manual
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-1">
+                      <Navigation className="h-4 w-4" /> GPS
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Drop GPS Capture */}
+          {dropLocationMode === 'gps' && (
+            <div className="space-y-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleDropGpsCapture}
+                disabled={dropGpsLoading}
+                className="w-full"
+              >
+                {dropGpsLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Getting drop location…
+                  </>
+                ) : (
+                  <>
+                    <Navigation className="h-4 w-4 mr-2" />
+                    {dropLat ? 'Drop location captured ✓' : 'Capture Drop GPS Location'}
+                  </>
+                )}
+              </Button>
+              {dropLat !== null && dropLng !== null && (
+                <p className="text-xs text-muted-foreground">
+                  Lat: {dropLat.toFixed(5)}, Lng: {dropLng.toFixed(5)}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Drop Area & Pincode — always visible for One Way */}
           <div className="space-y-2">
             <Label htmlFor="dropArea">Drop Area</Label>
             <Input
