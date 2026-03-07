@@ -1,104 +1,124 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useGetCallerUserProfile } from '../hooks/useGetCallerUserProfile';
-import RoleSelectionWarningModal from '../components/RoleSelectionWarningModal';
-import { Button } from '@/components/ui/button';
-import { Car, Users } from 'lucide-react';
+import { useNavigate } from "@tanstack/react-router";
+import { Car, Loader2, User } from "lucide-react";
+import React from "react";
+import { toast } from "sonner";
+import { Role } from "../backend";
+import {
+  useGetMyRole,
+  useSetMyRoleCustomer,
+  useSetMyRoleDriver,
+} from "../hooks/useQueries";
 
+/**
+ * Legacy role selection page — redirects to /select-role.
+ * Kept as a module to avoid import errors from App.tsx.
+ */
 export default function RoleSelectionPage() {
-  const { identity } = useInternetIdentity();
-  const { data: userProfile, isLoading } = useGetCallerUserProfile();
   const navigate = useNavigate();
-  const [showModal, setShowModal] = useState(false);
+  const { data: currentRole, isLoading: roleLoading } = useGetMyRole();
+  const setCustomer = useSetMyRoleCustomer();
+  const setDriver = useSetMyRoleDriver();
 
-  useEffect(() => {
-    // Redirect if not authenticated
-    if (!identity && !isLoading) {
-      navigate({ to: '/' });
-      return;
+  React.useEffect(() => {
+    if (roleLoading) return;
+    if (currentRole === Role.admin) {
+      navigate({ to: "/admin/dashboard" });
+    } else if (currentRole === Role.driver) {
+      navigate({ to: "/driver/dashboard" });
+    } else if (currentRole === Role.customer) {
+      navigate({ to: "/customer/dashboard" });
     }
+  }, [currentRole, roleLoading, navigate]);
 
-    // Redirect if user already has a role
-    if (userProfile && userProfile.role.role) {
-      const role = userProfile.role.role;
-      if (role === 'admin') {
-        navigate({ to: '/admin/dashboard' });
-      } else if (role === 'driver') {
-        navigate({ to: '/driver/dashboard' });
-      } else if (role === 'customer') {
-        navigate({ to: '/customer/dashboard' });
-      }
-      return;
+  const handleSelectCustomer = async () => {
+    try {
+      await setCustomer.mutateAsync();
+      navigate({ to: "/customer/dashboard" });
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to set role. Please try again.");
     }
+  };
 
-    // Show modal automatically when page loads
-    if (userProfile && !userProfile.role.role) {
-      setShowModal(true);
+  const handleSelectDriver = async () => {
+    try {
+      await setDriver.mutateAsync();
+      navigate({ to: "/driver/dashboard" });
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to set role. Please try again.");
     }
-  }, [identity, userProfile, isLoading, navigate]);
+  };
 
-  if (isLoading) {
+  const isLoading = setCustomer.isPending || setDriver.isPending;
+
+  if (roleLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <>
-      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4">
-        <div className="max-w-4xl w-full space-y-8">
-          <div className="text-center space-y-4">
-            <h1 className="text-4xl font-bold tracking-tight">Choose Your Role</h1>
-            <p className="text-xl text-muted-foreground">
-              Select how you want to use Namma Driver Pilot
-            </p>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+            <Car className="h-8 w-8 text-primary" />
           </div>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Welcome!</h1>
+          <p className="text-muted-foreground text-base">
+            How would you like to use Namma Driver Pilot?
+          </p>
+        </div>
 
-          <div className="grid md:grid-cols-2 gap-6 mt-12">
-            <div className="bg-card p-8 rounded-lg border-2 border-border hover:border-primary transition-colors">
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className="flex items-center justify-center w-20 h-20 bg-primary/10 rounded-full">
-                  <Users className="h-10 w-10 text-primary" />
-                </div>
-                <h2 className="text-2xl font-bold">Customer</h2>
-                <p className="text-muted-foreground">
-                  Book rides and travel to your destination with ease
-                </p>
-                <ul className="text-sm text-muted-foreground space-y-2 text-left w-full">
-                  <li>• Request rides anytime</li>
-                  <li>• Track your trips</li>
-                  <li>• View trip history</li>
-                </ul>
+        <div className="grid grid-cols-1 gap-4">
+          <button
+            type="button"
+            onClick={handleSelectCustomer}
+            disabled={isLoading}
+            className="group relative flex items-center gap-5 p-6 rounded-2xl border-2 border-border bg-card hover:border-primary hover:bg-primary/5 transition-all duration-200 text-left disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+              {setCustomer.isPending ? (
+                <Loader2 className="h-7 w-7 animate-spin text-primary" />
+              ) : (
+                <User className="h-7 w-7 text-primary" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-lg text-foreground">
+                Continue as Customer
+              </div>
+              <div className="text-sm text-muted-foreground mt-0.5">
+                Book rides and manage your trips
               </div>
             </div>
+          </button>
 
-            <div className="bg-card p-8 rounded-lg border-2 border-border hover:border-primary transition-colors">
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className="flex items-center justify-center w-20 h-20 bg-primary/10 rounded-full">
-                  <Car className="h-10 w-10 text-primary" />
-                </div>
-                <h2 className="text-2xl font-bold">Driver</h2>
-                <p className="text-muted-foreground">
-                  Accept ride requests and earn by driving
-                </p>
-                <ul className="text-sm text-muted-foreground space-y-2 text-left w-full">
-                  <li>• View available trips</li>
-                  <li>• Accept ride requests</li>
-                  <li>• Manage your trips</li>
-                </ul>
+          <button
+            type="button"
+            onClick={handleSelectDriver}
+            disabled={isLoading}
+            className="group relative flex items-center gap-5 p-6 rounded-2xl border-2 border-border bg-card hover:border-secondary hover:bg-secondary/5 transition-all duration-200 text-left disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-secondary/10 flex items-center justify-center group-hover:bg-secondary/20 transition-colors">
+              {setDriver.isPending ? (
+                <Loader2 className="h-7 w-7 animate-spin text-secondary" />
+              ) : (
+                <Car className="h-7 w-7 text-secondary" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-lg text-foreground">
+                Continue as Driver
+              </div>
+              <div className="text-sm text-muted-foreground mt-0.5">
+                Accept trips and earn money
               </div>
             </div>
-          </div>
+          </button>
         </div>
       </div>
-
-      {showModal && <RoleSelectionWarningModal />}
-    </>
+    </div>
   );
 }

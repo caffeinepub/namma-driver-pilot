@@ -1,145 +1,196 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import { Edit } from 'lucide-react';
-import type { UserProfile, VehicleExperience, TransmissionComfort } from '../backend';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Car,
+  Edit,
+  Languages,
+  MapPin,
+  Radio,
+  Settings,
+  User,
+} from "lucide-react";
+import React from "react";
+import type { DriverProfile, UserProfile } from "../backend";
+import type { NormalizedDriverProfile } from "../utils/normalizeProfile";
 
 interface DriverProfileSectionProps {
-  userProfile: UserProfile | null | undefined;
-  isLoading: boolean;
-  error: Error | null;
+  profile: NormalizedDriverProfile | null;
+  driverProfile?: DriverProfile | null;
+  userProfile?: UserProfile | null;
   onEditClick: () => void;
 }
 
-export default function DriverProfileSection({ userProfile, isLoading, error, onEditClick }: DriverProfileSectionProps) {
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>My Profile</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-4 w-1/2" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>My Profile</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-destructive">Failed to load profile: {error.message}</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!userProfile) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>My Profile</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">No profile data available</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const formatVehicleExperience = (experience: VehicleExperience[]): string => {
-    if (!experience || experience.length === 0) return 'None';
-    return experience.map(exp => {
-      switch (exp) {
-        case 'hatchback': return 'Hatchback';
-        case 'sedan': return 'Sedan';
-        case 'suv': return 'SUV';
-        case 'luxury': return 'Luxury';
-        default: return exp;
-      }
-    }).join(', ');
+function getVehicleLabel(v: string): string {
+  const map: Record<string, string> = {
+    hatchback: "Hatchback",
+    sedan: "Sedan",
+    suv: "SUV",
+    luxury: "Luxury",
   };
+  return map[v] ?? v;
+}
 
-  const formatTransmissionComfort = (comfort: TransmissionComfort[]): string => {
-    if (!comfort || comfort.length === 0) return 'None';
-    return comfort.map(trans => {
-      switch (trans) {
-        case 'manual': return 'Manual';
-        case 'automatic': return 'Automatic';
-        case 'ev': return 'EV';
-        default: return trans;
-      }
-    }).join(', ');
+function getTransmissionLabel(t: string): string {
+  const map: Record<string, string> = {
+    manual: "Manual",
+    automatic: "Automatic",
+    ev: "EV",
   };
+  return map[t] ?? t;
+}
 
-  const formatLanguages = (languages: string[] | undefined): string => {
-    if (!languages || languages.length === 0) return 'None';
-    return languages.join(', ');
-  };
+export default function DriverProfileSection({
+  profile,
+  driverProfile,
+  userProfile,
+  onEditClick,
+}: DriverProfileSectionProps) {
+  // Prefer driverProfile for duty status and languages (most up-to-date)
+  const isAvailable =
+    driverProfile?.isAvailable ?? profile?.isAvailable ?? false;
+  const languages: string[] =
+    driverProfile?.languages ?? profile?.languages ?? [];
+  const serviceAreaName =
+    driverProfile?.serviceAreaName ||
+    profile?.serviceAreaName ||
+    userProfile?.serviceAreaName ||
+    "Not set";
+  const servicePincode =
+    driverProfile?.servicePincode ||
+    profile?.servicePincode ||
+    userProfile?.servicePincode ||
+    "—";
 
-  const formatEarnings = (earnings: bigint): string => {
-    return `₹${earnings.toString()}`;
-  };
+  const vehicleExperience: string[] = driverProfile
+    ? (driverProfile.vehicleExperience as string[])
+    : (profile?.vehicleExperience ?? []);
+
+  const transmissionComfort: string[] = driverProfile
+    ? (driverProfile.transmissionComfort as string[])
+    : (profile?.transmissionComfort ?? []);
+
+  const displayName = userProfile?.fullName || "Driver";
+  const displayEmail = userProfile?.email || "";
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle>My Profile</CardTitle>
-        <Button onClick={onEditClick} variant="outline" size="sm">
-          <Edit className="h-4 w-4 mr-2" />
+    <Card className="border-border shadow-sm">
+      <CardHeader className="flex flex-row items-start justify-between pb-2">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <User className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <CardTitle className="text-lg font-semibold">
+              {displayName}
+            </CardTitle>
+            {displayEmail && (
+              <p className="text-sm text-muted-foreground">{displayEmail}</p>
+            )}
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onEditClick}
+          className="gap-1"
+        >
+          <Edit className="w-3.5 h-3.5" />
           Edit Profile
         </Button>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Service Pincode</p>
-            <p className="text-base font-semibold">{userProfile.servicePincode || 'Not set'}</p>
-          </div>
 
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Service Area Name</p>
-            <p className="text-base font-semibold">{userProfile.serviceAreaName || 'Not set'}</p>
-          </div>
+      <CardContent className="space-y-4">
+        {/* Duty Status */}
+        <div className="flex items-center gap-2">
+          <Radio className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-muted-foreground">
+            Status:
+          </span>
+          {isAvailable ? (
+            <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800">
+              On-Duty
+            </Badge>
+          ) : (
+            <Badge variant="secondary">Off-Duty</Badge>
+          )}
+        </div>
 
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Vehicle Experience</p>
-            <p className="text-base">{formatVehicleExperience(userProfile.vehicleExperience)}</p>
-          </div>
+        {/* Service Area */}
+        <div className="flex items-center gap-2">
+          <MapPin className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-muted-foreground">
+            Service Area:
+          </span>
+          <span className="text-sm">{serviceAreaName}</span>
+          {servicePincode &&
+            servicePincode !== "—" &&
+            servicePincode !== "000000" && (
+              <span className="text-xs text-muted-foreground">
+                ({servicePincode})
+              </span>
+            )}
+        </div>
 
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Transmission Comfort</p>
-            <p className="text-base">{formatTransmissionComfort(userProfile.transmissionComfort)}</p>
-          </div>
-
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Availability Status</p>
-            <div className="mt-1">
-              {userProfile.isAvailable ? (
-                <Badge variant="default" className="bg-green-600 hover:bg-green-700">Available</Badge>
-              ) : (
-                <Badge variant="secondary">Unavailable</Badge>
-              )}
+        {/* Vehicle Experience */}
+        {vehicleExperience.length > 0 && (
+          <div className="flex items-start gap-2">
+            <Car className="w-4 h-4 text-muted-foreground mt-0.5" />
+            <span className="text-sm font-medium text-muted-foreground">
+              Vehicles:
+            </span>
+            <div className="flex flex-wrap gap-1">
+              {vehicleExperience.map((v) => (
+                <Badge key={v} variant="outline" className="text-xs">
+                  {getVehicleLabel(v)}
+                </Badge>
+              ))}
             </div>
           </div>
+        )}
 
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Total Earnings</p>
-            <p className="text-base font-semibold">{formatEarnings(userProfile.totalEarnings)}</p>
+        {/* Transmission Comfort */}
+        {transmissionComfort.length > 0 && (
+          <div className="flex items-start gap-2">
+            <Settings className="w-4 h-4 text-muted-foreground mt-0.5" />
+            <span className="text-sm font-medium text-muted-foreground">
+              Transmission:
+            </span>
+            <div className="flex flex-wrap gap-1">
+              {transmissionComfort.map((t) => (
+                <Badge key={t} variant="outline" className="text-xs">
+                  {getTransmissionLabel(t)}
+                </Badge>
+              ))}
+            </div>
           </div>
+        )}
 
-          <div className="md:col-span-2">
-            <p className="text-sm font-medium text-muted-foreground">Languages</p>
-            <p className="text-base">{formatLanguages(userProfile.languages)}</p>
+        {/* Languages */}
+        {languages.length > 0 && (
+          <div className="flex items-start gap-2">
+            <Languages className="w-4 h-4 text-muted-foreground mt-0.5" />
+            <span className="text-sm font-medium text-muted-foreground">
+              Languages:
+            </span>
+            <div className="flex flex-wrap gap-1">
+              {languages.map((lang) => (
+                <Badge key={lang} variant="secondary" className="text-xs">
+                  {lang}
+                </Badge>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Empty state */}
+        {vehicleExperience.length === 0 &&
+          transmissionComfort.length === 0 &&
+          languages.length === 0 && (
+            <p className="text-sm text-muted-foreground italic">
+              No profile details yet. Click "Edit Profile" to get started.
+            </p>
+          )}
       </CardContent>
     </Card>
   );

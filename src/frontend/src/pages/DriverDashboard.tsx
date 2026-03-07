@@ -1,75 +1,91 @@
-import { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import AvailableTripsSection from '../components/AvailableTripsSection';
-import DriverTripList from '../components/DriverTripList';
-import DriverProfileSection from '../components/DriverProfileSection';
-import EditDriverProfileModal from '../components/EditDriverProfileModal';
-import { useGetRequestedTrips, useGetMyTrips } from '../hooks/useQueries';
-import { useGetCallerUserProfile } from '../hooks/useGetCallerUserProfile';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import React, { useState } from "react";
+import type { DriverProfile } from "../backend";
+import AvailableTripsSection from "../components/AvailableTripsSection";
+import DriverProfileSection from "../components/DriverProfileSection";
+import DriverTripList from "../components/DriverTripList";
+import EditDriverProfileModal from "../components/EditDriverProfileModal";
+import { useGetCallerUserProfile } from "../hooks/useQueries";
+import { useGetDriverProfile } from "../hooks/useQueries";
+import { normalizeDriverProfile } from "../utils/normalizeProfile";
 
 export default function DriverDashboard() {
-  const { data: requestedTrips, isLoading: loadingRequested } = useGetRequestedTrips();
-  const { data: myTrips, isLoading: loadingMyTrips } = useGetMyTrips();
-  const { data: userProfile, isLoading: profileLoading, error: profileError } = useGetCallerUserProfile();
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+
+  const { data: userProfile, isLoading: profileLoading } =
+    useGetCallerUserProfile();
+
+  const { data: driverProfile, isLoading: driverProfileLoading } =
+    useGetDriverProfile();
+
+  const isLoading = profileLoading || driverProfileLoading;
+
+  const normalizedProfile = React.useMemo(() => {
+    if (driverProfile) {
+      return normalizeDriverProfile(driverProfile as any);
+    }
+    if (userProfile) {
+      return normalizeDriverProfile(userProfile as any);
+    }
+    return null;
+  }, [driverProfile, userProfile]);
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 space-y-6">
+        <Skeleton className="h-48 w-full rounded-xl" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Driver Dashboard</h1>
-        <p className="text-muted-foreground">Accept rides and manage your trips</p>
-      </div>
-
-      <div className="mb-6">
-        <DriverProfileSection 
-          userProfile={userProfile} 
-          isLoading={profileLoading} 
-          error={profileError}
-          onEditClick={() => setIsEditModalOpen(true)}
-        />
-      </div>
-
-      <EditDriverProfileModal
-        open={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        userProfile={userProfile}
+    <div className="container mx-auto px-4 py-8 space-y-6">
+      {/* Driver Profile Card */}
+      <DriverProfileSection
+        profile={normalizedProfile}
+        driverProfile={driverProfile ?? null}
+        userProfile={userProfile ?? null}
+        onEditClick={() => setEditModalOpen(true)}
       />
 
-      <Tabs defaultValue="available" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="available">
-            Available Trips {!loadingRequested && `(${requestedTrips?.length || 0})`}
-          </TabsTrigger>
-          <TabsTrigger value="mytrips">
-            My Trips {!loadingMyTrips && `(${myTrips?.length || 0})`}
-          </TabsTrigger>
-        </TabsList>
+      {/* Trips Tabs */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Trips</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 pb-4">
+          <Tabs defaultValue="available" className="w-full">
+            <div className="px-6 pt-0 pb-4">
+              <TabsList className="w-full sm:w-auto">
+                <TabsTrigger value="available" className="flex-1 sm:flex-none">
+                  Available Trips
+                </TabsTrigger>
+                <TabsTrigger value="my-trips" className="flex-1 sm:flex-none">
+                  My Trips
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
-        <TabsContent value="available" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Available Trips</CardTitle>
-              <CardDescription>Trips waiting to be accepted by drivers</CardDescription>
-            </CardHeader>
-            <CardContent>
+            <TabsContent value="available" className="px-6 mt-0">
               <AvailableTripsSection />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </TabsContent>
 
-        <TabsContent value="mytrips" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>My Accepted Trips</CardTitle>
-              <CardDescription>Trips you have accepted</CardDescription>
-            </CardHeader>
-            <CardContent>
+            <TabsContent value="my-trips" className="px-6 mt-0">
               <DriverTripList />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Edit Profile Modal */}
+      <EditDriverProfileModal
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        profile={driverProfile ?? (userProfile as any) ?? null}
+      />
     </div>
   );
 }

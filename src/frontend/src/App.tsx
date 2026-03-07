@@ -1,230 +1,196 @@
-import { createRouter, createRoute, createRootRoute, RouterProvider, Outlet, useNavigate } from '@tanstack/react-router';
-import { useInternetIdentity } from './hooks/useInternetIdentity';
-import { useGetCallerUserProfile } from './hooks/useGetCallerUserProfile';
-import { useEffect } from 'react';
-import LandingPage from './pages/LandingPage';
-import RoleSelectionPage from './pages/RoleSelectionPage';
-import CustomerDashboard from './pages/CustomerDashboard';
-import DriverDashboard from './pages/DriverDashboard';
-import AdminDashboard from './pages/AdminDashboard';
-import ProfileSetupModal from './components/ProfileSetupModal';
-import Layout from './components/Layout';
-import { Toaster } from '@/components/ui/sonner';
-import { ThemeProvider } from 'next-themes';
+import {
+  Outlet,
+  RouterProvider,
+  createRootRoute,
+  createRoute,
+  createRouter,
+} from "@tanstack/react-router";
+import { ThemeProvider } from "next-themes";
+import React, { useState } from "react";
+import { Toaster } from "./components/ui/sonner";
 
-// Root layout component
-function RootLayout() {
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import OfflineBanner from "./components/OfflineBanner";
+import ProfileSetupModal from "./components/ProfileSetupModal";
+
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminUpgradePage from "./pages/AdminUpgradePage";
+import CustomerDashboard from "./pages/CustomerDashboard";
+import DriverDashboard from "./pages/DriverDashboard";
+import LandingPage from "./pages/LandingPage";
+import LoginPage from "./pages/LoginPage";
+import NotAuthorizedPage from "./pages/NotAuthorizedPage";
+import PostLoginLandingPage from "./pages/PostLoginLandingPage";
+import RoleSelectionPage from "./pages/RoleSelectionPage";
+import SelectRolePage from "./pages/SelectRolePage";
+
+import { Role } from "./backend";
+import Navigation from "./components/Navigation";
+import RoleGuard from "./components/RoleGuard";
+import { useBackendHealth } from "./hooks/useBackendHealth";
+import { useGetCallerUserProfile } from "./hooks/useGetCallerUserProfile";
+import { useInternetIdentity } from "./hooks/useInternetIdentity";
+import { useGetMyRole } from "./hooks/useQueries";
+
+// ─── Root Layout ──────────────────────────────────────────────────────────────
+
+function AppShell() {
   const { identity } = useInternetIdentity();
-  const { data: userProfile, isLoading: profileLoading, isFetched } = useGetCallerUserProfile();
+  const { isHealthy, isChecking, recheck } = useBackendHealth();
+  const {
+    data: userProfile,
+    isLoading: profileLoading,
+    isFetched: profileFetched,
+  } = useGetCallerUserProfile();
+  const { data: myRole } = useGetMyRole();
+  const [profileSetupDone, setProfileSetupDone] = useState(false);
+
   const isAuthenticated = !!identity;
 
-  // Show profile setup modal only when authenticated, profile is fetched, and no profile exists
-  const showProfileSetup = isAuthenticated && !profileLoading && isFetched && userProfile === null;
+  // Only show profile setup modal when:
+  // 1. User is authenticated
+  // 2. Profile has been fetched and is null (no profile yet)
+  // 3. User has an assigned role (not unassigned)
+  // 4. Not already done
+  const hasAssignedRole =
+    myRole === Role.customer || myRole === Role.driver || myRole === Role.admin;
+
+  const showProfileSetup =
+    isAuthenticated &&
+    !profileLoading &&
+    profileFetched &&
+    userProfile === null &&
+    hasAssignedRole &&
+    !profileSetupDone;
 
   return (
-    <>
-      <Layout>
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
+      {isChecking && <OfflineBanner isColdStart={true} />}
+      {!isChecking && !isHealthy && (
+        <OfflineBanner isColdStart={false} onRecheck={recheck} />
+      )}
+      <Navigation />
+      <main className="flex-1">
         <Outlet />
-      </Layout>
-      {showProfileSetup && <ProfileSetupModal />}
-    </>
+      </main>
+      {showProfileSetup && (
+        <ProfileSetupModal
+          open={showProfileSetup}
+          onClose={() => setProfileSetupDone(true)}
+        />
+      )}
+    </div>
   );
 }
 
-// Root route with layout
+// ─── Routes ───────────────────────────────────────────────────────────────────
+
 const rootRoute = createRootRoute({
-  component: RootLayout,
+  component: AppShell,
 });
 
-// Landing page route
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/',
+  path: "/",
   component: LandingPage,
 });
 
-// Role selection route
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/login",
+  component: LoginPage,
+});
+
+const postLoginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/post-login",
+  component: PostLoginLandingPage,
+});
+
+const selectRoleRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/select-role",
+  component: SelectRolePage,
+});
+
 const roleSelectionRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/role-selection',
+  path: "/role-selection",
   component: RoleSelectionPage,
 });
 
-// Customer dashboard component with strict protection
-function CustomerDashboardRoute() {
-  const { identity } = useInternetIdentity();
-  const { data: userProfile, isLoading } = useGetCallerUserProfile();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!identity && !isLoading) {
-      navigate({ to: '/' });
-      return;
-    }
-
-    if (userProfile && !isLoading) {
-      const role = userProfile.role.role;
-      
-      // If no role set, redirect to role selection
-      if (!role) {
-        navigate({ to: '/role-selection' });
-        return;
-      }
-
-      // Strict role check - redirect non-customers to their correct dashboard
-      if (role === 'driver') {
-        navigate({ to: '/driver/dashboard' });
-      } else if (role === 'admin') {
-        navigate({ to: '/admin/dashboard' });
-      }
-    }
-  }, [identity, userProfile, isLoading, navigate]);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return <CustomerDashboard />;
-}
-
-// Customer dashboard route
-const customerRoute = createRoute({
+const customerDashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/customer/dashboard',
-  component: CustomerDashboardRoute,
+  path: "/customer/dashboard",
+  component: () => (
+    <RoleGuard allowedRole="customer">
+      <CustomerDashboard />
+    </RoleGuard>
+  ),
 });
 
-// Driver dashboard component with strict protection
-function DriverDashboardRoute() {
-  const { identity } = useInternetIdentity();
-  const { data: userProfile, isLoading } = useGetCallerUserProfile();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!identity && !isLoading) {
-      navigate({ to: '/' });
-      return;
-    }
-
-    if (userProfile && !isLoading) {
-      const role = userProfile.role.role;
-      
-      // If no role set, redirect to role selection
-      if (!role) {
-        navigate({ to: '/role-selection' });
-        return;
-      }
-
-      // Strict role check - redirect non-drivers to their correct dashboard
-      if (role === 'customer') {
-        navigate({ to: '/customer/dashboard' });
-      } else if (role === 'admin') {
-        navigate({ to: '/admin/dashboard' });
-      }
-    }
-  }, [identity, userProfile, isLoading, navigate]);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return <DriverDashboard />;
-}
-
-// Driver dashboard route
-const driverRoute = createRoute({
+const driverDashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/driver/dashboard',
-  component: DriverDashboardRoute,
+  path: "/driver/dashboard",
+  component: () => (
+    <RoleGuard allowedRole="driver">
+      <DriverDashboard />
+    </RoleGuard>
+  ),
 });
 
-// Admin dashboard component with strict protection
-function AdminDashboardRoute() {
-  const { identity } = useInternetIdentity();
-  const { data: userProfile, isLoading } = useGetCallerUserProfile();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!identity && !isLoading) {
-      navigate({ to: '/' });
-      return;
-    }
-
-    if (userProfile && !isLoading) {
-      const role = userProfile.role.role;
-      
-      // If no role set, redirect to role selection
-      if (!role) {
-        navigate({ to: '/role-selection' });
-        return;
-      }
-
-      // Strict role check - redirect non-admins to their correct dashboard
-      if (role === 'customer') {
-        navigate({ to: '/customer/dashboard' });
-      } else if (role === 'driver') {
-        navigate({ to: '/driver/dashboard' });
-      }
-    }
-  }, [identity, userProfile, isLoading, navigate]);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return <AdminDashboard />;
-}
-
-// Admin dashboard route
-const adminRoute = createRoute({
+const adminDashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/admin/dashboard',
-  component: AdminDashboardRoute,
+  path: "/admin/dashboard",
+  component: () => (
+    <RoleGuard allowedRole="admin">
+      <AdminDashboard />
+    </RoleGuard>
+  ),
 });
 
-// Create router
+const adminUpgradeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/upgrade",
+  component: AdminUpgradePage,
+});
+
+const notAuthorizedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/not-authorized",
+  component: NotAuthorizedPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  loginRoute,
+  postLoginRoute,
+  selectRoleRoute,
   roleSelectionRoute,
-  customerRoute,
-  driverRoute,
-  adminRoute,
+  customerDashboardRoute,
+  driverDashboardRoute,
+  adminDashboardRoute,
+  adminUpgradeRoute,
+  notAuthorizedRoute,
 ]);
 
 const router = createRouter({ routeTree });
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;
   }
 }
 
+// ─── App ──────────────────────────────────────────────────────────────────────
+
 export default function App() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-      <RouterProvider router={router} />
-      <Toaster />
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+        <RouterProvider router={router} />
+        <Toaster richColors position="top-right" />
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }

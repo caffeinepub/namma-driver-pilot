@@ -4,29 +4,40 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import EditDriverProfileForm from './EditDriverProfileForm';
-import type { UserProfile } from '../backend';
+} from "@/components/ui/dialog";
+import React from "react";
+import type { DriverProfile, UserProfile } from "../backend";
+import { normalizeDriverProfile } from "../utils/normalizeProfile";
+import EditDriverProfileForm from "./EditDriverProfileForm";
 
 interface EditDriverProfileModalProps {
   open: boolean;
   onClose: () => void;
-  userProfile: UserProfile | null | undefined;
+  profile: UserProfile | DriverProfile | null;
 }
 
-export default function EditDriverProfileModal({ open, onClose, userProfile }: EditDriverProfileModalProps) {
-  if (!userProfile) return null;
+export default function EditDriverProfileModal({
+  open,
+  onClose,
+  profile,
+}: EditDriverProfileModalProps) {
+  const normalized = profile ? normalizeDriverProfile(profile as any) : null;
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Driver Profile</DialogTitle>
           <DialogDescription>
-            Update your service area, vehicle experience, and availability settings
+            Update your service area, vehicle experience, and availability.
           </DialogDescription>
         </DialogHeader>
-        <EditDriverProfileForm userProfile={userProfile} onClose={onClose} />
+        <EditDriverProfileForm profile={normalized} onClose={onClose} />
       </DialogContent>
     </Dialog>
   );

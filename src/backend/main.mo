@@ -1,32 +1,25 @@
 import Map "mo:core/Map";
-import List "mo:core/List";
-import Iter "mo:core/Iter";
-import Order "mo:core/Order";
-import Runtime "mo:core/Runtime";
-import Principal "mo:core/Principal";
-import Time "mo:core/Time";
+import Set "mo:core/Set";
 import Text "mo:core/Text";
-import Nat64 "mo:core/Nat";
-import Nat "mo:core/Nat";
-import Migration "migration";
-
+import Nat64 "mo:core/Nat64";
+import Time "mo:core/Time";
+import Iter "mo:core/Iter";
+import Array "mo:core/Array";
+import Principal "mo:core/Principal";
+import Runtime "mo:core/Runtime";
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
 
-(with migration = Migration.run)
-actor {
-  // Types
-  public type UserRole = AccessControl.UserRole;
 
-  public type AppRole = {
+
+actor {
+  type AdminPrincipalSet = Set.Set<Text>;
+
+  public type Role = {
     #customer;
     #driver;
     #admin;
-  };
-
-  public type LockedRole = {
-    role : AppRole;
-    isLocked : Bool;
+    #unassigned;
   };
 
   public type VehicleExperience = {
@@ -40,29 +33,6 @@ actor {
     #manual;
     #automatic;
     #ev;
-  };
-
-  public type UserProfile = {
-    principalId : Principal;
-    email : Text;
-    fullName : Text;
-    role : LockedRole;
-    createdTime : Time.Time;
-    servicePincode : Text;
-    serviceAreaName : Text;
-    vehicleExperience : [VehicleExperience];
-    transmissionComfort : [TransmissionComfort];
-    isAvailable : Bool;
-    totalEarnings : Nat64;
-    languages : ?[Text];
-    isVerified : ?Bool;
-  };
-
-  public type TripStatus = {
-    #requested;
-    #accepted;
-    #completed;
-    #cancelled;
   };
 
   public type TripType = {
@@ -82,9 +52,10 @@ actor {
     #luxury;
   };
 
-  public type Duration = {
-    #hours : Nat;
-    #days : Nat;
+  public type TransmissionType = {
+    #automatic;
+    #manual;
+    #ev;
   };
 
   public type Location = {
@@ -92,6 +63,37 @@ actor {
     area : Text;
     latitude : ?Float;
     longitude : ?Float;
+  };
+
+  public type Duration = {
+    #hours : Nat;
+    #days : Nat;
+  };
+
+  public type TripRequest = {
+    tripId : Text;
+    customerId : ?Principal;
+    driverId : ?Principal;
+    tripType : TripType;
+    journeyType : JourneyType;
+    vehicleType : VehicleType;
+    duration : Duration;
+    startDateTime : ?Time.Time;
+    endDateTime : ?Time.Time;
+    pickupLocation : Location;
+    dropoffLocation : ?Location;
+    phone : Text;
+    landmark : ?Text;
+    totalFare : Nat;
+    ratePerHour : Nat;
+    billableHours : Nat;
+  };
+
+  public type TripStatus = {
+    #requested;
+    #accepted;
+    #completed;
+    #cancelled;
   };
 
   public type Trip = {
@@ -110,420 +112,476 @@ actor {
     landmark : ?Text;
     status : TripStatus;
     createdTime : Time.Time;
-    transmissionType : TransmissionComfort;
+    totalFare : Nat;
+    ratePerHour : Nat;
+    billableHours : Nat;
   };
 
-  module Profile {
-    public func compareByEmail(profile1 : UserProfile, profile2 : UserProfile) : Order.Order {
-      Text.compare(profile1.email, profile2.email);
-    };
+  public type UserProfile = {
+    principalId : Principal;
+    fullName : Text;
+    email : Text;
+    role : Role;
+    createdTime : Time.Time;
+    servicePincode : Text;
+    serviceAreaName : Text;
+    vehicleExperience : [VehicleExperience];
+    transmissionComfort : [TransmissionComfort];
+    isAvailable : Bool;
+    totalEarnings : Nat64;
+    languages : ?[Text];
   };
 
-  module Trip {
-    public func compareByTripId(trip1 : Trip, trip2 : Trip) : Order.Order {
-      Text.compare(trip1.tripId, trip2.tripId);
-    };
-
-    public func compareByPickupLocation(trip1 : Trip, trip2 : Trip) : Order.Order {
-      Text.compare(trip1.pickupLocation.area, trip2.pickupLocation.area);
-    };
-
-    public func compareByDropoffLocation(trip1 : Trip, trip2 : Trip) : Order.Order {
-      switch (trip1.dropoffLocation, trip2.dropoffLocation) {
-        case (?loc1, ?loc2) { Text.compare(loc1.area, loc2.area) };
-        case (?_, null) { #greater };
-        case (null, ?_) { #less };
-        case (null, null) { #equal };
-      };
-    };
+  public type DriverProfile = {
+    serviceAreaName : Text;
+    servicePincode : Text;
+    vehicleExperience : [VehicleType];
+    transmissionComfort : [TransmissionType];
+    languages : [Text];
+    isAvailable : Bool;
+    updatedTime : Nat64;
   };
 
+  public type LocalPricing = {
+    base_first_hour : Float;
+    min_hours : Float;
+    per_min_after_first_hour : Float;
+    free_wait_mins : Float;
+    wait_per_min : Float;
+  };
+
+  public type OutstationPricing = {
+    min_days : Float;
+    driver_bata_per_day : Float;
+    commission_rate : Float;
+    km_slab_1_limit : Float;
+    km_slab_2_limit : Float;
+    km_slab_3_limit : Float;
+    per_km_slab_1 : Float;
+    per_km_slab_2 : Float;
+    per_km_slab_3 : Float;
+    per_km_slab_4 : Float;
+    extra_driver_comp_per_100km_over_400 : Float;
+  };
+
+  public type VehicleMultiplier = {
+    hatchback : Float;
+    sedan : Float;
+    suv : Float;
+    luxury : Float;
+  };
+
+  public type Commission = {
+    local : Float;
+    outstation : Float;
+  };
+
+  public type PricingConfig = {
+    local : LocalPricing;
+    outstation : OutstationPricing;
+    vehicle_multiplier : VehicleMultiplier;
+    commission : Commission;
+  };
+
+  stable var adminPrincipals : AdminPrincipalSet = Set.fromArray([
+    "6ngnc-ph7ou-g23nw-z2zbr-czprs-ohpe6-2wolp-eeo7o-c32lo-deiso-yqe",
+  ]);
+  stable var pricingConfig : ?PricingConfig = null;
   let userProfiles = Map.empty<Principal, UserProfile>();
+  let driverProfiles = Map.empty<Principal, DriverProfile>();
   let trips = Map.empty<Text, Trip>();
 
-  // Initialize the user system state
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
-  // Helper function to get user's app role
-  private func getUserAppRole(user : Principal) : ?AppRole {
-    switch (userProfiles.get(user)) {
-      case (?profile) { ?profile.role.role };
-      case (null) { null };
+  public type UpdateConfigResult = {
+    #ok : PricingConfig;
+    #notAdmin;
+    #invalidConfig : Text;
+    #noConfigFound;
+    #failedUpdate : Text;
+  };
+
+  private func isAdmin(caller : Principal) : Bool {
+    adminPrincipals.contains(caller.toText());
+  };
+
+  private func isAnonymous(caller : Principal) : Bool {
+    caller.isAnonymous();
+  };
+
+  private func requireAuthenticated(caller : Principal) {
+    if (isAnonymous(caller)) {
+      Runtime.trap("Unauthorized: Anonymous callers are not allowed");
     };
   };
 
-  // Helper function to check if user is a customer
-  private func isCustomer(user : Principal) : Bool {
-    switch (getUserAppRole(user)) {
-      case (?#customer) { true };
-      case (?#admin) { true }; // Admins can act as customers
-      case (_) { false };
+  private func requireAdminCaller(caller : Principal) {
+    if (not isAdmin(caller)) {
+      Runtime.trap("Unauthorized: Only admins can perform this action");
     };
   };
 
-  // Helper function to check if user is a driver
-  private func isDriver(user : Principal) : Bool {
-    switch (getUserAppRole(user)) {
-      case (?#driver) { true };
-      case (?#admin) { true }; // Admins can act as drivers
-      case (_) { false };
+  let defaultPricingConfig : PricingConfig = {
+    local = {
+      base_first_hour = 200;
+      min_hours = 1;
+      per_min_after_first_hour = 3.5;
+      free_wait_mins = 10;
+      wait_per_min = 1.5;
+    };
+    outstation = {
+      min_days = 1;
+      driver_bata_per_day = 500;
+      commission_rate = 0.15;
+      km_slab_1_limit = 400;
+      km_slab_2_limit = 600;
+      km_slab_3_limit = 900;
+      per_km_slab_1 = 8;
+      per_km_slab_2 = 9;
+      per_km_slab_3 = 10;
+      per_km_slab_4 = 11;
+      extra_driver_comp_per_100km_over_400 = 1000;
+    };
+    vehicle_multiplier = {
+      hatchback = 1.0;
+      sedan = 1.0;
+      suv = 1.0;
+      luxury = 2.0;
+    };
+    commission = {
+      local = 0.20;
+      outstation = 0.15;
     };
   };
 
-  // Helper function to check if user is an admin
-  private func isAppAdmin(user : Principal) : Bool {
-    switch (getUserAppRole(user)) {
-      case (?#admin) { true };
-      case (_) { false };
+  public query func getPricingConfig() : async PricingConfig {
+    switch (pricingConfig) {
+      case (?config) { config };
+      case (null) { defaultPricingConfig };
     };
+  };
+
+  public shared ({ caller }) func updatePricingConfig(newConfig : PricingConfig) : async UpdateConfigResult {
+    if (not isAdmin(caller)) { return (#notAdmin) };
+
+    if (newConfig.local.base_first_hour < 0
+      or newConfig.local.min_hours < 1
+      or newConfig.local.per_min_after_first_hour < 0
+      or newConfig.local.free_wait_mins < 0
+      or newConfig.local.wait_per_min < 0
+      or newConfig.outstation.min_days < 1
+      or newConfig.outstation.driver_bata_per_day < 0
+      or newConfig.outstation.commission_rate < 0
+      or newConfig.outstation.km_slab_1_limit < 0
+      or newConfig.outstation.km_slab_1_limit >= newConfig.outstation.km_slab_2_limit
+      or newConfig.outstation.km_slab_2_limit >= newConfig.outstation.km_slab_3_limit
+      or newConfig.outstation.per_km_slab_1 < 0
+      or newConfig.outstation.per_km_slab_2 < 0
+      or newConfig.outstation.per_km_slab_3 < 0
+      or newConfig.outstation.per_km_slab_4 < 0
+      or newConfig.outstation.extra_driver_comp_per_100km_over_400 < 0
+      or newConfig.vehicle_multiplier.hatchback < 0
+      or newConfig.vehicle_multiplier.sedan < 0
+      or newConfig.vehicle_multiplier.suv < 0
+      or newConfig.vehicle_multiplier.luxury < 0
+      or newConfig.commission.local < 0
+      or newConfig.commission.outstation < 0
+    ) {
+      return #invalidConfig("One or more config values are out of allowed range and limits");
+    };
+
+    pricingConfig := ?newConfig;
+    #ok(newConfig);
   };
 
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can access profiles");
+    requireAuthenticated(caller);
+    switch (userProfiles.get(caller)) {
+      case (null) { null };
+      case (?profile) { ?profile };
     };
-    userProfiles.get(caller);
   };
 
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can access profiles");
-    };
-    if (caller != user and not isAppAdmin(caller)) {
+    requireAuthenticated(caller);
+    if (caller != user and not isAdmin(caller)) {
       Runtime.trap("Unauthorized: Can only view your own profile");
     };
     userProfiles.get(user);
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
-    };
+    requireAuthenticated(caller);
 
-    // CRITICAL: Users can NEVER set their own role to admin through this endpoint
-    // Admin role can only be assigned through AccessControl.assignRole (admin-only) or admin secret code
-    if (profile.role.role == #admin) {
-      Runtime.trap("Unauthorized: Admin role cannot be self-assigned");
-    };
-
-    switch (userProfiles.get(caller)) {
-      case (?existingProfile) {
-        // Prevent changing locked role
-        if (existingProfile.role.isLocked) {
-          if (existingProfile.role.role != profile.role.role) {
-            Runtime.trap("Role is locked and cannot be changed");
-          };
-
-          // If the locked role matches, allow profile update but preserve the locked role
-          userProfiles.add(caller, { profile with
-            role = existingProfile.role;
-          });
-          return;
-        };
-
-        // If role is not locked, allow update but ensure it's not admin
-        if (profile.role.role == #admin) {
-          Runtime.trap("Unauthorized: Admin role cannot be self-assigned");
-        };
+    let persistentRole : Role = switch (userProfiles.get(caller)) {
+      case (?existing) {
+        existing.role;
       };
       case (null) {
-        // New user - ensure they cannot create themselves as admin
-        if (profile.role.role == #admin) {
-          Runtime.trap("Unauthorized: Admin role cannot be self-assigned");
+        switch (profile.role) {
+          case (#driver) { #driver };
+          case (#customer) { #customer };
+          case (_) { #unassigned };
         };
       };
     };
 
-    userProfiles.add(caller, profile);
+    userProfiles.add(caller, {
+      profile with
+      principalId = caller;
+      role = persistentRole;
+    });
   };
 
-  public shared ({ caller }) func updateUserRoleAndLock(role : AppRole) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can update roles");
-    };
-
-    // CRITICAL: Users can only lock customer or driver roles, never admin
-    // Admin role can only be assigned through AccessControl.assignRole or admin secret code
-    if (role == #admin) {
-      Runtime.trap("Unauthorized: Admin role cannot be self-assigned");
-    };
-
-    switch (userProfiles.get(caller)) {
-      case (null) {
-        Runtime.trap("User not found");
-      };
-      case (?userProfile) {
-        if (userProfile.role.isLocked) {
-          Runtime.trap("Role is already locked and cannot be changed");
-        };
-
-        // Ensure the role being locked is not admin
-        if (role == #admin) {
-          Runtime.trap("Unauthorized: Admin role cannot be self-assigned");
-        };
-
-        let updatedProfile : UserProfile = {
-          userProfile with
-          role = {
-            role;
-            isLocked = true;
-          };
-        };
-        userProfiles.add(caller, updatedProfile);
-      };
-    };
+  public type TripRequestInput = {
+    #notUsed;
   };
 
-  // Trip Management
+  public shared ({ caller }) func createTrip(tripData : TripRequest) : async Trip {
+    requireAuthenticated(caller);
 
-  public shared ({ caller }) func createTrip(
-    tripType : TripType,
-    journeyType : JourneyType,
-    vehicleType : VehicleType,
-    duration : Duration,
-    startDateTime : ?Time.Time,
-    endDateTime : ?Time.Time,
-    pickupLocation : Location,
-    dropoffLocation : ?Location,
-    phone : Text,
-    landmark : ?Text,
-    transmissionType : TransmissionComfort
-  ) : async Text {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only authenticated users can create trips");
-    };
-
-    if (not isCustomer(caller)) {
-      Runtime.trap("Unauthorized: Only customers can create trips");
-    };
-
-    let tripId = phone.concat("-").concat(pickupLocation.pincode).concat("-").concat(Time.now().toText());
     let newTrip : Trip = {
-      tripId;
+      tripId = tripData.tripId;
       customerId = caller;
       driverId = null;
-      tripType;
-      journeyType;
-      vehicleType;
-      duration;
-      startDateTime;
-      endDateTime;
-      pickupLocation;
-      dropoffLocation;
-      phone;
-      landmark;
+      tripType = tripData.tripType;
+      journeyType = tripData.journeyType;
+      vehicleType = tripData.vehicleType;
+      duration = tripData.duration;
+      startDateTime = tripData.startDateTime;
+      endDateTime = tripData.endDateTime;
+      pickupLocation = tripData.pickupLocation;
+      dropoffLocation = tripData.dropoffLocation;
+      phone = tripData.phone;
+      landmark = tripData.landmark;
       status = #requested;
       createdTime = Time.now();
-      transmissionType;
+      totalFare = tripData.totalFare;
+      ratePerHour = tripData.ratePerHour;
+      billableHours = tripData.billableHours;
     };
 
-    trips.add(tripId, newTrip);
-    tripId;
+    trips.add(newTrip.tripId, newTrip);
+    newTrip;
   };
 
-  public query ({ caller }) func getMyTrips() : async [Trip] {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only authenticated users can view trips");
-    };
-
-    let userTrips = trips.values().toList<Trip>().filter(
-      func(trip) {
-        // Customers see their own trips
-        if (isCustomer(caller) and trip.customerId == caller) {
-          return true;
-        };
-        // Drivers see trips they accepted
-        if (isDriver(caller)) {
-          switch (trip.driverId) {
-            case (?driverId) { return driverId == caller };
-            case (null) { return false };
-          };
-        };
-        false;
-      }
-    );
-
-    userTrips.toArray();
+  public type AcceptTripResult = {
+    #ok : Trip;
+    #tripNotFound;
+    #alreadyAccepted;
+    #offDuty;
+    #unauthorized;
   };
 
-  public query ({ caller }) func getRequestedTrips() : async [Trip] {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only authenticated users can view requested trips");
-    };
+  public shared ({ caller }) func acceptTrip(tripId : Text) : async AcceptTripResult {
+    requireAuthenticated(caller);
 
-    if (not isDriver(caller)) {
-      Runtime.trap("Unauthorized: Only drivers can view requested trips");
-    };
-
-    let driverProfile = switch (userProfiles.get(caller)) {
+    switch (driverProfiles.get(caller)) {
       case (null) {
-        Runtime.trap("Driver profile not found");
+        return #offDuty;
       };
-      case (?profile) { profile };
-    };
-
-    // Step 1: Verify driver availability and verification status
-    if (not driverProfile.isAvailable) {
-      Runtime.trap("Driver is not available");
-    };
-
-    switch (driverProfile.isVerified) {
-      case (?isVerified) {
-        if (not isVerified) {
-          Runtime.trap("Driver is not verified");
+      case (?profile) {
+        if (not profile.isAvailable) {
+          return #offDuty;
         };
-      };
-      case (null) { () };
-    };
-
-    // Step 2: Check if driver has any active trips
-    let activeTripExists = switch (trips.values().find(func(trip) {
-      switch (trip.driverId) {
-        case (?driverId) {
-          driverId == caller and trip.status == #accepted;
-        };
-        case (null) { false };
-      };
-    })) {
-      case (null) { false };
-      case (?_) { true };
-    };
-
-    if (activeTripExists) {
-      Runtime.trap("Driver has an active trip and cannot accept new requests");
-    };
-
-    let matchingAreas = List.empty<Trip>();
-    let otherRequests = List.empty<Trip>();
-
-    let tripsIter = trips.values();
-    tripsIter.forEach(
-      func(trip) {
-        // Step 3: Filter by required criteria
-        if (
-          trip.status == #requested
-            and trip.pickupLocation.pincode == driverProfile.servicePincode
-        ) {
-          let hasVehicleExperience = driverProfile.vehicleExperience.find(
-            func(experience) { experience == trip.vehicleType }
-          );
-
-          let hasTransmissionComfort = driverProfile.transmissionComfort.find(
-            func(comfort) { comfort == trip.transmissionType }
-          );
-
-          if (hasVehicleExperience != null and hasTransmissionComfort != null) {
-            // Step 4: Smart ordering based on area name match
-            let pickupAreaLower = trip.pickupLocation.area.toLower();
-            let serviceAreaLower = driverProfile.serviceAreaName.toLower();
-
-            if (pickupAreaLower.contains(#text serviceAreaLower)) {
-              matchingAreas.add(trip);
-            } else {
-              otherRequests.add(trip);
+        switch (trips.get(tripId)) {
+          case (null) {
+            return #tripNotFound;
+          };
+          case (?trip) {
+            switch (trip.status) {
+              case (#requested) {
+                let updatedTrip : Trip = {
+                  trip with
+                  driverId = ?caller;
+                  status = #accepted;
+                };
+                trips.add(tripId, updatedTrip);
+                return #ok(updatedTrip);
+              };
+              case (_) {
+                return #alreadyAccepted;
+              };
             };
           };
         };
+      };
+    };
+  };
+
+  public query ({ caller }) func getDriverProfile() : async ?DriverProfile {
+    requireAuthenticated(caller);
+    driverProfiles.get(caller);
+  };
+
+  public shared ({ caller }) func upsertDriverProfile(profile : DriverProfile) : async Bool {
+    requireAuthenticated(caller);
+    driverProfiles.add(caller, profile);
+    true;
+  };
+
+  public query ({ caller }) func listAdmins() : async [Principal] {
+    requireAuthenticated(caller);
+    requireAdminCaller(caller);
+    adminPrincipals.toArray().map<Text, Principal>(
+      func(p) { Principal.fromText(p) : Principal }
+    );
+  };
+
+  public query ({ caller }) func persistentAdminCheck() : async Bool {
+    requireAuthenticated(caller);
+    isAdmin(caller);
+  };
+
+  public query func ping() : async Text { "ok" };
+
+  public query func health() : async Text { "ok" };
+
+  public query ({ caller }) func getAvailableTripsForDriver() : async [Trip] {
+    requireAuthenticated(caller);
+
+    switch (driverProfiles.get(caller)) {
+      case (null) {
+        [];
+      };
+      case (?driverProfile) {
+        if (not driverProfile.isAvailable) {
+          return [];
+        };
+
+        let driverServicePincode = driverProfile.servicePincode;
+
+        trips.entries().toArray().filter(
+          func((_, trip)) {
+            trip.status == #requested and
+            trip.driverId == null and
+            trip.pickupLocation.pincode == driverServicePincode
+          }
+        ).map(func((_, trip)) { trip });
+      };
+    };
+  };
+
+  public query ({ caller }) func getMyRole() : async Role {
+    requireAuthenticated(caller);
+    if (isAdmin(caller)) {
+      return #admin;
+    };
+    switch (userProfiles.get(caller)) {
+      case (?profile) { profile.role };
+      case (null) { #unassigned };
+    };
+  };
+
+  public shared ({ caller }) func setMyRole(newRole : Role) : async () {
+    requireAuthenticated(caller);
+
+    if (isAdmin(caller)) {
+      Runtime.trap("Admins cannot change their role");
+    };
+
+    switch (newRole) {
+      case (#customer) {};
+      case (#driver) {};
+      case (_) {
+        Runtime.trap("Only #driver or #customer roles can be self-assigned");
+      };
+    };
+
+    let currentTime = Time.now();
+
+    switch (userProfiles.get(caller)) {
+      case (?existing) {
+        userProfiles.add(caller, { existing with role = newRole });
+      };
+      case (null) {
+        let newProfile : UserProfile = {
+          principalId = caller;
+          fullName = "";
+          email = "";
+          role = newRole;
+          createdTime = currentTime;
+          servicePincode = "000000";
+          serviceAreaName = "Unknown";
+          vehicleExperience = [];
+          transmissionComfort = [];
+          isAvailable = false;
+          totalEarnings = 0;
+          languages = null;
+        };
+        userProfiles.add(caller, newProfile);
+      };
+    };
+  };
+
+  public query ({ caller }) func getAllTripsAdmin() : async [Trip] {
+    requireAuthenticated(caller);
+    requireAdminCaller(caller);
+
+    trips.entries().toArray().reverse().map(func((_, trip)) { trip });
+  };
+
+  public query ({ caller }) func getMyCustomerTrips() : async [Trip] {
+    requireAuthenticated(caller);
+
+    let filteredEntries = trips.entries().toArray().filter(
+      func((_, trip)) { trip.customerId == caller }
+    );
+
+    filteredEntries.reverse().map(func((_, trip)) { trip });
+  };
+
+  public query ({ caller }) func getMyDriverTrips() : async [Trip] {
+    requireAuthenticated(caller);
+
+    let filteredEntries = trips.entries().toArray().filter(
+      func((_, trip)) {
+        switch (trip.driverId) {
+          case (?ref) { ref == caller };
+          case (null) { false };
+        };
       }
     );
 
-    // Combine matching areas and other requests
-    let resultList = List.empty<Trip>();
-    resultList.addAll(matchingAreas.values());
-    resultList.addAll(otherRequests.values());
-
-    resultList.toArray();
+    filteredEntries.reverse().map(func((_, trip)) { trip });
   };
 
-  public shared ({ caller }) func acceptTrip(tripId : Text) : async () {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only authenticated users can accept trips");
-    };
+  public type CompleteTripResult = {
+    #ok : Trip;
+    #notFound;
+    #notAssigned;
+    #notAccepted;
+  };
 
-    if (not isDriver(caller)) {
-      Runtime.trap("Unauthorized: Only drivers can accept trips");
-    };
+  public shared ({ caller }) func completeTrip(tripId : Text) : async CompleteTripResult {
+    requireAuthenticated(caller);
 
     switch (trips.get(tripId)) {
       case (null) {
-        Runtime.trap("Trip not found");
-      };
-      case (?trip) {
-        if (trip.status != #requested) {
-          Runtime.trap("Trip is not available for acceptance");
-        };
-
-        // Prevent customers from accepting their own trips
-        if (trip.customerId == caller) {
-          Runtime.trap("Unauthorized: Cannot accept your own trip");
-        };
-
-        let updatedTrip : Trip = { trip with
-          driverId = ?caller;
-          status = #accepted;
-        };
-        trips.add(tripId, updatedTrip);
-      };
-    };
-  };
-
-  public shared ({ caller }) func completeTrip(tripId : Text) : async () {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only authenticated users can complete trips");
-    };
-
-    if (not isDriver(caller)) {
-      Runtime.trap("Unauthorized: Only drivers can complete trips");
-    };
-
-    switch (trips.get(tripId)) {
-      case (null) {
-        Runtime.trap("Trip not found");
+        #notFound;
       };
       case (?trip) {
         switch (trip.driverId) {
-          case (?driverId) {
-            if (driverId != caller) {
-              Runtime.trap("Unauthorized: Only the assigned driver can complete this trip");
+          case (?ref) {
+            if (ref != caller) {
+              #notAssigned;
+            } else {
+              switch (trip.status) {
+                case (#accepted) {
+                  let updatedTrip : Trip = {
+                    trip with status = #completed
+                  };
+                  trips.add(tripId, updatedTrip);
+                  #ok(updatedTrip);
+                };
+                case (_) { #notAccepted };
+              };
             };
           };
-          case (null) {
-            Runtime.trap("Trip has no assigned driver");
-          };
+          case (null) { #notAssigned };
         };
-
-        if (trip.status != #accepted) {
-          Runtime.trap("Trip must be in accepted status to complete");
-        };
-
-        let updatedTrip : Trip = { trip with status = #completed };
-        trips.add(tripId, updatedTrip);
       };
     };
-  };
-
-  public query ({ caller }) func getAllUsers() : async [UserProfile] {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only authenticated users can view users");
-    };
-
-    if (not isAppAdmin(caller)) {
-      Runtime.trap("Unauthorized: Only admins can view all users");
-    };
-
-    userProfiles.values().toArray().sort(Profile.compareByEmail);
-  };
-
-  public query ({ caller }) func getAllTrips() : async [Trip] {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only authenticated users can view trips");
-    };
-
-    if (not isAppAdmin(caller)) {
-      Runtime.trap("Unauthorized: Only admins can view all trips");
-    };
-
-    trips.values().toArray().sort(Trip.compareByTripId);
   };
 };

@@ -1,88 +1,120 @@
-import { useGetAllUsers } from '../hooks/useQueries';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Input } from '@/components/ui/input';
-import { useState } from 'react';
-import type { AppRole } from '../backend';
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Search } from "lucide-react";
+import { useState } from "react";
+import type { UserProfile } from "../backend";
+import { useGetAllUsers } from "../hooks/useQueries";
+import { getRoleString } from "../lib/types";
 
-const roleColors: Record<AppRole, string> = {
-  customer: 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20',
-  driver: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
-  admin: 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20',
-};
+function getRoleLabel(profile: UserProfile): string {
+  const role = getRoleString(profile.role);
+  if (role === "admin") return "Admin";
+  if (role === "driver") return "Driver";
+  if (role === "customer") return "Customer";
+  return "No role";
+}
+
+function getRoleBadgeVariant(
+  profile: UserProfile,
+): "default" | "secondary" | "outline" | "destructive" {
+  const role = getRoleString(profile.role);
+  if (role === "admin") return "default";
+  if (role === "driver") return "secondary";
+  if (role === "customer") return "outline";
+  return "outline";
+}
+
+function formatDate(timestamp: bigint): string {
+  try {
+    const ms = Number(timestamp) / 1_000_000;
+    return new Date(ms).toLocaleDateString();
+  } catch {
+    return "—";
+  }
+}
 
 export default function AdminUsersTab() {
   const { data: users, isLoading } = useGetAllUsers();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [search, setSearch] = useState("");
 
-  const filteredUsers = users?.filter(
-    (user) =>
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.fullName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = (users ?? []).filter((u) => {
+    const q = search.toLowerCase();
+    return (
+      u.fullName.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+    );
+  });
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="space-y-2">
+        {["s1", "s2", "s3", "s4", "s5"].map((k) => (
+          <Skeleton key={k} className="h-12 w-full" />
+        ))}
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search by name or email..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
+          placeholder="Search by name or email…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
         />
-        <p className="text-sm text-muted-foreground">
-          Total: {filteredUsers?.length || 0} user{filteredUsers?.length !== 1 ? 's' : ''}
-        </p>
       </div>
-
-      <ScrollArea className="h-[500px] rounded-md border">
+      <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Full Name</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Joined</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUsers && filteredUsers.length > 0 ? (
-              filteredUsers.map((user) => (
+            {filtered.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={4}
+                  className="text-center text-muted-foreground py-8"
+                >
+                  {search ? "No users match your search." : "No users found."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filtered.map((user) => (
                 <TableRow key={user.principalId.toString()}>
-                  <TableCell className="font-medium">{user.email}</TableCell>
-                  <TableCell>{user.fullName}</TableCell>
-                  <TableCell>
-                    {user.role.role && (
-                      <Badge variant="outline" className={roleColors[user.role.role]}>
-                        {user.role.role}
-                        {user.role.isLocked && ' 🔒'}
-                      </Badge>
-                    )}
+                  <TableCell className="font-medium">
+                    {user.fullName || "—"}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {new Date(Number(user.createdTime) / 1000000).toLocaleDateString()}
+                  <TableCell>{user.email || "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant={getRoleBadgeVariant(user)}>
+                      {getRoleLabel(user)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {formatDate(user.createdTime)}
                   </TableCell>
                 </TableRow>
               ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground">
-                  No users found
-                </TableCell>
-              </TableRow>
             )}
           </TableBody>
         </Table>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

@@ -1,88 +1,131 @@
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useGetCallerUserProfile } from '../hooks/useGetCallerUserProfile';
-import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from '@tanstack/react-router';
-import { Button } from '@/components/ui/button';
-import { Car, LogOut, User } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { Car, LayoutDashboard, LogOut, ShieldCheck } from "lucide-react";
+import { Role } from "../backend";
+import { useBackendHealth } from "../hooks/useBackendHealth";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import { useGetMyRole } from "../hooks/useQueries";
+
+function getRoleLabel(role: Role | null): string | null {
+  if (!role) return null;
+  if (role === Role.admin) return "Admin";
+  if (role === Role.driver) return "Driver";
+  if (role === Role.customer) return "Customer";
+  return null;
+}
 
 export default function Navigation() {
-  const { identity, clear, loginStatus } = useInternetIdentity();
-  const { data: userProfile } = useGetCallerUserProfile();
+  const { identity, clear } = useInternetIdentity();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const isAuthenticated = !!identity;
+  const { data: role, isFetched: roleFetched } = useGetMyRole();
+  const { isHealthy, isChecking } = useBackendHealth();
 
   const handleLogout = async () => {
     await clear();
     queryClient.clear();
-    navigate({ to: '/' });
+    navigate({ to: "/login" });
   };
 
-  const handleNavigateToDashboard = () => {
-    if (userProfile && userProfile.role.role) {
-      if (userProfile.role.role === 'admin') {
-        navigate({ to: '/admin/dashboard' });
-      } else if (userProfile.role.role === 'driver') {
-        navigate({ to: '/driver/dashboard' });
-      } else {
-        navigate({ to: '/customer/dashboard' });
-      }
-    }
+  const getDashboardLink = () => {
+    if (role === Role.admin) return "/admin/dashboard";
+    if (role === Role.customer) return "/customer/dashboard";
+    if (role === Role.driver) return "/driver/dashboard";
+    return null;
   };
+
+  const dashboardLink = getDashboardLink();
+  const roleLabel =
+    isAuthenticated && roleFetched && role ? getRoleLabel(role) : null;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate({ to: '/' })}>
-          <Car className="h-6 w-6 text-primary" />
-          <span className="font-bold text-lg">Namma Driver Pilot</span>
-        </div>
+      <div className="container mx-auto flex h-14 items-center justify-between px-4">
+        <Link
+          to="/"
+          className="flex items-center gap-2 font-bold text-lg text-primary"
+        >
+          <Car className="h-5 w-5" />
+          <span>Namma Driver</span>
+        </Link>
 
-        {isAuthenticated && userProfile ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                <span className="hidden sm:inline">{userProfile.fullName}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">{userProfile.fullName}</p>
-                  <p className="text-xs text-muted-foreground">{userProfile.email}</p>
-                  {userProfile.role.role && (
-                    <p className="text-xs text-muted-foreground capitalize">
-                      Role: {userProfile.role.role}
-                      {userProfile.role.isLocked && ' 🔒'}
-                    </p>
-                  )}
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleNavigateToDashboard}>
-                Dashboard
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-destructive">
-                <LogOut className="mr-2 h-4 w-4" />
-                Logout
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <div className="text-sm text-muted-foreground">
-            {loginStatus === 'logging-in' ? 'Connecting...' : ''}
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {/* DEV-only backend status badge */}
+          {import.meta.env.DEV && (
+            <span
+              className={`hidden sm:inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium border ${
+                isChecking
+                  ? "border-muted text-muted-foreground bg-muted/30"
+                  : isHealthy
+                    ? "border-green-600 text-green-700 bg-green-50 dark:border-green-500 dark:text-green-400 dark:bg-green-950/30"
+                    : "border-destructive text-destructive bg-destructive/10"
+              }`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  isChecking
+                    ? "bg-muted-foreground"
+                    : isHealthy
+                      ? "bg-green-600 dark:bg-green-400"
+                      : "bg-destructive"
+                }`}
+              />
+              {isChecking
+                ? "Backend: Checking…"
+                : isHealthy
+                  ? "Backend: Connected"
+                  : "Backend: Disconnected"}
+            </span>
+          )}
+
+          {isAuthenticated && roleLabel && (
+            <Badge
+              variant={role === Role.admin ? "default" : "secondary"}
+              className="hidden sm:inline-flex capitalize text-xs"
+            >
+              {roleLabel}
+            </Badge>
+          )}
+
+          {isAuthenticated &&
+            dashboardLink &&
+            (role === Role.admin ? (
+              <Link
+                to={dashboardLink}
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                <span className="hidden sm:inline">Admin Dashboard</span>
+              </Link>
+            ) : (
+              <Link
+                to={dashboardLink}
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                <span className="hidden sm:inline">Dashboard</span>
+              </Link>
+            ))}
+
+          {isAuthenticated ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="flex items-center gap-1"
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">Logout</span>
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => navigate({ to: "/login" })}>
+              Login
+            </Button>
+          )}
+        </div>
       </div>
     </header>
   );

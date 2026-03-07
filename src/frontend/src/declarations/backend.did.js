@@ -8,18 +8,11 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
-export const UserRole = IDL.Variant({
-  'admin' : IDL.Null,
-  'user' : IDL.Null,
-  'guest' : IDL.Null,
-});
-export const TripType = IDL.Variant({
-  'local' : IDL.Null,
-  'outstation' : IDL.Null,
-});
-export const JourneyType = IDL.Variant({
-  'roundTrip' : IDL.Null,
-  'oneWay' : IDL.Null,
+export const TripStatus = IDL.Variant({
+  'requested' : IDL.Null,
+  'cancelled' : IDL.Null,
+  'completed' : IDL.Null,
+  'accepted' : IDL.Null,
 });
 export const VehicleType = IDL.Variant({
   'suv' : IDL.Null,
@@ -28,35 +21,34 @@ export const VehicleType = IDL.Variant({
   'hatchback' : IDL.Null,
 });
 export const Duration = IDL.Variant({ 'hours' : IDL.Nat, 'days' : IDL.Nat });
-export const Time = IDL.Int;
+export const TripType = IDL.Variant({
+  'local' : IDL.Null,
+  'outstation' : IDL.Null,
+});
 export const Location = IDL.Record({
   'latitude' : IDL.Opt(IDL.Float64),
   'area' : IDL.Text,
   'longitude' : IDL.Opt(IDL.Float64),
   'pincode' : IDL.Text,
 });
-export const TransmissionComfort = IDL.Variant({
-  'ev' : IDL.Null,
-  'automatic' : IDL.Null,
-  'manual' : IDL.Null,
-});
-export const TripStatus = IDL.Variant({
-  'requested' : IDL.Null,
-  'cancelled' : IDL.Null,
-  'completed' : IDL.Null,
-  'accepted' : IDL.Null,
+export const Time = IDL.Int;
+export const JourneyType = IDL.Variant({
+  'roundTrip' : IDL.Null,
+  'oneWay' : IDL.Null,
 });
 export const Trip = IDL.Record({
   'status' : TripStatus,
   'driverId' : IDL.Opt(IDL.Principal),
   'vehicleType' : VehicleType,
-  'transmissionType' : TransmissionComfort,
   'duration' : Duration,
   'tripType' : TripType,
   'dropoffLocation' : IDL.Opt(Location),
   'tripId' : IDL.Text,
+  'totalFare' : IDL.Nat,
   'createdTime' : Time,
   'endDateTime' : IDL.Opt(Time),
+  'ratePerHour' : IDL.Nat,
+  'billableHours' : IDL.Nat,
   'customerId' : IDL.Principal,
   'landmark' : IDL.Opt(IDL.Text),
   'journeyType' : JourneyType,
@@ -64,14 +56,47 @@ export const Trip = IDL.Record({
   'startDateTime' : IDL.Opt(Time),
   'pickupLocation' : Location,
 });
-export const AppRole = IDL.Variant({
+export const AcceptTripResult = IDL.Variant({
+  'ok' : Trip,
+  'offDuty' : IDL.Null,
+  'tripNotFound' : IDL.Null,
+  'unauthorized' : IDL.Null,
+  'alreadyAccepted' : IDL.Null,
+});
+export const UserRole = IDL.Variant({
+  'admin' : IDL.Null,
+  'user' : IDL.Null,
+  'guest' : IDL.Null,
+});
+export const CompleteTripResult = IDL.Variant({
+  'ok' : Trip,
+  'notAssigned' : IDL.Null,
+  'notFound' : IDL.Null,
+  'notAccepted' : IDL.Null,
+});
+export const TripRequest = IDL.Record({
+  'driverId' : IDL.Opt(IDL.Principal),
+  'vehicleType' : VehicleType,
+  'duration' : Duration,
+  'tripType' : TripType,
+  'dropoffLocation' : IDL.Opt(Location),
+  'tripId' : IDL.Text,
+  'totalFare' : IDL.Nat,
+  'endDateTime' : IDL.Opt(Time),
+  'ratePerHour' : IDL.Nat,
+  'billableHours' : IDL.Nat,
+  'customerId' : IDL.Opt(IDL.Principal),
+  'landmark' : IDL.Opt(IDL.Text),
+  'journeyType' : JourneyType,
+  'phone' : IDL.Text,
+  'startDateTime' : IDL.Opt(Time),
+  'pickupLocation' : Location,
+});
+export const Role = IDL.Variant({
   'admin' : IDL.Null,
   'customer' : IDL.Null,
+  'unassigned' : IDL.Null,
   'driver' : IDL.Null,
-});
-export const LockedRole = IDL.Record({
-  'role' : AppRole,
-  'isLocked' : IDL.Bool,
 });
 export const VehicleExperience = IDL.Variant({
   'suv' : IDL.Null,
@@ -79,72 +104,122 @@ export const VehicleExperience = IDL.Variant({
   'luxury' : IDL.Null,
   'hatchback' : IDL.Null,
 });
+export const TransmissionComfort = IDL.Variant({
+  'ev' : IDL.Null,
+  'automatic' : IDL.Null,
+  'manual' : IDL.Null,
+});
 export const UserProfile = IDL.Record({
   'serviceAreaName' : IDL.Text,
   'servicePincode' : IDL.Text,
-  'role' : LockedRole,
+  'role' : Role,
   'vehicleExperience' : IDL.Vec(VehicleExperience),
   'languages' : IDL.Opt(IDL.Vec(IDL.Text)),
   'isAvailable' : IDL.Bool,
   'fullName' : IDL.Text,
   'createdTime' : Time,
   'email' : IDL.Text,
-  'isVerified' : IDL.Opt(IDL.Bool),
   'totalEarnings' : IDL.Nat64,
   'transmissionComfort' : IDL.Vec(TransmissionComfort),
   'principalId' : IDL.Principal,
 });
+export const TransmissionType = IDL.Variant({
+  'ev' : IDL.Null,
+  'automatic' : IDL.Null,
+  'manual' : IDL.Null,
+});
+export const DriverProfile = IDL.Record({
+  'serviceAreaName' : IDL.Text,
+  'updatedTime' : IDL.Nat64,
+  'servicePincode' : IDL.Text,
+  'vehicleExperience' : IDL.Vec(VehicleType),
+  'languages' : IDL.Vec(IDL.Text),
+  'isAvailable' : IDL.Bool,
+  'transmissionComfort' : IDL.Vec(TransmissionType),
+});
+export const Commission = IDL.Record({
+  'local' : IDL.Float64,
+  'outstation' : IDL.Float64,
+});
+export const LocalPricing = IDL.Record({
+  'per_min_after_first_hour' : IDL.Float64,
+  'min_hours' : IDL.Float64,
+  'base_first_hour' : IDL.Float64,
+  'wait_per_min' : IDL.Float64,
+  'free_wait_mins' : IDL.Float64,
+});
+export const VehicleMultiplier = IDL.Record({
+  'suv' : IDL.Float64,
+  'sedan' : IDL.Float64,
+  'luxury' : IDL.Float64,
+  'hatchback' : IDL.Float64,
+});
+export const OutstationPricing = IDL.Record({
+  'commission_rate' : IDL.Float64,
+  'km_slab_1_limit' : IDL.Float64,
+  'km_slab_2_limit' : IDL.Float64,
+  'min_days' : IDL.Float64,
+  'km_slab_3_limit' : IDL.Float64,
+  'per_km_slab_1' : IDL.Float64,
+  'per_km_slab_2' : IDL.Float64,
+  'per_km_slab_3' : IDL.Float64,
+  'per_km_slab_4' : IDL.Float64,
+  'driver_bata_per_day' : IDL.Float64,
+  'extra_driver_comp_per_100km_over_400' : IDL.Float64,
+});
+export const PricingConfig = IDL.Record({
+  'commission' : Commission,
+  'local' : LocalPricing,
+  'vehicle_multiplier' : VehicleMultiplier,
+  'outstation' : OutstationPricing,
+});
+export const UpdateConfigResult = IDL.Variant({
+  'ok' : PricingConfig,
+  'failedUpdate' : IDL.Text,
+  'notAdmin' : IDL.Null,
+  'invalidConfig' : IDL.Text,
+  'noConfigFound' : IDL.Null,
+});
 
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
-  'acceptTrip' : IDL.Func([IDL.Text], [], []),
+  'acceptTrip' : IDL.Func([IDL.Text], [AcceptTripResult], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-  'completeTrip' : IDL.Func([IDL.Text], [], []),
-  'createTrip' : IDL.Func(
-      [
-        TripType,
-        JourneyType,
-        VehicleType,
-        Duration,
-        IDL.Opt(Time),
-        IDL.Opt(Time),
-        Location,
-        IDL.Opt(Location),
-        IDL.Text,
-        IDL.Opt(IDL.Text),
-        TransmissionComfort,
-      ],
-      [IDL.Text],
-      [],
-    ),
-  'getAllTrips' : IDL.Func([], [IDL.Vec(Trip)], ['query']),
-  'getAllUsers' : IDL.Func([], [IDL.Vec(UserProfile)], ['query']),
+  'completeTrip' : IDL.Func([IDL.Text], [CompleteTripResult], []),
+  'createTrip' : IDL.Func([TripRequest], [Trip], []),
+  'getAllTripsAdmin' : IDL.Func([], [IDL.Vec(Trip)], ['query']),
+  'getAvailableTripsForDriver' : IDL.Func([], [IDL.Vec(Trip)], ['query']),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-  'getMyTrips' : IDL.Func([], [IDL.Vec(Trip)], ['query']),
-  'getRequestedTrips' : IDL.Func([], [IDL.Vec(Trip)], ['query']),
+  'getDriverProfile' : IDL.Func([], [IDL.Opt(DriverProfile)], ['query']),
+  'getMyCustomerTrips' : IDL.Func([], [IDL.Vec(Trip)], ['query']),
+  'getMyDriverTrips' : IDL.Func([], [IDL.Vec(Trip)], ['query']),
+  'getMyRole' : IDL.Func([], [Role], ['query']),
+  'getPricingConfig' : IDL.Func([], [PricingConfig], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
       [IDL.Opt(UserProfile)],
       ['query'],
     ),
+  'health' : IDL.Func([], [IDL.Text], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'listAdmins' : IDL.Func([], [IDL.Vec(IDL.Principal)], ['query']),
+  'persistentAdminCheck' : IDL.Func([], [IDL.Bool], ['query']),
+  'ping' : IDL.Func([], [IDL.Text], ['query']),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
-  'updateUserRoleAndLock' : IDL.Func([AppRole], [], []),
+  'setMyRole' : IDL.Func([Role], [], []),
+  'updatePricingConfig' : IDL.Func([PricingConfig], [UpdateConfigResult], []),
+  'upsertDriverProfile' : IDL.Func([DriverProfile], [IDL.Bool], []),
 });
 
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
-  const UserRole = IDL.Variant({
-    'admin' : IDL.Null,
-    'user' : IDL.Null,
-    'guest' : IDL.Null,
-  });
-  const TripType = IDL.Variant({ 'local' : IDL.Null, 'outstation' : IDL.Null });
-  const JourneyType = IDL.Variant({
-    'roundTrip' : IDL.Null,
-    'oneWay' : IDL.Null,
+  const TripStatus = IDL.Variant({
+    'requested' : IDL.Null,
+    'cancelled' : IDL.Null,
+    'completed' : IDL.Null,
+    'accepted' : IDL.Null,
   });
   const VehicleType = IDL.Variant({
     'suv' : IDL.Null,
@@ -153,35 +228,31 @@ export const idlFactory = ({ IDL }) => {
     'hatchback' : IDL.Null,
   });
   const Duration = IDL.Variant({ 'hours' : IDL.Nat, 'days' : IDL.Nat });
-  const Time = IDL.Int;
+  const TripType = IDL.Variant({ 'local' : IDL.Null, 'outstation' : IDL.Null });
   const Location = IDL.Record({
     'latitude' : IDL.Opt(IDL.Float64),
     'area' : IDL.Text,
     'longitude' : IDL.Opt(IDL.Float64),
     'pincode' : IDL.Text,
   });
-  const TransmissionComfort = IDL.Variant({
-    'ev' : IDL.Null,
-    'automatic' : IDL.Null,
-    'manual' : IDL.Null,
-  });
-  const TripStatus = IDL.Variant({
-    'requested' : IDL.Null,
-    'cancelled' : IDL.Null,
-    'completed' : IDL.Null,
-    'accepted' : IDL.Null,
+  const Time = IDL.Int;
+  const JourneyType = IDL.Variant({
+    'roundTrip' : IDL.Null,
+    'oneWay' : IDL.Null,
   });
   const Trip = IDL.Record({
     'status' : TripStatus,
     'driverId' : IDL.Opt(IDL.Principal),
     'vehicleType' : VehicleType,
-    'transmissionType' : TransmissionComfort,
     'duration' : Duration,
     'tripType' : TripType,
     'dropoffLocation' : IDL.Opt(Location),
     'tripId' : IDL.Text,
+    'totalFare' : IDL.Nat,
     'createdTime' : Time,
     'endDateTime' : IDL.Opt(Time),
+    'ratePerHour' : IDL.Nat,
+    'billableHours' : IDL.Nat,
     'customerId' : IDL.Principal,
     'landmark' : IDL.Opt(IDL.Text),
     'journeyType' : JourneyType,
@@ -189,70 +260,160 @@ export const idlFactory = ({ IDL }) => {
     'startDateTime' : IDL.Opt(Time),
     'pickupLocation' : Location,
   });
-  const AppRole = IDL.Variant({
+  const AcceptTripResult = IDL.Variant({
+    'ok' : Trip,
+    'offDuty' : IDL.Null,
+    'tripNotFound' : IDL.Null,
+    'unauthorized' : IDL.Null,
+    'alreadyAccepted' : IDL.Null,
+  });
+  const UserRole = IDL.Variant({
+    'admin' : IDL.Null,
+    'user' : IDL.Null,
+    'guest' : IDL.Null,
+  });
+  const CompleteTripResult = IDL.Variant({
+    'ok' : Trip,
+    'notAssigned' : IDL.Null,
+    'notFound' : IDL.Null,
+    'notAccepted' : IDL.Null,
+  });
+  const TripRequest = IDL.Record({
+    'driverId' : IDL.Opt(IDL.Principal),
+    'vehicleType' : VehicleType,
+    'duration' : Duration,
+    'tripType' : TripType,
+    'dropoffLocation' : IDL.Opt(Location),
+    'tripId' : IDL.Text,
+    'totalFare' : IDL.Nat,
+    'endDateTime' : IDL.Opt(Time),
+    'ratePerHour' : IDL.Nat,
+    'billableHours' : IDL.Nat,
+    'customerId' : IDL.Opt(IDL.Principal),
+    'landmark' : IDL.Opt(IDL.Text),
+    'journeyType' : JourneyType,
+    'phone' : IDL.Text,
+    'startDateTime' : IDL.Opt(Time),
+    'pickupLocation' : Location,
+  });
+  const Role = IDL.Variant({
     'admin' : IDL.Null,
     'customer' : IDL.Null,
+    'unassigned' : IDL.Null,
     'driver' : IDL.Null,
   });
-  const LockedRole = IDL.Record({ 'role' : AppRole, 'isLocked' : IDL.Bool });
   const VehicleExperience = IDL.Variant({
     'suv' : IDL.Null,
     'sedan' : IDL.Null,
     'luxury' : IDL.Null,
     'hatchback' : IDL.Null,
   });
+  const TransmissionComfort = IDL.Variant({
+    'ev' : IDL.Null,
+    'automatic' : IDL.Null,
+    'manual' : IDL.Null,
+  });
   const UserProfile = IDL.Record({
     'serviceAreaName' : IDL.Text,
     'servicePincode' : IDL.Text,
-    'role' : LockedRole,
+    'role' : Role,
     'vehicleExperience' : IDL.Vec(VehicleExperience),
     'languages' : IDL.Opt(IDL.Vec(IDL.Text)),
     'isAvailable' : IDL.Bool,
     'fullName' : IDL.Text,
     'createdTime' : Time,
     'email' : IDL.Text,
-    'isVerified' : IDL.Opt(IDL.Bool),
     'totalEarnings' : IDL.Nat64,
     'transmissionComfort' : IDL.Vec(TransmissionComfort),
     'principalId' : IDL.Principal,
   });
+  const TransmissionType = IDL.Variant({
+    'ev' : IDL.Null,
+    'automatic' : IDL.Null,
+    'manual' : IDL.Null,
+  });
+  const DriverProfile = IDL.Record({
+    'serviceAreaName' : IDL.Text,
+    'updatedTime' : IDL.Nat64,
+    'servicePincode' : IDL.Text,
+    'vehicleExperience' : IDL.Vec(VehicleType),
+    'languages' : IDL.Vec(IDL.Text),
+    'isAvailable' : IDL.Bool,
+    'transmissionComfort' : IDL.Vec(TransmissionType),
+  });
+  const Commission = IDL.Record({
+    'local' : IDL.Float64,
+    'outstation' : IDL.Float64,
+  });
+  const LocalPricing = IDL.Record({
+    'per_min_after_first_hour' : IDL.Float64,
+    'min_hours' : IDL.Float64,
+    'base_first_hour' : IDL.Float64,
+    'wait_per_min' : IDL.Float64,
+    'free_wait_mins' : IDL.Float64,
+  });
+  const VehicleMultiplier = IDL.Record({
+    'suv' : IDL.Float64,
+    'sedan' : IDL.Float64,
+    'luxury' : IDL.Float64,
+    'hatchback' : IDL.Float64,
+  });
+  const OutstationPricing = IDL.Record({
+    'commission_rate' : IDL.Float64,
+    'km_slab_1_limit' : IDL.Float64,
+    'km_slab_2_limit' : IDL.Float64,
+    'min_days' : IDL.Float64,
+    'km_slab_3_limit' : IDL.Float64,
+    'per_km_slab_1' : IDL.Float64,
+    'per_km_slab_2' : IDL.Float64,
+    'per_km_slab_3' : IDL.Float64,
+    'per_km_slab_4' : IDL.Float64,
+    'driver_bata_per_day' : IDL.Float64,
+    'extra_driver_comp_per_100km_over_400' : IDL.Float64,
+  });
+  const PricingConfig = IDL.Record({
+    'commission' : Commission,
+    'local' : LocalPricing,
+    'vehicle_multiplier' : VehicleMultiplier,
+    'outstation' : OutstationPricing,
+  });
+  const UpdateConfigResult = IDL.Variant({
+    'ok' : PricingConfig,
+    'failedUpdate' : IDL.Text,
+    'notAdmin' : IDL.Null,
+    'invalidConfig' : IDL.Text,
+    'noConfigFound' : IDL.Null,
+  });
   
   return IDL.Service({
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
-    'acceptTrip' : IDL.Func([IDL.Text], [], []),
+    'acceptTrip' : IDL.Func([IDL.Text], [AcceptTripResult], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-    'completeTrip' : IDL.Func([IDL.Text], [], []),
-    'createTrip' : IDL.Func(
-        [
-          TripType,
-          JourneyType,
-          VehicleType,
-          Duration,
-          IDL.Opt(Time),
-          IDL.Opt(Time),
-          Location,
-          IDL.Opt(Location),
-          IDL.Text,
-          IDL.Opt(IDL.Text),
-          TransmissionComfort,
-        ],
-        [IDL.Text],
-        [],
-      ),
-    'getAllTrips' : IDL.Func([], [IDL.Vec(Trip)], ['query']),
-    'getAllUsers' : IDL.Func([], [IDL.Vec(UserProfile)], ['query']),
+    'completeTrip' : IDL.Func([IDL.Text], [CompleteTripResult], []),
+    'createTrip' : IDL.Func([TripRequest], [Trip], []),
+    'getAllTripsAdmin' : IDL.Func([], [IDL.Vec(Trip)], ['query']),
+    'getAvailableTripsForDriver' : IDL.Func([], [IDL.Vec(Trip)], ['query']),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-    'getMyTrips' : IDL.Func([], [IDL.Vec(Trip)], ['query']),
-    'getRequestedTrips' : IDL.Func([], [IDL.Vec(Trip)], ['query']),
+    'getDriverProfile' : IDL.Func([], [IDL.Opt(DriverProfile)], ['query']),
+    'getMyCustomerTrips' : IDL.Func([], [IDL.Vec(Trip)], ['query']),
+    'getMyDriverTrips' : IDL.Func([], [IDL.Vec(Trip)], ['query']),
+    'getMyRole' : IDL.Func([], [Role], ['query']),
+    'getPricingConfig' : IDL.Func([], [PricingConfig], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
         [IDL.Opt(UserProfile)],
         ['query'],
       ),
+    'health' : IDL.Func([], [IDL.Text], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'listAdmins' : IDL.Func([], [IDL.Vec(IDL.Principal)], ['query']),
+    'persistentAdminCheck' : IDL.Func([], [IDL.Bool], ['query']),
+    'ping' : IDL.Func([], [IDL.Text], ['query']),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
-    'updateUserRoleAndLock' : IDL.Func([AppRole], [], []),
+    'setMyRole' : IDL.Func([Role], [], []),
+    'updatePricingConfig' : IDL.Func([PricingConfig], [UpdateConfigResult], []),
+    'upsertDriverProfile' : IDL.Func([DriverProfile], [IDL.Bool], []),
   });
 };
 

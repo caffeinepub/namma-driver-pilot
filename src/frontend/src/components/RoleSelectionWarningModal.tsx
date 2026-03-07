@@ -1,100 +1,123 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { useUpdateUserRoleAndLock } from '../hooks/useQueries';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { AlertCircle } from 'lucide-react';
-import { toast } from 'sonner';
-import { AppRole } from '../backend';
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useNavigate } from "@tanstack/react-router";
+import { Car, Loader2, User } from "lucide-react";
+import { useEffect } from "react";
+import { toast } from "sonner";
+import { Role } from "../backend";
+import {
+  useGetMyRole,
+  useSetMyRoleCustomer,
+  useSetMyRoleDriver,
+} from "../hooks/useQueries";
 
-export default function RoleSelectionWarningModal() {
-  const [countdown, setCountdown] = useState(60);
-  const [selectedRole, setSelectedRole] = useState<AppRole | null>(null);
-  const updateRoleMutation = useUpdateUserRoleAndLock();
+interface RoleSelectionWarningModalProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+export default function RoleSelectionWarningModal({
+  open,
+  onClose,
+}: RoleSelectionWarningModalProps) {
   const navigate = useNavigate();
+  const { data: role } = useGetMyRole();
+  const setCustomer = useSetMyRoleCustomer();
+  const setDriver = useSetMyRoleDriver();
+
+  const isAdmin = role === Role.admin;
+  const isSetting = setCustomer.isPending || setDriver.isPending;
 
   useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => {
-        setCountdown(countdown - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
+    if (isAdmin) {
+      navigate({ to: "/admin/dashboard" });
     }
-  }, [countdown]);
+  }, [isAdmin, navigate]);
 
-  const handleContinue = async (role: AppRole) => {
-    setSelectedRole(role);
-    
+  if (isAdmin) return null;
+
+  const handleSelectCustomer = async () => {
     try {
-      await updateRoleMutation.mutateAsync(role);
-      toast.success(`Role set to ${role} successfully!`);
-      
-      // Redirect to appropriate dashboard
-      if (role === AppRole.customer) {
-        navigate({ to: '/customer/dashboard' });
-      } else if (role === AppRole.driver) {
-        navigate({ to: '/driver/dashboard' });
-      }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to set role');
-      setSelectedRole(null);
+      await setCustomer.mutateAsync();
+      navigate({ to: "/customer/dashboard" });
+      onClose();
+    } catch (err) {
+      console.error(
+        "[RoleSelectionWarningModal] setMyRoleCustomer failed:",
+        err,
+      );
+      toast.error("Failed to set role. Please try again.");
     }
   };
 
-  const isButtonDisabled = countdown > 0 || updateRoleMutation.isPending;
+  const handleSelectDriver = async () => {
+    try {
+      await setDriver.mutateAsync();
+      navigate({ to: "/driver/dashboard" });
+      onClose();
+    } catch (err) {
+      console.error("[RoleSelectionWarningModal] setMyRoleDriver failed:", err);
+      toast.error("Failed to set role. Please try again.");
+    }
+  };
 
   return (
-    <Dialog open={true}>
-      <DialogContent 
-        className="sm:max-w-md" 
-        onInteractOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
-      >
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="flex items-center gap-2 text-destructive mb-2">
-            <AlertCircle className="h-5 w-5" />
-            <DialogTitle>Important Notice</DialogTitle>
-          </div>
-          <DialogDescription className="text-base">
-            Choose carefully. Role cannot be changed later.
+          <DialogTitle>Choose Your Role</DialogTitle>
+          <DialogDescription>
+            Select how you want to use the platform. This cannot be changed
+            later.
           </DialogDescription>
         </DialogHeader>
-
-        <div className="py-6">
-          <div className="bg-muted/50 rounded-lg p-6 text-center">
-            <p className="text-sm text-muted-foreground mb-2">
-              Please wait before making your selection
-            </p>
-            <div className="text-5xl font-bold text-primary">
-              {countdown}
-            </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              seconds remaining
-            </p>
-          </div>
+        <div className="grid grid-cols-2 gap-4 my-4">
+          <button
+            type="button"
+            onClick={handleSelectCustomer}
+            disabled={isSetting}
+            className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all disabled:opacity-50"
+          >
+            <User className="h-8 w-8 text-primary" />
+            <span className="font-semibold">Customer</span>
+            <span className="text-xs text-muted-foreground text-center">
+              Book rides and manage trips
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={handleSelectDriver}
+            disabled={isSetting}
+            className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all disabled:opacity-50"
+          >
+            <Car className="h-8 w-8 text-primary" />
+            <span className="font-semibold">Driver</span>
+            <span className="text-xs text-muted-foreground text-center">
+              Accept trips and earn
+            </span>
+          </button>
         </div>
-
-        <DialogFooter className="flex-col sm:flex-col gap-3">
-          <Button
-            onClick={() => handleContinue(AppRole.customer)}
-            disabled={isButtonDisabled}
-            className="w-full"
-            size="lg"
-          >
-            {selectedRole === AppRole.customer && updateRoleMutation.isPending
-              ? 'Setting up...'
-              : 'Continue as Customer'}
-          </Button>
-          <Button
-            onClick={() => handleContinue(AppRole.driver)}
-            disabled={isButtonDisabled}
-            variant="outline"
-            className="w-full"
-            size="lg"
-          >
-            {selectedRole === AppRole.driver && updateRoleMutation.isPending
-              ? 'Setting up...'
-              : 'Continue as Driver'}
+        {isSetting && (
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Setting up your account…
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={isSetting}>
+            Cancel
           </Button>
         </DialogFooter>
       </DialogContent>
