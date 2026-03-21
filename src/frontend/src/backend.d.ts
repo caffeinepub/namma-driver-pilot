@@ -88,11 +88,26 @@ export type Duration = {
 export interface DriverProfile {
     serviceAreaName: string;
     updatedTime: bigint;
+    aadharBackBase64: string;
+    bankAccount: string;
     servicePincode: string;
     vehicleExperience: Array<VehicleType>;
+    bankUPI: string;
+    dlPhotoBase64: string;
     languages: Array<string>;
     isAvailable: boolean;
+    fullName: string;
+    aadharFrontBase64: string;
+    bankIFSC: string;
+    bankName: string;
+    vehicleTypes: Array<string>;
+    aadharNumber: string;
+    transmissionTypes: Array<string>;
+    dlNumber: string;
     transmissionComfort: Array<TransmissionType>;
+    mobile: string;
+    selfieBase64: string;
+    luxuryVehicleDetails: string;
 }
 export interface Commission {
     local: number;

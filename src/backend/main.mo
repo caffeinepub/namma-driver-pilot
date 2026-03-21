@@ -140,6 +140,23 @@ actor {
     languages : [Text];
     isAvailable : Bool;
     updatedTime : Nat64;
+
+    // New fields for detailed driver profile
+    vehicleTypes : [Text];
+    transmissionTypes : [Text];
+    luxuryVehicleDetails : Text;
+    aadharNumber : Text;
+    aadharFrontBase64 : Text;
+    aadharBackBase64 : Text;
+    dlNumber : Text;
+    dlPhotoBase64 : Text;
+    selfieBase64 : Text;
+    fullName : Text;
+    mobile : Text;
+    bankName : Text;
+    bankAccount : Text;
+    bankIFSC : Text;
+    bankUPI : Text;
   };
 
   public type LocalPricing = {
@@ -585,3 +602,4 @@ actor {
     };
   };
 };
+

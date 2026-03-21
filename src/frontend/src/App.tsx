@@ -4,14 +4,14 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  useNavigate,
 } from "@tanstack/react-router";
 import { ThemeProvider } from "next-themes";
-import React, { useState } from "react";
+import React from "react";
 import { Toaster } from "./components/ui/sonner";
 
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import OfflineBanner from "./components/OfflineBanner";
-import ProfileSetupModal from "./components/ProfileSetupModal";
 
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUpgradePage from "./pages/AdminUpgradePage";
@@ -24,44 +24,17 @@ import PostLoginLandingPage from "./pages/PostLoginLandingPage";
 import RoleSelectionPage from "./pages/RoleSelectionPage";
 import SelectRolePage from "./pages/SelectRolePage";
 
-import { Role } from "./backend";
+import CustomerOnboarding from "./components/CustomerOnboarding";
+import DriverOnboarding from "./components/DriverOnboarding";
+
 import Navigation from "./components/Navigation";
 import RoleGuard from "./components/RoleGuard";
 import { useBackendHealth } from "./hooks/useBackendHealth";
-import { useGetCallerUserProfile } from "./hooks/useGetCallerUserProfile";
-import { useInternetIdentity } from "./hooks/useInternetIdentity";
-import { useGetMyRole } from "./hooks/useQueries";
 
 // ─── Root Layout ──────────────────────────────────────────────────────────────
 
 function AppShell() {
-  const { identity } = useInternetIdentity();
   const { isHealthy, isChecking, recheck } = useBackendHealth();
-  const {
-    data: userProfile,
-    isLoading: profileLoading,
-    isFetched: profileFetched,
-  } = useGetCallerUserProfile();
-  const { data: myRole } = useGetMyRole();
-  const [profileSetupDone, setProfileSetupDone] = useState(false);
-
-  const isAuthenticated = !!identity;
-
-  // Only show profile setup modal when:
-  // 1. User is authenticated
-  // 2. Profile has been fetched and is null (no profile yet)
-  // 3. User has an assigned role (not unassigned)
-  // 4. Not already done
-  const hasAssignedRole =
-    myRole === Role.customer || myRole === Role.driver || myRole === Role.admin;
-
-  const showProfileSetup =
-    isAuthenticated &&
-    !profileLoading &&
-    profileFetched &&
-    userProfile === null &&
-    hasAssignedRole &&
-    !profileSetupDone;
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
@@ -73,13 +46,31 @@ function AppShell() {
       <main className="flex-1">
         <Outlet />
       </main>
-      {showProfileSetup && (
-        <ProfileSetupModal
-          open={showProfileSetup}
-          onClose={() => setProfileSetupDone(true)}
-        />
-      )}
     </div>
+  );
+}
+
+// ─── Onboarding Route Components ───────────────────────────────────────────────
+
+function DriverOnboardingRoute() {
+  const navigate = useNavigate();
+  return (
+    <DriverOnboarding
+      mode="onboarding"
+      onComplete={() => navigate({ to: "/driver/dashboard" })}
+      onCancel={() => navigate({ to: "/driver/dashboard" })}
+    />
+  );
+}
+
+function CustomerOnboardingRoute() {
+  const navigate = useNavigate();
+  return (
+    <CustomerOnboarding
+      mode="onboarding"
+      onComplete={() => navigate({ to: "/customer/dashboard" })}
+      onCancel={() => navigate({ to: "/customer/dashboard" })}
+    />
   );
 }
 
@@ -117,6 +108,18 @@ const roleSelectionRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/role-selection",
   component: RoleSelectionPage,
+});
+
+const driverOnboardingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/driver/onboarding",
+  component: DriverOnboardingRoute,
+});
+
+const customerOnboardingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/customer/onboarding",
+  component: CustomerOnboardingRoute,
 });
 
 const customerDashboardRoute = createRoute({
@@ -167,6 +170,8 @@ const routeTree = rootRoute.addChildren([
   postLoginRoute,
   selectRoleRoute,
   roleSelectionRoute,
+  driverOnboardingRoute,
+  customerOnboardingRoute,
   customerDashboardRoute,
   driverDashboardRoute,
   adminDashboardRoute,

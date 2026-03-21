@@ -99,6 +99,21 @@ export default function EditDriverProfileForm({
       languages,
       isAvailable,
       updatedTime: BigInt(Date.now()),
+      vehicleTypes: vehicleExperience,
+      transmissionTypes: transmissionComfort,
+      luxuryVehicleDetails: "",
+      aadharNumber: "",
+      aadharFrontBase64: "",
+      aadharBackBase64: "",
+      dlNumber: "",
+      dlPhotoBase64: "",
+      selfieBase64: "",
+      fullName: "",
+      mobile: "",
+      bankName: "",
+      bankAccount: "",
+      bankIFSC: "",
+      bankUPI: "",
     };
 
     try {

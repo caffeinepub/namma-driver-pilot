@@ -170,11 +170,26 @@ export type Duration = {
 export interface DriverProfile {
     serviceAreaName: string;
     updatedTime: bigint;
+    aadharBackBase64: string;
+    bankAccount: string;
     servicePincode: string;
     vehicleExperience: Array<VehicleType>;
+    bankUPI: string;
+    dlPhotoBase64: string;
     languages: Array<string>;
     isAvailable: boolean;
+    fullName: string;
+    aadharFrontBase64: string;
+    bankIFSC: string;
+    bankName: string;
+    vehicleTypes: Array<string>;
+    aadharNumber: string;
+    transmissionTypes: Array<string>;
+    dlNumber: string;
     transmissionComfort: Array<TransmissionType>;
+    mobile: string;
+    selfieBase64: string;
+    luxuryVehicleDetails: string;
 }
 export interface Commission {
     local: number;
@@ -845,28 +860,73 @@ function from_candid_record_n41(_uploadFile: (file: ExternalBlob) => Promise<Uin
 function from_candid_record_n54(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     serviceAreaName: string;
     updatedTime: bigint;
+    aadharBackBase64: string;
+    bankAccount: string;
     servicePincode: string;
     vehicleExperience: Array<_VehicleType>;
+    bankUPI: string;
+    dlPhotoBase64: string;
     languages: Array<string>;
     isAvailable: boolean;
+    fullName: string;
+    aadharFrontBase64: string;
+    bankIFSC: string;
+    bankName: string;
+    vehicleTypes: Array<string>;
+    aadharNumber: string;
+    transmissionTypes: Array<string>;
+    dlNumber: string;
     transmissionComfort: Array<_TransmissionType>;
+    mobile: string;
+    selfieBase64: string;
+    luxuryVehicleDetails: string;
 }): {
     serviceAreaName: string;
     updatedTime: bigint;
+    aadharBackBase64: string;
+    bankAccount: string;
     servicePincode: string;
     vehicleExperience: Array<VehicleType>;
+    bankUPI: string;
+    dlPhotoBase64: string;
     languages: Array<string>;
     isAvailable: boolean;
+    fullName: string;
+    aadharFrontBase64: string;
+    bankIFSC: string;
+    bankName: string;
+    vehicleTypes: Array<string>;
+    aadharNumber: string;
+    transmissionTypes: Array<string>;
+    dlNumber: string;
     transmissionComfort: Array<TransmissionType>;
+    mobile: string;
+    selfieBase64: string;
+    luxuryVehicleDetails: string;
 } {
     return {
         serviceAreaName: value.serviceAreaName,
         updatedTime: value.updatedTime,
+        aadharBackBase64: value.aadharBackBase64,
+        bankAccount: value.bankAccount,
         servicePincode: value.servicePincode,
         vehicleExperience: from_candid_vec_n55(_uploadFile, _downloadFile, value.vehicleExperience),
+        bankUPI: value.bankUPI,
+        dlPhotoBase64: value.dlPhotoBase64,
         languages: value.languages,
         isAvailable: value.isAvailable,
-        transmissionComfort: from_candid_vec_n56(_uploadFile, _downloadFile, value.transmissionComfort)
+        fullName: value.fullName,
+        aadharFrontBase64: value.aadharFrontBase64,
+        bankIFSC: value.bankIFSC,
+        bankName: value.bankName,
+        vehicleTypes: value.vehicleTypes,
+        aadharNumber: value.aadharNumber,
+        transmissionTypes: value.transmissionTypes,
+        dlNumber: value.dlNumber,
+        transmissionComfort: from_candid_vec_n56(_uploadFile, _downloadFile, value.transmissionComfort),
+        mobile: value.mobile,
+        selfieBase64: value.selfieBase64,
+        luxuryVehicleDetails: value.luxuryVehicleDetails
     };
 }
 function from_candid_variant_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
@@ -1245,28 +1305,73 @@ function to_candid_record_n59(_uploadFile: (file: ExternalBlob) => Promise<Uint8
 function to_candid_record_n70(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     serviceAreaName: string;
     updatedTime: bigint;
+    aadharBackBase64: string;
+    bankAccount: string;
     servicePincode: string;
     vehicleExperience: Array<VehicleType>;
+    bankUPI: string;
+    dlPhotoBase64: string;
     languages: Array<string>;
     isAvailable: boolean;
+    fullName: string;
+    aadharFrontBase64: string;
+    bankIFSC: string;
+    bankName: string;
+    vehicleTypes: Array<string>;
+    aadharNumber: string;
+    transmissionTypes: Array<string>;
+    dlNumber: string;
     transmissionComfort: Array<TransmissionType>;
+    mobile: string;
+    selfieBase64: string;
+    luxuryVehicleDetails: string;
 }): {
     serviceAreaName: string;
     updatedTime: bigint;
+    aadharBackBase64: string;
+    bankAccount: string;
     servicePincode: string;
     vehicleExperience: Array<_VehicleType>;
+    bankUPI: string;
+    dlPhotoBase64: string;
     languages: Array<string>;
     isAvailable: boolean;
+    fullName: string;
+    aadharFrontBase64: string;
+    bankIFSC: string;
+    bankName: string;
+    vehicleTypes: Array<string>;
+    aadharNumber: string;
+    transmissionTypes: Array<string>;
+    dlNumber: string;
     transmissionComfort: Array<_TransmissionType>;
+    mobile: string;
+    selfieBase64: string;
+    luxuryVehicleDetails: string;
 } {
     return {
         serviceAreaName: value.serviceAreaName,
         updatedTime: value.updatedTime,
+        aadharBackBase64: value.aadharBackBase64,
+        bankAccount: value.bankAccount,
         servicePincode: value.servicePincode,
         vehicleExperience: to_candid_vec_n71(_uploadFile, _downloadFile, value.vehicleExperience),
+        bankUPI: value.bankUPI,
+        dlPhotoBase64: value.dlPhotoBase64,
         languages: value.languages,
         isAvailable: value.isAvailable,
-        transmissionComfort: to_candid_vec_n72(_uploadFile, _downloadFile, value.transmissionComfort)
+        fullName: value.fullName,
+        aadharFrontBase64: value.aadharFrontBase64,
+        bankIFSC: value.bankIFSC,
+        bankName: value.bankName,
+        vehicleTypes: value.vehicleTypes,
+        aadharNumber: value.aadharNumber,
+        transmissionTypes: value.transmissionTypes,
+        dlNumber: value.dlNumber,
+        transmissionComfort: to_candid_vec_n72(_uploadFile, _downloadFile, value.transmissionComfort),
+        mobile: value.mobile,
+        selfieBase64: value.selfieBase64,
+        luxuryVehicleDetails: value.luxuryVehicleDetails
     };
 }
 function to_candid_variant_n23(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): {

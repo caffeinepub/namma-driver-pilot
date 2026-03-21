@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -6,7 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { User } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { Edit, User } from "lucide-react";
 import { useState } from "react";
 import CustomerTripList from "../components/CustomerTripList";
 import DataLoadErrorBanner from "../components/DataLoadErrorBanner";
@@ -17,19 +19,17 @@ import type { NormalizedTrip } from "../utils/normalizeTrip";
 
 export default function CustomerDashboard() {
   const { identity } = useInternetIdentity();
+  const navigate = useNavigate();
   const principal = identity?.getPrincipal().toString();
 
-  // Fetch trips from backend for the current customer
   const {
     data: fetchedTrips,
     isLoading,
     isError,
   } = useGetCustomerTrips(principal);
 
-  // Local state for optimistic updates (newly created trips before backend refresh)
   const [optimisticTrips, setOptimisticTrips] = useState<NormalizedTrip[]>([]);
 
-  // Called by RideRequestForm with a NormalizedTrip
   const handleTripCreated = (newTrip: NormalizedTrip) => {
     setOptimisticTrips((prev) => {
       if (prev.some((t) => t.tripId === newTrip.tripId)) return prev;
@@ -37,7 +37,6 @@ export default function CustomerDashboard() {
     });
   };
 
-  // Merge: optimistic trips first (newest), then backend trips (deduped)
   const fetchedIds = new Set((fetchedTrips ?? []).map((t) => t.tripId));
   const dedupedOptimistic = optimisticTrips.filter(
     (t) => !fetchedIds.has(t.tripId),
@@ -56,9 +55,21 @@ export default function CustomerDashboard() {
               Request rides and track your trips
             </p>
           </div>
-          <Badge variant="secondary" className="capitalize text-sm px-3 py-1">
-            Role: Customer
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="capitalize text-sm px-3 py-1">
+              Role: Customer
+            </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate({ to: "/customer/onboarding" })}
+              className="gap-1.5"
+              data-ocid="customer-dashboard.edit_profile.button"
+            >
+              <Edit className="w-3.5 h-3.5" />
+              View / Edit Profile
+            </Button>
+          </div>
         </div>
 
         {principal && (

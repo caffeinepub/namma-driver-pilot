@@ -4,6 +4,8 @@ import React from "react";
 import { toast } from "sonner";
 import { Role } from "../backend";
 import {
+  useGetCallerUserProfile,
+  useGetDriverProfile,
   useGetMyRole,
   useSetMyRoleCustomer,
   useSetMyRoleDriver,
@@ -16,6 +18,10 @@ export default function SelectRolePage() {
     isLoading: roleLoading,
     isFetched: roleFetched,
   } = useGetMyRole();
+  const { data: userProfile, isFetched: profileFetched } =
+    useGetCallerUserProfile();
+  const { data: driverProfile, isFetched: driverProfileFetched } =
+    useGetDriverProfile();
   const redirectedRef = React.useRef(false);
 
   const setCustomer = useSetMyRoleCustomer();
@@ -31,19 +37,39 @@ export default function SelectRolePage() {
       navigate({ to: "/admin/dashboard" });
     } else if (currentRole === Role.driver) {
       redirectedRef.current = true;
-      navigate({ to: "/driver/dashboard" });
+      // If driver has a profile, go to dashboard; else go to onboarding
+      if (driverProfileFetched && driverProfile) {
+        navigate({ to: "/driver/dashboard" });
+      } else if (driverProfileFetched) {
+        navigate({ to: "/driver/onboarding" });
+      }
     } else if (currentRole === Role.customer) {
       redirectedRef.current = true;
-      navigate({ to: "/customer/dashboard" });
+      // If customer has a profile, go to dashboard; else go to onboarding
+      if (profileFetched && userProfile) {
+        navigate({ to: "/customer/dashboard" });
+      } else if (profileFetched) {
+        navigate({ to: "/customer/onboarding" });
+      }
     }
     // Role.unassigned or null => stay on this page
-  }, [currentRole, roleLoading, roleFetched, navigate]);
+  }, [
+    currentRole,
+    roleLoading,
+    roleFetched,
+    userProfile,
+    profileFetched,
+    driverProfile,
+    driverProfileFetched,
+    navigate,
+  ]);
 
   const handleSelectCustomer = async () => {
     try {
       await setCustomer.mutateAsync();
       redirectedRef.current = true;
-      navigate({ to: "/customer/dashboard" });
+      // New customer — go to onboarding
+      navigate({ to: "/customer/onboarding" });
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to set role. Please try again.");
     }
@@ -53,7 +79,8 @@ export default function SelectRolePage() {
     try {
       await setDriver.mutateAsync();
       redirectedRef.current = true;
-      navigate({ to: "/driver/dashboard" });
+      // New driver — go to onboarding
+      navigate({ to: "/driver/onboarding" });
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to set role. Please try again.");
     }
@@ -74,13 +101,18 @@ export default function SelectRolePage() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-            <Car className="h-8 w-8 text-primary" />
-          </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Welcome!</h1>
+          <div className="text-5xl mb-4">🚖</div>
+          <h1 className="text-3xl font-bold text-foreground mb-2">
+            Welcome to Namma Driver Pilot
+          </h1>
           <p className="text-muted-foreground text-base">
-            How would you like to use Namma Driver Pilot?
+            A professional driver, for your own vehicle.
           </p>
+          <div className="mt-3 inline-block bg-amber-50 border border-amber-200 rounded-full px-4 py-1.5">
+            <span className="text-xs font-medium text-amber-700">
+              🚨 Not a taxi — we drive your car
+            </span>
+          </div>
         </div>
 
         {/* Role Cards */}
@@ -90,23 +122,25 @@ export default function SelectRolePage() {
             type="button"
             onClick={handleSelectCustomer}
             disabled={isLoading}
-            className="group relative flex items-center gap-5 p-6 rounded-2xl border-2 border-border bg-card hover:border-primary hover:bg-primary/5 transition-all duration-200 text-left disabled:opacity-60 disabled:cursor-not-allowed"
+            className="group relative flex items-center gap-5 p-6 rounded-2xl border-2 border-border bg-card hover:border-primary hover:bg-primary/5 transition-all duration-200 text-left disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
+            data-ocid="role-selection.customer.button"
           >
-            <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+            <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
               {setCustomer.isPending ? (
-                <Loader2 className="h-7 w-7 animate-spin text-primary" />
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
               ) : (
-                <User className="h-7 w-7 text-primary" />
+                <User className="h-8 w-8 text-primary" />
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-semibold text-lg text-foreground">
-                Continue as Customer
+              <div className="font-bold text-xl text-foreground">
+                I'm a Customer
               </div>
-              <div className="text-sm text-muted-foreground mt-0.5">
-                Book rides and manage your trips
+              <div className="text-sm text-muted-foreground mt-1">
+                I want to hire a driver for my vehicle
               </div>
             </div>
+            <div className="text-2xl">👋</div>
           </button>
 
           {/* Driver */}
@@ -114,23 +148,25 @@ export default function SelectRolePage() {
             type="button"
             onClick={handleSelectDriver}
             disabled={isLoading}
-            className="group relative flex items-center gap-5 p-6 rounded-2xl border-2 border-border bg-card hover:border-secondary hover:bg-secondary/5 transition-all duration-200 text-left disabled:opacity-60 disabled:cursor-not-allowed"
+            className="group relative flex items-center gap-5 p-6 rounded-2xl border-2 border-border bg-card hover:border-primary hover:bg-primary/5 transition-all duration-200 text-left disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
+            data-ocid="role-selection.driver.button"
           >
-            <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-secondary/10 flex items-center justify-center group-hover:bg-secondary/20 transition-colors">
+            <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
               {setDriver.isPending ? (
-                <Loader2 className="h-7 w-7 animate-spin text-secondary" />
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
               ) : (
-                <Car className="h-7 w-7 text-secondary" />
+                <Car className="h-8 w-8 text-primary" />
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-semibold text-lg text-foreground">
-                Continue as Driver
+              <div className="font-bold text-xl text-foreground">
+                I'm a Driver
               </div>
-              <div className="text-sm text-muted-foreground mt-0.5">
-                Accept trips and earn money
+              <div className="text-sm text-muted-foreground mt-1">
+                I want to earn by driving customers' vehicles
               </div>
             </div>
+            <div className="text-2xl">🚗</div>
           </button>
         </div>
 
